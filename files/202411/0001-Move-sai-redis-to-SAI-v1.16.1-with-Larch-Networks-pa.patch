@@ -1,0 +1,3790 @@
+From bca2942823481c29dfc07eb69fd8b9483cd4a8db Mon Sep 17 00:00:00 2001
+From: Kostiantyn Buravchenko <kburavchenko@larch-networks.com>
+Date: Thu, 20 Nov 2025 12:08:14 +0200
+Subject: [PATCH] Move sai-redis to SAI v1.16.1 with Larch-Networks patch
+
+---
+ lib/ServerSai.cpp                   |  63 +++++
+ lib/Switch.cpp                      |   1 +
+ lib/sai_redis_poe.cpp               |  12 +
+ meta/Meta.cpp                       | 163 ++++++++-----
+ meta/Meta.h                         |  20 ++
+ meta/MetaKeyHasher.cpp              | 101 ++++++++
+ meta/SaiInterface.cpp               |  60 +++++
+ meta/SaiSerialize.cpp               | 150 ++++++++++++
+ meta/sai_serialize.h                |  31 +++
+ saiplayer/SaiPlayer.cpp             | 362 ++++++++++++++++++++++++++++
+ saiplayer/SaiPlayer.h               |  24 ++
+ stub.pl                             |   4 +-
+ syncd/AsicView.cpp                  |  14 ++
+ syncd/AsicView.h                    |   1 +
+ syncd/BestCandidateFinder.cpp       |  83 +++++++
+ syncd/BestCandidateFinder.h         |   3 +
+ syncd/ComparisonLogic.cpp           |   4 +
+ syncd/NotificationHandler.cpp       |   1 +
+ syncd/SaiSwitch.cpp                 |  12 +-
+ syncd/SingleReiniter.cpp            |  43 ++++
+ syncd/SingleReiniter.h              |   3 +
+ syncd/SwitchNotifications.h         |   3 +
+ syncd/Syncd.cpp                     | 211 ++++++++++++++++
+ syncd/VendorSai.cpp                 | 289 ++++++++++++++++++++++
+ syncd/scripts/poesyncdmgrd          |  76 ++++++
+ syncd/scripts/syncd_init_common.sh  |   4 +
+ tests/NVDAMBF2H536C.pl              |   8 +-
+ tests/NVDAMBF2H536C/dashapis.rec    |  29 +++
+ tests/aspell.en.pws                 |   2 +
+ tests/utils.pm                      |  11 +-
+ unittest/lib/test_sai_redis_poe.cpp |  33 +++
+ unittest/meta/TestMeta.cpp          |   9 +
+ unittest/meta/TestSaiSerialize.cpp  |  12 +
+ unittest/syncd/TestVendorSai.cpp    | 205 +++++++++++++++-
+ unittest/vslib/Makefile.am          |   1 +
+ unittest/vslib/TestSwitchConfig.cpp |   6 +
+ unittest/vslib/TestSwitchPoe.cpp    | 173 +++++++++++++
+ unittest/vslib/test_sai_vs_poe.cpp  |  33 +++
+ vslib/Makefile.am                   |   1 +
+ vslib/SwitchConfig.cpp              |  12 +-
+ vslib/SwitchConfig.h                |   2 +
+ vslib/SwitchPoE.cpp                 | 348 ++++++++++++++++++++++++++
+ vslib/SwitchPoE.h                   |  68 ++++++
+ vslib/SwitchStateBase.cpp           |  13 +
+ vslib/SwitchStateBase.h             |   3 +
+ vslib/VirtualSwitchSaiInterface.cpp |   6 +
+ vslib/sai_vs_poe.cpp                |  12 +
+ vslib/saivs.h                       |   2 +
+ 48 files changed, 2653 insertions(+), 74 deletions(-)
+ create mode 100644 lib/sai_redis_poe.cpp
+ create mode 100755 syncd/scripts/poesyncdmgrd
+ create mode 100644 unittest/lib/test_sai_redis_poe.cpp
+ create mode 100644 unittest/vslib/TestSwitchPoe.cpp
+ create mode 100644 unittest/vslib/test_sai_vs_poe.cpp
+ create mode 100644 vslib/SwitchPoE.cpp
+ create mode 100644 vslib/SwitchPoE.h
+ create mode 100644 vslib/sai_vs_poe.cpp
+
+diff --git a/lib/ServerSai.cpp b/lib/ServerSai.cpp
+index 6a8f5ad9..dd4f8b62 100644
+--- a/lib/ServerSai.cpp
++++ b/lib/ServerSai.cpp
+@@ -1325,6 +1325,28 @@ sai_status_t ServerSai::processBulkCreateEntry(
+         }
+         break;
+ 
++        // TODO: Uncomment when SAI bulk API will be implemented for L2MC
++        /*
++        case SAI_OBJECT_TYPE_L2MC_ENTRY:
++        {
++            std::vector<sai_l2mc_entry_t> entries(object_count);
++            for (uint32_t it = 0; it < object_count; it++)
++            {
++                sai_deserialize_l2mc_entry(objectIds[it], entries[it]);
++            }
++
++            status = m_sai->bulkCreate(
++                    object_count,
++                    entries.data(),
++                    attr_counts.data(),
++                    attr_lists.data(),
++                    mode,
++                    statuses.data());
++
++        }
++        break;
++        */
++
+         case SAI_OBJECT_TYPE_NAT_ENTRY:
+         {
+             std::vector<sai_nat_entry_t> entries(object_count);
+@@ -1571,6 +1593,26 @@ sai_status_t ServerSai::processBulkRemoveEntry(
+         }
+         break;
+ 
++        // TODO: Uncomment when SAI bulk API will be implemented for L2MC
++        /*
++        case SAI_OBJECT_TYPE_L2MC_ENTRY:
++        {
++            std::vector<sai_l2mc_entry_t> entries(object_count);
++            for (uint32_t it = 0; it < object_count; it++)
++            {
++                sai_deserialize_l2mc_entry(objectIds[it], entries[it]);
++            }
++
++            status = m_sai->bulkRemove(
++                    object_count,
++                    entries.data(),
++                    mode,
++                    statuses.data());
++
++        }
++        break;
++        */
++
+         case SAI_OBJECT_TYPE_NAT_ENTRY:
+         {
+             std::vector<sai_nat_entry_t> entries(object_count);
+@@ -1801,6 +1843,27 @@ sai_status_t ServerSai::processBulkSetEntry(
+         }
+         break;
+ 
++        // TODO: Uncomment when SAI bulk API will be implemented for L2MC
++        /*
++        case SAI_OBJECT_TYPE_L2MC_ENTRY:
++        {
++            std::vector<sai_l2mc_entry_t> entries(object_count);
++            for (uint32_t it = 0; it < object_count; it++)
++            {
++                sai_deserialize_l2mc_entry(objectIds[it], entries[it]);
++            }
++
++            status = m_sai->bulkSet(
++                    object_count,
++                    entries.data(),
++                    attr_lists.data(),
++                    mode,
++                    statuses.data());
++
++        }
++        break;
++        */
++
+         case SAI_OBJECT_TYPE_NAT_ENTRY:
+         {
+             std::vector<sai_nat_entry_t> entries(object_count);
+diff --git a/lib/Switch.cpp b/lib/Switch.cpp
+index 41358022..bf88ec6c 100644
+--- a/lib/Switch.cpp
++++ b/lib/Switch.cpp
+@@ -60,6 +60,7 @@ void Switch::updateNotifications(
+     SWSS_LOG_ENTER();
+ 
+     sai_metadata_update_switch_notification_pointers(&m_switchNotifications, attrCount, attrList);
++
+ }
+ 
+ const sai_switch_notifications_t& Switch::getSwitchNotifications() const
+diff --git a/lib/sai_redis_poe.cpp b/lib/sai_redis_poe.cpp
+new file mode 100644
+index 00000000..9bede47f
+--- /dev/null
++++ b/lib/sai_redis_poe.cpp
+@@ -0,0 +1,12 @@
++#include "sai_redis.h"
++
++REDIS_GENERIC_QUAD(POE_DEVICE,poe_device);
++REDIS_GENERIC_QUAD(POE_PSE,poe_pse);
++REDIS_GENERIC_QUAD(POE_PORT,poe_port);
++
++const sai_poe_api_t redis_poe_api = {
++
++    REDIS_GENERIC_QUAD_API(poe_device)
++    REDIS_GENERIC_QUAD_API(poe_pse)
++    REDIS_GENERIC_QUAD_API(poe_port)
++};
+diff --git a/meta/Meta.cpp b/meta/Meta.cpp
+index a9851d20..eaf0cbd4 100644
+--- a/meta/Meta.cpp
++++ b/meta/Meta.cpp
+@@ -1937,6 +1937,10 @@ void Meta::meta_generic_validation_post_remove(
+                 // no special action required
+                 break;
+ 
++            case SAI_ATTR_VALUE_TYPE_POE_PORT_POWER_CONSUMPTION:
++                // no special action required
++                break;
++
+             default:
+                 META_LOG_THROW(md, "serialization type is not supported yet FIXME");
+         }
+@@ -3154,6 +3158,82 @@ sai_status_t Meta::meta_sai_validate_meter_bucket_entry(
+     return SAI_STATUS_NOT_IMPLEMENTED;
+ }
+ 
++sai_status_t Meta::meta_sai_validate_prefix_compression_entry(
++        _In_ const sai_prefix_compression_entry_t* prefix_compression_entry,
++        _In_ bool create,
++        _In_ bool get)
++{
++    SWSS_LOG_ENTER();
++
++    if (prefix_compression_entry == NULL)
++    {
++        SWSS_LOG_ERROR("prefix_compression_entry pointer is NULL");
++
++        return SAI_STATUS_INVALID_PARAMETER;
++    }
++
++    // TODO FIX ME
++
++    return SAI_STATUS_NOT_IMPLEMENTED;
++}
++
++sai_status_t Meta::meta_sai_validate_outbound_port_map_port_range_entry(
++        _In_ const sai_outbound_port_map_port_range_entry_t* outbound_port_map_port_range_entry,
++        _In_ bool create,
++        _In_ bool get)
++{
++    SWSS_LOG_ENTER();
++
++    if (outbound_port_map_port_range_entry == NULL)
++    {
++        SWSS_LOG_ERROR("outbound_port_map_port_range_entry pointer is NULL");
++
++        return SAI_STATUS_INVALID_PARAMETER;
++    }
++
++    // TODO FIX ME
++
++    return SAI_STATUS_SUCCESS;
++}
++
++sai_status_t Meta::meta_sai_validate_global_trusted_vni_entry(
++        _In_ const sai_global_trusted_vni_entry_t* global_trusted_vni_entry,
++        _In_ bool create,
++        _In_ bool get)
++{
++    SWSS_LOG_ENTER();
++
++    if (global_trusted_vni_entry == NULL)
++    {
++        SWSS_LOG_ERROR("global_trusted_vni_entry pointer is NULL");
++
++        return SAI_STATUS_INVALID_PARAMETER;
++    }
++
++    // TODO FIX ME
++
++    return SAI_STATUS_SUCCESS;
++}
++
++sai_status_t Meta::meta_sai_validate_eni_trusted_vni_entry(
++        _In_ const sai_eni_trusted_vni_entry_t* eni_trusted_vni_entry,
++        _In_ bool create,
++        _In_ bool get)
++{
++    SWSS_LOG_ENTER();
++
++    if (eni_trusted_vni_entry == NULL)
++    {
++        SWSS_LOG_ERROR("eni_trusted_vni_entry pointer is NULL");
++
++        return SAI_STATUS_INVALID_PARAMETER;
++    }
++
++    // TODO FIX ME
++
++    return SAI_STATUS_SUCCESS;
++}
++
+ sai_status_t Meta::meta_generic_validation_create(
+         _In_ const sai_object_meta_key_t& meta_key,
+         _In_ sai_object_id_t switch_id,
+@@ -3611,6 +3691,9 @@ sai_status_t Meta::meta_generic_validation_create(
+                 VALIDATION_LIST(md, value.ipprefixlist);
+                 break;
+ 
++            case SAI_ATTR_VALUE_TYPE_POE_PORT_POWER_CONSUMPTION:
++                break;
++
+             default:
+ 
+                 META_LOG_THROW(md, "serialization type is not supported yet FIXME");
+@@ -3816,64 +3899,7 @@ sai_status_t Meta::meta_generic_validation_create(
+ 
+         // this is conditional attribute, check if it's required
+ 
+-        bool any = false;
+-
+-        for (size_t index = 0; md.conditions[index] != NULL; index++)
+-        {
+-            const auto& c = *md.conditions[index];
+-
+-            // conditions may only be on the same object type
+-            const auto& cmd = *sai_metadata_get_attr_metadata(meta_key.objecttype, c.attrid);
+-
+-            const sai_attribute_value_t* cvalue = cmd.defaultvalue;
+-
+-            const sai_attribute_t *cattr = sai_metadata_get_attr_by_id(c.attrid, attr_count, attr_list);
+-
+-            if (cattr != NULL)
+-            {
+-                META_LOG_DEBUG(md, "condition attr %d was passed, using it's value", c.attrid);
+-
+-                cvalue = &cattr->value;
+-            }
+-
+-            if (cmd.attrvaluetype == SAI_ATTR_VALUE_TYPE_BOOL)
+-            {
+-                if (c.condition.booldata == cvalue->booldata)
+-                {
+-                    META_LOG_DEBUG(md, "bool condition was met on attr %d = %d", cmd.attrid, c.condition.booldata);
+-
+-                    any = true;
+-                    break;
+-                }
+-            }
+-            else // enum condition
+-            {
+-                int32_t val = cvalue->s32;
+-
+-                switch (cmd.attrvaluetype)
+-                {
+-                    case SAI_ATTR_VALUE_TYPE_ACL_FIELD_DATA_INT32:
+-                        val = cvalue->aclfield.data.s32;
+-                        break;
+-
+-                    case SAI_ATTR_VALUE_TYPE_ACL_ACTION_DATA_INT32:
+-                        val = cvalue->aclaction.parameter.s32;
+-                        break;
+-
+-                    default:
+-                        val = cvalue->s32;
+-                        break;
+-                }
+-
+-                if (c.condition.s32 == val)
+-                {
+-                    META_LOG_DEBUG(md, "enum condition was met on attr id %d, val = %d", cmd.attrid, val);
+-
+-                    any = true;
+-                    break;
+-                }
+-            }
+-        }
++        bool any = sai_metadata_is_condition_met(mdp, attr_count, attr_list);
+ 
+         if (!any)
+         {
+@@ -4286,6 +4312,9 @@ sai_status_t Meta::meta_generic_validation_set(
+             VALIDATION_LIST(md, value.ipprefixlist);
+             break;
+ 
++        case SAI_ATTR_VALUE_TYPE_POE_PORT_POWER_CONSUMPTION:
++            break;
++
+         default:
+ 
+             META_LOG_THROW(md, "serialization type is not supported yet FIXME");
+@@ -4673,6 +4702,9 @@ sai_status_t Meta::meta_generic_validation_get(
+                 VALIDATION_LIST(md, value.ipprefixlist);
+                 break;
+ 
++            case SAI_ATTR_VALUE_TYPE_POE_PORT_POWER_CONSUMPTION:
++                break;
++
+             default:
+ 
+                 // acl capability will is more complex since is in/out we need to check stage
+@@ -4946,7 +4978,10 @@ void Meta::meta_generic_validation_post_get(
+                 VALIDATION_LIST_GET(md, value.ipprefixlist);
+                 break;
+ 
+-            default:
++            case SAI_ATTR_VALUE_TYPE_POE_PORT_POWER_CONSUMPTION:
++                break;
++
++           default:
+ 
+                 META_LOG_THROW(md, "serialization type is not supported yet FIXME");
+         }
+@@ -5840,6 +5875,10 @@ void Meta::meta_generic_validation_post_create(
+                 // no special action required
+                 break;
+ 
++            case SAI_ATTR_VALUE_TYPE_POE_PORT_POWER_CONSUMPTION:
++                // no special action required
++                break;
++
+             default:
+ 
+                 META_LOG_THROW(md, "serialization type is not supported yet FIXME");
+@@ -6079,7 +6118,11 @@ void Meta::meta_generic_validation_post_set(
+             // no special action required
+             break;
+ 
+-        default:
++        case SAI_ATTR_VALUE_TYPE_POE_PORT_POWER_CONSUMPTION:
++            // no special action required
++            break;
++
++       default:
+             META_LOG_THROW(md, "serialization type is not supported yet FIXME");
+     }
+ 
+diff --git a/meta/Meta.h b/meta/Meta.h
+index ce8a0a2d..1c26a93f 100644
+--- a/meta/Meta.h
++++ b/meta/Meta.h
+@@ -563,6 +563,26 @@ namespace saimeta
+                      _In_ bool create,
+                      _In_ bool get = false);
+ 
++             sai_status_t meta_sai_validate_prefix_compression_entry(
++                     _In_ const sai_prefix_compression_entry_t* prefix_compression_entry,
++                     _In_ bool create,
++                     _In_ bool get = false);
++
++             sai_status_t meta_sai_validate_outbound_port_map_port_range_entry(
++                     _In_ const sai_outbound_port_map_port_range_entry_t* outbound_port_map_port_range_entry,
++                     _In_ bool create,
++                     _In_ bool get = false);
++
++             sai_status_t meta_sai_validate_global_trusted_vni_entry(
++                     _In_ const sai_global_trusted_vni_entry_t* global_trusted_vni_entry,
++                     _In_ bool create,
++                     _In_ bool get = false);
++
++             sai_status_t meta_sai_validate_eni_trusted_vni_entry(
++                     _In_ const sai_eni_trusted_vni_entry_t* eni_trusted_vni_entry,
++                     _In_ bool create,
++                     _In_ bool get = false);
++
+         public:
+ 
+             /*
+diff --git a/meta/MetaKeyHasher.cpp b/meta/MetaKeyHasher.cpp
+index 65fe6c59..24ddf896 100644
+--- a/meta/MetaKeyHasher.cpp
++++ b/meta/MetaKeyHasher.cpp
+@@ -321,6 +321,42 @@ static bool operator==(
+     return a.switch_id == b.switch_id && a.dst_vnet_id == b.dst_vnet_id && a.dip == b.dip;
+ }
+ 
++static bool operator==(
++        _In_ const sai_u32_range_t& a,
++        _In_ const sai_u32_range_t& b)
++{
++    // SWSS_LOG_ENTER(); // disabled for performance reasons
++
++    return a.min == b.min && a.max == b.max;
++}
++
++static bool operator==(
++        _In_ const sai_outbound_port_map_port_range_entry_t& a,
++        _In_ const sai_outbound_port_map_port_range_entry_t& b)
++{
++    // SWSS_LOG_ENTER(); // disabled for performance reasons
++
++    return a.switch_id == b.switch_id && a.outbound_port_map_id == b.outbound_port_map_id && a.dst_port_range == b.dst_port_range;
++}
++
++static bool operator==(
++        _In_ const sai_global_trusted_vni_entry_t& a,
++        _In_ const sai_global_trusted_vni_entry_t& b)
++{
++    // SWSS_LOG_ENTER(); // disabled for performance reasons
++
++    return a.switch_id == b.switch_id && a.vni_range == b.vni_range;
++}
++
++static bool operator==(
++        _In_ const sai_eni_trusted_vni_entry_t& a,
++        _In_ const sai_eni_trusted_vni_entry_t& b)
++{
++    // SWSS_LOG_ENTER(); // disabled for performance reasons
++
++    return a.switch_id == b.switch_id && a.eni_id == b.eni_id && a.vni_range == b.vni_range;
++}
++
+ bool MetaKeyHasher::operator()(
+         _In_ const sai_object_meta_key_t& a,
+         _In_ const sai_object_meta_key_t& b) const
+@@ -383,6 +419,15 @@ bool MetaKeyHasher::operator()(
+     if ((sai_object_type_extensions_t)a.objecttype == SAI_OBJECT_TYPE_OUTBOUND_CA_TO_PA_ENTRY)
+         return a.objectkey.key.outbound_ca_to_pa_entry == b.objectkey.key.outbound_ca_to_pa_entry;
+ 
++    if ((sai_object_type_extensions_t)a.objecttype == SAI_OBJECT_TYPE_OUTBOUND_PORT_MAP_PORT_RANGE_ENTRY)
++        return a.objectkey.key.outbound_port_map_port_range_entry == b.objectkey.key.outbound_port_map_port_range_entry;
++
++    if ((sai_object_type_extensions_t)a.objecttype == SAI_OBJECT_TYPE_GLOBAL_TRUSTED_VNI_ENTRY)
++        return a.objectkey.key.global_trusted_vni_entry == b.objectkey.key.global_trusted_vni_entry;
++
++    if ((sai_object_type_extensions_t)a.objecttype == SAI_OBJECT_TYPE_ENI_TRUSTED_VNI_ENTRY)
++        return a.objectkey.key.eni_trusted_vni_entry == b.objectkey.key.eni_trusted_vni_entry;
++
+     SWSS_LOG_THROW("not implemented: %s",
+             sai_serialize_object_meta_key(a).c_str());
+ }
+@@ -691,6 +736,53 @@ static inline std::size_t sai_get_hash(
+     return hash;
+ }
+ 
++static inline std::size_t sai_get_hash(
++        _In_ const sai_u32_range_t & oe)
++{
++    // SWSS_LOG_ENTER(); // disabled for performance reasons
++
++    std::size_t hash = 0;
++    boost::hash_combine(hash, oe.min);
++    boost::hash_combine(hash, oe.max);
++
++    return hash;
++}
++
++static inline std::size_t sai_get_hash(
++        _In_ const sai_outbound_port_map_port_range_entry_t & oe)
++{
++    // SWSS_LOG_ENTER(); // disabled for performance reasons
++
++    std::size_t hash = 0;
++    boost::hash_combine(hash, oe.outbound_port_map_id);
++    boost::hash_combine(hash, sai_get_hash(oe.dst_port_range));
++
++    return hash;
++}
++
++static inline std::size_t sai_get_hash(
++        _In_ const sai_global_trusted_vni_entry_t & oe)
++{
++    // SWSS_LOG_ENTER(); // disabled for performance reasons
++
++    std::size_t hash = 0;
++    boost::hash_combine(hash, sai_get_hash(oe.vni_range));
++
++    return hash;
++}
++
++static inline std::size_t sai_get_hash(
++        _In_ const sai_eni_trusted_vni_entry_t & oe)
++{
++    // SWSS_LOG_ENTER(); // disabled for performance reasons
++
++    std::size_t hash = 0;
++    boost::hash_combine(hash, oe.eni_id);
++    boost::hash_combine(hash, sai_get_hash(oe.vni_range));
++
++    return hash;
++}
++
+ std::size_t MetaKeyHasher::operator()(
+         _In_ const sai_object_meta_key_t& k) const
+ {
+@@ -760,6 +852,15 @@ std::size_t MetaKeyHasher::operator()(
+         case SAI_OBJECT_TYPE_OUTBOUND_CA_TO_PA_ENTRY:
+             return sai_get_hash(k.objectkey.key.outbound_ca_to_pa_entry);
+ 
++        case SAI_OBJECT_TYPE_OUTBOUND_PORT_MAP_PORT_RANGE_ENTRY:
++            return sai_get_hash(k.objectkey.key.outbound_port_map_port_range_entry);
++
++        case SAI_OBJECT_TYPE_GLOBAL_TRUSTED_VNI_ENTRY:
++            return sai_get_hash(k.objectkey.key.global_trusted_vni_entry);
++
++        case SAI_OBJECT_TYPE_ENI_TRUSTED_VNI_ENTRY:
++            return sai_get_hash(k.objectkey.key.eni_trusted_vni_entry);
++
+         default:
+             SWSS_LOG_THROW("not handled: %s", sai_serialize_object_type(k.objecttype).c_str());
+     }
+diff --git a/meta/SaiInterface.cpp b/meta/SaiInterface.cpp
+index 3a95bc01..c7bc332e 100644
+--- a/meta/SaiInterface.cpp
++++ b/meta/SaiInterface.cpp
+@@ -37,6 +37,12 @@ sai_status_t SaiInterface::create(
+         case SAI_OBJECT_TYPE_NEIGHBOR_ENTRY:
+             return create(&metaKey.objectkey.key.neighbor_entry, attr_count, attr_list);
+ 
++        case SAI_OBJECT_TYPE_L2MC_ENTRY:
++            return create(&metaKey.objectkey.key.l2mc_entry, attr_count, attr_list);
++
++        case SAI_OBJECT_TYPE_IPMC_ENTRY:
++            return create(&metaKey.objectkey.key.ipmc_entry, attr_count, attr_list);
++
+         case SAI_OBJECT_TYPE_NAT_ENTRY:
+             return create(&metaKey.objectkey.key.nat_entry, attr_count, attr_list);
+ 
+@@ -67,6 +73,15 @@ sai_status_t SaiInterface::create(
+         case SAI_OBJECT_TYPE_OUTBOUND_CA_TO_PA_ENTRY:
+             return create(&metaKey.objectkey.key.outbound_ca_to_pa_entry, attr_count, attr_list);
+ 
++        case SAI_OBJECT_TYPE_OUTBOUND_PORT_MAP_PORT_RANGE_ENTRY:
++            return create(&metaKey.objectkey.key.outbound_port_map_port_range_entry, attr_count, attr_list);
++
++        case SAI_OBJECT_TYPE_GLOBAL_TRUSTED_VNI_ENTRY:
++            return create(&metaKey.objectkey.key.global_trusted_vni_entry, attr_count, attr_list);
++
++        case SAI_OBJECT_TYPE_ENI_TRUSTED_VNI_ENTRY:
++            return create(&metaKey.objectkey.key.eni_trusted_vni_entry, attr_count, attr_list);
++
+         default:
+ 
+             SWSS_LOG_ERROR("object type %s not implemented, FIXME", info->objecttypename);
+@@ -105,6 +120,12 @@ sai_status_t SaiInterface::remove(
+         case SAI_OBJECT_TYPE_NEIGHBOR_ENTRY:
+             return remove(&metaKey.objectkey.key.neighbor_entry);
+ 
++        case SAI_OBJECT_TYPE_L2MC_ENTRY:
++            return remove(&metaKey.objectkey.key.l2mc_entry);
++
++        case SAI_OBJECT_TYPE_IPMC_ENTRY:
++            return remove(&metaKey.objectkey.key.ipmc_entry);
++
+         case SAI_OBJECT_TYPE_NAT_ENTRY:
+             return remove(&metaKey.objectkey.key.nat_entry);
+ 
+@@ -135,6 +156,15 @@ sai_status_t SaiInterface::remove(
+         case SAI_OBJECT_TYPE_OUTBOUND_CA_TO_PA_ENTRY:
+             return remove(&metaKey.objectkey.key.outbound_ca_to_pa_entry);
+ 
++        case SAI_OBJECT_TYPE_OUTBOUND_PORT_MAP_PORT_RANGE_ENTRY:
++            return remove(&metaKey.objectkey.key.outbound_port_map_port_range_entry);
++
++        case SAI_OBJECT_TYPE_GLOBAL_TRUSTED_VNI_ENTRY:
++            return remove(&metaKey.objectkey.key.global_trusted_vni_entry);
++
++        case SAI_OBJECT_TYPE_ENI_TRUSTED_VNI_ENTRY:
++            return remove(&metaKey.objectkey.key.eni_trusted_vni_entry);
++
+         default:
+ 
+             SWSS_LOG_ERROR("object type %s not implemented, FIXME", info->objecttypename);
+@@ -174,6 +204,12 @@ sai_status_t SaiInterface::set(
+         case SAI_OBJECT_TYPE_NEIGHBOR_ENTRY:
+             return set(&metaKey.objectkey.key.neighbor_entry, attr);
+ 
++        case SAI_OBJECT_TYPE_L2MC_ENTRY:
++            return set(&metaKey.objectkey.key.l2mc_entry, attr);
++
++        case SAI_OBJECT_TYPE_IPMC_ENTRY:
++            return set(&metaKey.objectkey.key.ipmc_entry, attr);
++
+         case SAI_OBJECT_TYPE_NAT_ENTRY:
+             return set(&metaKey.objectkey.key.nat_entry, attr);
+ 
+@@ -204,6 +240,15 @@ sai_status_t SaiInterface::set(
+         case SAI_OBJECT_TYPE_OUTBOUND_CA_TO_PA_ENTRY:
+             return set(&metaKey.objectkey.key.outbound_ca_to_pa_entry, attr);
+ 
++        case SAI_OBJECT_TYPE_OUTBOUND_PORT_MAP_PORT_RANGE_ENTRY:
++            return set(&metaKey.objectkey.key.outbound_port_map_port_range_entry, attr);
++
++        case SAI_OBJECT_TYPE_GLOBAL_TRUSTED_VNI_ENTRY:
++            return set(&metaKey.objectkey.key.global_trusted_vni_entry, attr);
++
++        case SAI_OBJECT_TYPE_ENI_TRUSTED_VNI_ENTRY:
++            return set(&metaKey.objectkey.key.eni_trusted_vni_entry, attr);
++
+         default:
+ 
+             SWSS_LOG_ERROR("object type %s not implemented, FIXME", info->objecttypename);
+@@ -244,6 +289,12 @@ sai_status_t SaiInterface::get(
+         case SAI_OBJECT_TYPE_NEIGHBOR_ENTRY:
+             return get(&metaKey.objectkey.key.neighbor_entry, attr_count, attr_list);
+ 
++        case SAI_OBJECT_TYPE_L2MC_ENTRY:
++            return get(&metaKey.objectkey.key.l2mc_entry, attr_count, attr_list);
++
++        case SAI_OBJECT_TYPE_IPMC_ENTRY:
++            return get(&metaKey.objectkey.key.ipmc_entry, attr_count, attr_list);
++
+         case SAI_OBJECT_TYPE_NAT_ENTRY:
+             return get(&metaKey.objectkey.key.nat_entry, attr_count, attr_list);
+ 
+@@ -274,6 +325,15 @@ sai_status_t SaiInterface::get(
+         case SAI_OBJECT_TYPE_OUTBOUND_CA_TO_PA_ENTRY:
+             return get(&metaKey.objectkey.key.outbound_ca_to_pa_entry, attr_count, attr_list);
+ 
++        case SAI_OBJECT_TYPE_OUTBOUND_PORT_MAP_PORT_RANGE_ENTRY:
++            return get(&metaKey.objectkey.key.outbound_port_map_port_range_entry, attr_count, attr_list);
++
++        case SAI_OBJECT_TYPE_GLOBAL_TRUSTED_VNI_ENTRY:
++            return get(&metaKey.objectkey.key.global_trusted_vni_entry, attr_count, attr_list);
++
++        case SAI_OBJECT_TYPE_ENI_TRUSTED_VNI_ENTRY:
++            return get(&metaKey.objectkey.key.eni_trusted_vni_entry, attr_count, attr_list);
++
+         default:
+ 
+             SWSS_LOG_ERROR("object type %s not implemented, FIXME", info->objecttypename);
+diff --git a/meta/SaiSerialize.cpp b/meta/SaiSerialize.cpp
+index d2743820..e6d6439d 100644
+--- a/meta/SaiSerialize.cpp
++++ b/meta/SaiSerialize.cpp
+@@ -514,6 +514,10 @@ sai_status_t transfer_attribute(
+             transfer_primitive(src_attr.value.portpowerconsumption, dst_attr.value.portpowerconsumption);
+             break;
+ 
++        case SAI_ATTR_VALUE_TYPE_PORT_PAM4_EYE_VALUES_LIST:
++            RETURN_ON_ERROR(transfer_list(src_attr.value.portpam4eyevalues, dst_attr.value.portpam4eyevalues, countOnly));
++            break;
++
+         default:
+             SWSS_LOG_THROW("sai attr value %s is not implemented, FIXME", sai_serialize_attr_value_type(serialization_type).c_str());
+     }
+@@ -784,6 +788,14 @@ std::string sai_serialize_object_type(
+     return sai_serialize_enum(object_type, &sai_metadata_enum_sai_object_type_t);
+ }
+ 
++std::string sai_serialize_switch_type(
++        _In_ const sai_switch_type_t switch_type)
++{
++    SWSS_LOG_ENTER();
++
++    return sai_serialize_enum(switch_type, &sai_metadata_enum_sai_switch_type_t);
++}
++
+ std::string sai_serialize_log_level(
+         _In_ sai_log_level_t log_level)
+ {
+@@ -975,6 +987,20 @@ std::string sai_serialize_meter_bucket_entry(
+     return j.dump();
+ }
+ 
++std::string sai_serialize_prefix_compression_entry(
++        _In_ const sai_prefix_compression_entry_t &prefix_compression_entry)
++{
++    SWSS_LOG_ENTER();
++
++    json j;
++
++    j["switch_id"] = sai_serialize_object_id(prefix_compression_entry.switch_id);
++    j["prefix_table_id"] = sai_serialize_object_id(prefix_compression_entry.prefix_table_id);
++    j["prefix"] = sai_serialize_ip_prefix(prefix_compression_entry.prefix);
++
++    return j.dump();
++}
++
+ std::string sai_serialize_flow_entry(
+         _In_ const sai_flow_entry_t &flow_entry)
+ {
+@@ -1899,6 +1925,47 @@ std::string sai_serialize_outbound_ca_to_pa_entry(
+     return j.dump();
+ }
+ 
++std::string sai_serialize_outbound_port_map_port_range_entry(
++        _In_ const sai_outbound_port_map_port_range_entry_t &outbound_port_map_port_range_entry)
++{
++    SWSS_LOG_ENTER();
++
++    json j;
++
++    j["switch_id"] = sai_serialize_object_id(outbound_port_map_port_range_entry.switch_id);
++    j["outbound_port_map_id"] = sai_serialize_object_id(outbound_port_map_port_range_entry.outbound_port_map_id);
++    j["dst_port_range"] = sai_serialize_range(outbound_port_map_port_range_entry.dst_port_range);
++
++    return j.dump();
++}
++
++std::string sai_serialize_global_trusted_vni_entry(
++        _In_ const sai_global_trusted_vni_entry_t &global_trusted_vni_entry)
++{
++    SWSS_LOG_ENTER();
++
++    json j;
++
++    j["switch_id"] = sai_serialize_object_id(global_trusted_vni_entry.switch_id);
++    j["vni_range"] = sai_serialize_range(global_trusted_vni_entry.vni_range);
++
++    return j.dump();
++}
++
++std::string sai_serialize_eni_trusted_vni_entry(
++        _In_ const sai_eni_trusted_vni_entry_t &eni_trusted_vni_entry)
++{
++    SWSS_LOG_ENTER();
++
++    json j;
++
++    j["switch_id"] = sai_serialize_object_id(eni_trusted_vni_entry.switch_id);
++    j["eni_id"] = sai_serialize_object_id(eni_trusted_vni_entry.eni_id);
++    j["vni_range"] = sai_serialize_range(eni_trusted_vni_entry.vni_range);
++
++    return j.dump();
++}
++
+ std::string sai_serialize_system_port_config(
+         _In_ const sai_attr_metadata_t &meta,
+         _In_ const sai_system_port_config_t &sysportconfig)
+@@ -2678,6 +2745,10 @@ static bool sai_serialize_object_entry(
+             key = sai_serialize_mcast_fdb_entry(key_entry.mcast_fdb_entry);
+             return true;
+ 
++        case SAI_OBJECT_TYPE_PREFIX_COMPRESSION_ENTRY:
++            key = sai_serialize_prefix_compression_entry(key_entry.prefix_compression_entry);
++            return true;
++
+         default:
+             return false;
+     }
+@@ -2728,6 +2799,18 @@ static bool sai_serialize_object_extension_entry(
+             key = sai_serialize_meter_bucket_entry(key_entry.meter_bucket_entry);
+             return true;
+ 
++        case SAI_OBJECT_TYPE_OUTBOUND_PORT_MAP_PORT_RANGE_ENTRY:
++            key = sai_serialize_outbound_port_map_port_range_entry(key_entry.outbound_port_map_port_range_entry);
++            return true;
++
++        case SAI_OBJECT_TYPE_GLOBAL_TRUSTED_VNI_ENTRY:
++            key = sai_serialize_global_trusted_vni_entry(key_entry.global_trusted_vni_entry);
++            return true;
++
++        case SAI_OBJECT_TYPE_ENI_TRUSTED_VNI_ENTRY:
++            key = sai_serialize_eni_trusted_vni_entry(key_entry.eni_trusted_vni_entry);
++            return true;
++
+         default:
+             return false;
+     }
+@@ -4467,6 +4550,19 @@ void sai_deserialize_meter_bucket_entry(
+     sai_deserialize_number(j["meter_class"], meter_bucket_entry.meter_class);
+ }
+ 
++void sai_deserialize_prefix_compression_entry(
++        _In_ const std::string& s,
++        _Out_ sai_prefix_compression_entry_t& prefix_compression_entry)
++{
++    SWSS_LOG_ENTER();
++
++    json j = json::parse(s);
++
++    sai_deserialize_object_id(j["switch_id"], prefix_compression_entry.switch_id);
++    sai_deserialize_object_id(j["prefix_table_id"], prefix_compression_entry.prefix_table_id);
++    sai_deserialize_ip_prefix(j["prefix"], prefix_compression_entry.prefix);
++}
++
+ void sai_deserialize_flow_entry(
+         _In_ const std::string& s,
+         _Out_ sai_flow_entry_t &flow_entry)
+@@ -4485,6 +4581,44 @@ void sai_deserialize_flow_entry(
+     sai_deserialize_number(j["dst_port"], flow_entry.dst_port);
+ }
+ 
++void sai_deserialize_outbound_port_map_port_range_entry(
++        _In_ const std::string& s,
++        _Out_ sai_outbound_port_map_port_range_entry_t& outbound_port_map_port_range_entry)
++{
++    SWSS_LOG_ENTER();
++
++    json j = json::parse(s);
++
++    sai_deserialize_object_id(j["switch_id"], outbound_port_map_port_range_entry.switch_id);
++    sai_deserialize_object_id(j["outbound_port_map_id"], outbound_port_map_port_range_entry.outbound_port_map_id);
++    sai_deserialize_range(j["dst_port_range"], outbound_port_map_port_range_entry.dst_port_range);
++}
++
++void sai_deserialize_global_trusted_vni_entry(
++        _In_ const std::string& s,
++        _Out_ sai_global_trusted_vni_entry_t& global_trusted_vni_entry)
++{
++    SWSS_LOG_ENTER();
++
++    json j = json::parse(s);
++
++    sai_deserialize_object_id(j["switch_id"], global_trusted_vni_entry.switch_id);
++    sai_deserialize_range(j["vni_range"], global_trusted_vni_entry.vni_range);
++}
++
++void sai_deserialize_eni_trusted_vni_entry(
++        _In_ const std::string& s,
++        _Out_ sai_eni_trusted_vni_entry_t& eni_trusted_vni_entry)
++{
++    SWSS_LOG_ENTER();
++
++    json j = json::parse(s);
++
++    sai_deserialize_object_id(j["switch_id"], eni_trusted_vni_entry.switch_id);
++    sai_deserialize_object_id(j["eni_id"], eni_trusted_vni_entry.eni_id);
++    sai_deserialize_range(j["vni_range"], eni_trusted_vni_entry.vni_range);
++}
++
+ void sai_deserialize_twamp_session_stats_data(
+         _In_ const std::string& s,
+         _Out_ sai_twamp_session_stats_data_t &twamp_session_stats_data)
+@@ -4918,6 +5052,10 @@ bool sai_deserialize_object_entry(
+             sai_deserialize_mcast_fdb_entry(object_id, meta_key.objectkey.key.mcast_fdb_entry);
+             return true;
+ 
++        case SAI_OBJECT_TYPE_PREFIX_COMPRESSION_ENTRY:
++            sai_deserialize_prefix_compression_entry(object_id, meta_key.objectkey.key.prefix_compression_entry);
++            return true;
++
+         default:
+             return false;
+     }
+@@ -4967,6 +5105,18 @@ bool sai_deserialize_object_extension_entry(
+             sai_deserialize_meter_bucket_entry(object_id, meta_key.objectkey.key.meter_bucket_entry);
+             return true;
+ 
++        case SAI_OBJECT_TYPE_OUTBOUND_PORT_MAP_PORT_RANGE_ENTRY:
++            sai_deserialize_outbound_port_map_port_range_entry(object_id, meta_key.objectkey.key.outbound_port_map_port_range_entry);
++            return true;
++
++        case SAI_OBJECT_TYPE_GLOBAL_TRUSTED_VNI_ENTRY:
++            sai_deserialize_global_trusted_vni_entry(object_id, meta_key.objectkey.key.global_trusted_vni_entry);
++            return true;
++
++        case SAI_OBJECT_TYPE_ENI_TRUSTED_VNI_ENTRY:
++            sai_deserialize_eni_trusted_vni_entry(object_id, meta_key.objectkey.key.eni_trusted_vni_entry);
++            return true;
++
+         default:
+             return false;
+     }
+diff --git a/meta/sai_serialize.h b/meta/sai_serialize.h
+index 5e9c95e7..3787d0f4 100644
+--- a/meta/sai_serialize.h
++++ b/meta/sai_serialize.h
+@@ -72,15 +72,30 @@ std::string sai_serialize_fdb_entry(
+ std::string sai_serialize_meter_bucket_entry(
+         _In_ const sai_meter_bucket_entry_t &meter_bucket_entry);
+ 
++std::string sai_serialize_prefix_compression_entry(
++        _In_ const sai_prefix_compression_entry_t &prefix_compression_entry);
++
+ std::string sai_serialize_flow_entry(
+         _In_ const sai_flow_entry_t &flow_entry);
+ 
++std::string sai_serialize_outbound_port_map_port_range_entry(
++        _In_ const sai_outbound_port_map_port_range_entry_t &outbound_port_map_port_range_entry);
++
++std::string sai_serialize_global_trusted_vni_entry(
++        _In_ const sai_global_trusted_vni_entry_t &global_trusted_vni_entry);
++
++std::string sai_serialize_eni_trusted_vni_entry(
++        _In_ const sai_eni_trusted_vni_entry_t &eni_trusted_vni_entry);
++
+ std::string sai_serialize_vlan_id(
+         _In_ const sai_vlan_id_t vlan_id);
+ 
+ std::string sai_serialize_object_type(
+         _In_ const sai_object_type_t object_type);
+ 
++std::string sai_serialize_switch_type(
++        _In_ const sai_switch_type_t switch_type);
++
+ std::string sai_serialize_object_id(
+         _In_ const sai_object_id_t object_id);
+ 
+@@ -446,10 +461,26 @@ void sai_deserialize_meter_bucket_entry(
+         _In_ const std::string& s,
+         _Out_ sai_meter_bucket_entry_t& meter_bucket_entry);
+ 
++void sai_deserialize_prefix_compression_entry(
++        _In_ const std::string& s,
++        _Out_ sai_prefix_compression_entry_t& prefix_compression_entry);
++
+ void sai_deserialize_flow_entry(
+         _In_ const std::string& s,
+         _Out_ sai_flow_entry_t &flow_entry);
+ 
++void sai_deserialize_outbound_port_map_port_range_entry(
++        _In_ const std::string& s,
++        _Out_ sai_outbound_port_map_port_range_entry_t &outbound_port_map_port_range_entry);
++
++void sai_deserialize_global_trusted_vni_entry(
++        _In_ const std::string& s,
++        _Out_ sai_global_trusted_vni_entry_t &global_trusted_vni_entry);
++
++void sai_deserialize_eni_trusted_vni_entry(
++        _In_ const std::string& s,
++        _Out_ sai_eni_trusted_vni_entry_t &eni_trusted_vni_entry);
++
+ void sai_deserialize_vlan_id(
+         _In_ const std::string& s,
+         _In_ sai_vlan_id_t& vlan_id);
+diff --git a/saiplayer/SaiPlayer.cpp b/saiplayer/SaiPlayer.cpp
+index 700fb25b..31255ddd 100644
+--- a/saiplayer/SaiPlayer.cpp
++++ b/saiplayer/SaiPlayer.cpp
+@@ -608,6 +608,41 @@ sai_status_t SaiPlayer::handle_fdb(
+     return SAI_STATUS_SUCCESS;
+ }
+ 
++sai_status_t SaiPlayer::handle_l2mc(
++        _In_ const std::string &str_object_id,
++        _In_ sai_common_api_t api,
++        _In_ uint32_t attr_count,
++        _In_ sai_attribute_t *attr_list)
++{
++    SWSS_LOG_ENTER();
++
++    sai_l2mc_entry_t l2mc_entry;
++    sai_deserialize_l2mc_entry(str_object_id, l2mc_entry);
++
++    l2mc_entry.switch_id = translate_local_to_redis(l2mc_entry.switch_id);
++    l2mc_entry.bv_id = translate_local_to_redis(l2mc_entry.bv_id);
++
++    switch (api)
++    {
++        case SAI_COMMON_API_CREATE:
++            return m_sai->create(&l2mc_entry, attr_count, attr_list);
++
++        case SAI_COMMON_API_REMOVE:
++            return m_sai->remove(&l2mc_entry);
++
++        case SAI_COMMON_API_SET:
++            return m_sai->set(&l2mc_entry, attr_list);
++
++        case SAI_COMMON_API_GET:
++            return m_sai->get(&l2mc_entry, attr_count, attr_list);
++
++        default:
++            SWSS_LOG_THROW("l2mc other apis not implemented");
++    }
++
++    return SAI_STATUS_SUCCESS;
++}
++
+ sai_status_t SaiPlayer::handle_neighbor(
+         _In_ const std::string &str_object_id,
+         _In_ sai_common_api_t api,
+@@ -934,6 +969,104 @@ sai_status_t SaiPlayer::handle_dash_outbound_ca_to_pa(
+     }
+ }
+ 
++sai_status_t SaiPlayer::handle_dash_outbound_port_map_port_range(
++        _In_ const std::string &str_object_id,
++        _In_ sai_common_api_t api,
++        _In_ uint32_t attr_count,
++        _In_ sai_attribute_t *attr_list)
++{
++    SWSS_LOG_ENTER();
++
++    sai_outbound_port_map_port_range_entry_t entry;
++    sai_deserialize_outbound_port_map_port_range_entry(str_object_id, entry);
++
++    entry.switch_id = translate_local_to_redis(entry.switch_id);
++    entry.outbound_port_map_id = translate_local_to_redis(entry.outbound_port_map_id);
++
++    switch (api)
++    {
++        case SAI_COMMON_API_CREATE:
++            return m_sai->create(&entry, attr_count, attr_list);
++
++        case SAI_COMMON_API_REMOVE:
++            return m_sai->remove(&entry);
++
++        case SAI_COMMON_API_SET:
++            return m_sai->set(&entry, attr_list);
++
++        case SAI_COMMON_API_GET:
++            return m_sai->get(&entry, attr_count, attr_list);
++
++        default:
++            SWSS_LOG_THROW("DASH outbound_port_map_port_range other apis not implemented");
++    }
++}
++
++sai_status_t SaiPlayer::handle_dash_global_trusted_vni(
++        _In_ const std::string &str_object_id,
++        _In_ sai_common_api_t api,
++        _In_ uint32_t attr_count,
++        _In_ sai_attribute_t *attr_list)
++{
++    SWSS_LOG_ENTER();
++
++    sai_global_trusted_vni_entry_t entry;
++    sai_deserialize_global_trusted_vni_entry(str_object_id, entry);
++
++    entry.switch_id = translate_local_to_redis(entry.switch_id);
++
++    switch (api)
++    {
++        case SAI_COMMON_API_CREATE:
++            return m_sai->create(&entry, attr_count, attr_list);
++
++        case SAI_COMMON_API_REMOVE:
++            return m_sai->remove(&entry);
++
++        case SAI_COMMON_API_SET:
++            return m_sai->set(&entry, attr_list);
++
++        case SAI_COMMON_API_GET:
++            return m_sai->get(&entry, attr_count, attr_list);
++
++        default:
++            SWSS_LOG_THROW("DASH global_trusted_vni other apis not implemented");
++    }
++}
++
++sai_status_t SaiPlayer::handle_dash_eni_trusted_vni(
++        _In_ const std::string &str_object_id,
++        _In_ sai_common_api_t api,
++        _In_ uint32_t attr_count,
++        _In_ sai_attribute_t *attr_list)
++{
++    SWSS_LOG_ENTER();
++
++    sai_eni_trusted_vni_entry_t entry;
++    sai_deserialize_eni_trusted_vni_entry(str_object_id, entry);
++
++    entry.switch_id = translate_local_to_redis(entry.switch_id);
++    entry.eni_id = translate_local_to_redis(entry.eni_id);
++
++    switch (api)
++    {
++        case SAI_COMMON_API_CREATE:
++            return m_sai->create(&entry, attr_count, attr_list);
++
++        case SAI_COMMON_API_REMOVE:
++            return m_sai->remove(&entry);
++
++        case SAI_COMMON_API_SET:
++            return m_sai->set(&entry, attr_list);
++
++        case SAI_COMMON_API_GET:
++            return m_sai->get(&entry, attr_count, attr_list);
++
++        default:
++            SWSS_LOG_THROW("DASH ENI_TRUSTED_VNI_ENTRY other APIs not implemented");
++    }
++}
++
+ void SaiPlayer::update_notifications_pointers(
+         _In_ uint32_t attr_count,
+         _Inout_ sai_attribute_t *attr_list)
+@@ -1687,6 +1820,27 @@ sai_status_t SaiPlayer::handle_bulk_entry(
+             }
+             break;
+ 
++            // TODO: Uncomment when SAI bulk API will be implemented for L2MC
++            /*
++            case SAI_OBJECT_TYPE_L2MC_ENTRY:
++            {
++
++                std::vector<sai_l2mc_entry_t> entries(object_count);
++
++                for (size_t it = 0; it < object_count; it++)
++                {
++                    sai_deserialize_l2mc_entry(object_ids[it], entries[it]);
++
++                    entries[it].switch_id = translate_local_to_redis(entries[it].switch_id);
++                    entries[it].bv_id = translate_local_to_redis(entries[it].bv_id);
++                }
++
++                CALL_BULK_CREATE_API_WITH_TIMER("l2mc_entry");
++
++            }
++            break;
++            */
++
+             case SAI_OBJECT_TYPE_NAT_ENTRY:
+             {
+ 
+@@ -1821,6 +1975,56 @@ sai_status_t SaiPlayer::handle_bulk_entry(
+             }
+             break;
+ 
++            case SAI_OBJECT_TYPE_OUTBOUND_PORT_MAP_PORT_RANGE_ENTRY:
++            {
++                std::vector<sai_outbound_port_map_port_range_entry_t> entries(object_count);
++
++                for (uint32_t it = 0; it < object_count; it++)
++                {
++                    sai_deserialize_outbound_port_map_port_range_entry(object_ids[it], entries[it]);
++
++                    entries[it].switch_id = translate_local_to_redis(entries[it].switch_id);
++                    entries[it].outbound_port_map_id = translate_local_to_redis(entries[it].outbound_port_map_id);
++                }
++
++                CALL_BULK_CREATE_API_WITH_TIMER("outbound_port_map_port_range_entry");
++
++            }
++            break;
++
++            case SAI_OBJECT_TYPE_GLOBAL_TRUSTED_VNI_ENTRY:
++            {
++                std::vector<sai_global_trusted_vni_entry_t> entries(object_count);
++
++                for (uint32_t it = 0; it < object_count; it++)
++                {
++                    sai_deserialize_global_trusted_vni_entry(object_ids[it], entries[it]);
++
++                    entries[it].switch_id = translate_local_to_redis(entries[it].switch_id);
++                }
++
++                CALL_BULK_CREATE_API_WITH_TIMER("global_trusted_vni_entry");
++
++            }
++            break;
++
++            case SAI_OBJECT_TYPE_ENI_TRUSTED_VNI_ENTRY:
++            {
++                std::vector<sai_eni_trusted_vni_entry_t> entries(object_count);
++
++                for (uint32_t it = 0; it < object_count; it++)
++                {
++                    sai_deserialize_eni_trusted_vni_entry(object_ids[it], entries[it]);
++
++                    entries[it].switch_id = translate_local_to_redis(entries[it].switch_id);
++                    entries[it].eni_id = translate_local_to_redis(entries[it].eni_id);
++                }
++
++                CALL_BULK_CREATE_API_WITH_TIMER("eni_trusted_vni_entry");
++
++            }
++            break;
++
+             default:
+                 SWSS_LOG_THROW("api %s is not supported in bulk", sai_serialize_common_api(api).c_str());
+         }
+@@ -1882,6 +2086,27 @@ sai_status_t SaiPlayer::handle_bulk_entry(
+             }
+             break;
+ 
++            // TODO: Uncomment when SAI bulk API will be implemented for L2MC
++            /*
++            case SAI_OBJECT_TYPE_L2MC_ENTRY:
++            {
++
++                std::vector<sai_l2mc_entry_t> entries(object_count);
++
++                for (size_t it = 0; it < object_count; it++)
++                {
++                    sai_deserialize_l2mc_entry(object_ids[it], entries[it]);
++
++                    entries[it].switch_id = translate_local_to_redis(entries[it].switch_id);
++                    entries[it].bv_id = translate_local_to_redis(entries[it].bv_id);
++                }
++
++                CALL_BULK_REMOVE_API_WITH_TIMER("l2mc_entry");
++
++            }
++            break;
++            */
++
+             case SAI_OBJECT_TYPE_NAT_ENTRY:
+             {
+ 
+@@ -2016,6 +2241,56 @@ sai_status_t SaiPlayer::handle_bulk_entry(
+             }
+             break;
+ 
++            case SAI_OBJECT_TYPE_OUTBOUND_PORT_MAP_PORT_RANGE_ENTRY:
++            {
++                std::vector<sai_outbound_port_map_port_range_entry_t> entries(object_count);
++
++                for (uint32_t it = 0; it < object_count; it++)
++                {
++                    sai_deserialize_outbound_port_map_port_range_entry(object_ids[it], entries[it]);
++
++                    entries[it].switch_id = translate_local_to_redis(entries[it].switch_id);
++                    entries[it].outbound_port_map_id = translate_local_to_redis(entries[it].outbound_port_map_id);
++                }
++
++                CALL_BULK_REMOVE_API_WITH_TIMER("outbound_port_map_port_range_entry");
++
++            }
++            break;
++
++            case SAI_OBJECT_TYPE_GLOBAL_TRUSTED_VNI_ENTRY:
++            {
++                std::vector<sai_global_trusted_vni_entry_t> entries(object_count);
++
++                for (uint32_t it = 0; it < object_count; it++)
++                {
++                    sai_deserialize_global_trusted_vni_entry(object_ids[it], entries[it]);
++
++                    entries[it].switch_id = translate_local_to_redis(entries[it].switch_id);
++                }
++
++                CALL_BULK_REMOVE_API_WITH_TIMER("global_trusted_vni_entry");
++
++            }
++            break;
++
++            case SAI_OBJECT_TYPE_ENI_TRUSTED_VNI_ENTRY:
++            {
++                std::vector<sai_eni_trusted_vni_entry_t> entries(object_count);
++
++                for (uint32_t it = 0; it < object_count; it++)
++                {
++                    sai_deserialize_eni_trusted_vni_entry(object_ids[it], entries[it]);
++
++                    entries[it].switch_id = translate_local_to_redis(entries[it].switch_id);
++                    entries[it].eni_id = translate_local_to_redis(entries[it].eni_id);
++                }
++
++                CALL_BULK_REMOVE_API_WITH_TIMER("eni_trusted_vni_entry");
++
++            }
++            break;
++
+             default:
+                 SWSS_LOG_THROW("api %s is not supported in bulk", sai_serialize_common_api(api).c_str());
+ 
+@@ -2084,6 +2359,27 @@ sai_status_t SaiPlayer::handle_bulk_entry(
+             }
+             break;
+ 
++            // TODO: Uncomment when SAI bulk API will be implemented for L2MC
++            /*
++            case SAI_OBJECT_TYPE_L2MC_ENTRY:
++            {
++
++                std::vector<sai_l2mc_entry_t> entries(object_count);
++
++                for (size_t it = 0; it < object_count; it++)
++                {
++                    sai_deserialize_l2mc_entry(object_ids[it], entries[it]);
++
++                    entries[it].switch_id = translate_local_to_redis(entries[it].switch_id);
++                    entries[it].bv_id = translate_local_to_redis(entries[it].bv_id);
++                }
++
++                CALL_BULK_SET_API_WITH_TIMER("l2mc_entry");
++
++            }
++            break;
++            */
++
+             case SAI_OBJECT_TYPE_NAT_ENTRY:
+             {
+ 
+@@ -2218,6 +2514,56 @@ sai_status_t SaiPlayer::handle_bulk_entry(
+             }
+             break;
+ 
++            case SAI_OBJECT_TYPE_OUTBOUND_PORT_MAP_PORT_RANGE_ENTRY:
++            {
++                std::vector<sai_outbound_port_map_port_range_entry_t> entries(object_count);
++
++                for (uint32_t it = 0; it < object_count; it++)
++                {
++                    sai_deserialize_outbound_port_map_port_range_entry(object_ids[it], entries[it]);
++
++                    entries[it].switch_id = translate_local_to_redis(entries[it].switch_id);
++                    entries[it].outbound_port_map_id = translate_local_to_redis(entries[it].outbound_port_map_id);
++                }
++
++                CALL_BULK_SET_API_WITH_TIMER("outbound_port_map_port_range_entry");
++
++            }
++            break;
++
++            case SAI_OBJECT_TYPE_GLOBAL_TRUSTED_VNI_ENTRY:
++            {
++                std::vector<sai_global_trusted_vni_entry_t> entries(object_count);
++
++                for (uint32_t it = 0; it < object_count; it++)
++                {
++                    sai_deserialize_global_trusted_vni_entry(object_ids[it], entries[it]);
++
++                    entries[it].switch_id = translate_local_to_redis(entries[it].switch_id);
++                }
++
++                CALL_BULK_SET_API_WITH_TIMER("global_trusted_vni_entry");
++
++            }
++            break;
++
++            case SAI_OBJECT_TYPE_ENI_TRUSTED_VNI_ENTRY:
++            {
++                std::vector<sai_eni_trusted_vni_entry_t> entries(object_count);
++
++                for (uint32_t it = 0; it < object_count; it++)
++                {
++                    sai_deserialize_eni_trusted_vni_entry(object_ids[it], entries[it]);
++
++                    entries[it].switch_id = translate_local_to_redis(entries[it].switch_id);
++                    entries[it].eni_id = translate_local_to_redis(entries[it].eni_id);
++                }
++
++                CALL_BULK_SET_API_WITH_TIMER("eni_trusted_vni_entry");
++
++            }
++            break;
++
+             default:
+                 SWSS_LOG_THROW("api %s is not supported in bulk", sai_serialize_common_api(api).c_str());
+         }
+@@ -2459,6 +2805,7 @@ void SaiPlayer::processBulk(
+         case SAI_OBJECT_TYPE_ROUTE_ENTRY:
+         case SAI_OBJECT_TYPE_NEIGHBOR_ENTRY:
+         case SAI_OBJECT_TYPE_FDB_ENTRY:
++        case SAI_OBJECT_TYPE_L2MC_ENTRY:
+         case SAI_OBJECT_TYPE_NAT_ENTRY:
+         case SAI_OBJECT_TYPE_DIRECTION_LOOKUP_ENTRY:
+         case SAI_OBJECT_TYPE_ENI_ETHER_ADDRESS_MAP_ENTRY:
+@@ -2467,6 +2814,9 @@ void SaiPlayer::processBulk(
+         case SAI_OBJECT_TYPE_PA_VALIDATION_ENTRY:
+         case SAI_OBJECT_TYPE_OUTBOUND_ROUTING_ENTRY:
+         case SAI_OBJECT_TYPE_OUTBOUND_CA_TO_PA_ENTRY:
++        case SAI_OBJECT_TYPE_OUTBOUND_PORT_MAP_PORT_RANGE_ENTRY:
++        case SAI_OBJECT_TYPE_GLOBAL_TRUSTED_VNI_ENTRY:
++        case SAI_OBJECT_TYPE_ENI_TRUSTED_VNI_ENTRY:
+             status = handle_bulk_entry(object_ids, object_type, api, attributes, statuses);
+             break;
+ 
+@@ -2697,6 +3047,18 @@ int SaiPlayer::replay()
+                 status = handle_dash_outbound_ca_to_pa(str_object_id, api, attr_count, attr_list);
+                 break;
+ 
++            case SAI_OBJECT_TYPE_OUTBOUND_PORT_MAP_PORT_RANGE_ENTRY:
++                status = handle_dash_outbound_port_map_port_range(str_object_id, api, attr_count, attr_list);
++                break;
++
++            case SAI_OBJECT_TYPE_GLOBAL_TRUSTED_VNI_ENTRY:
++                status = handle_dash_global_trusted_vni(str_object_id, api, attr_count, attr_list);
++                break;
++
++            case SAI_OBJECT_TYPE_ENI_TRUSTED_VNI_ENTRY:
++                status = handle_dash_eni_trusted_vni(str_object_id, api, attr_count, attr_list);
++                break;
++
+             default:
+ 
+                 if (info->isnonobjectid)
+diff --git a/saiplayer/SaiPlayer.h b/saiplayer/SaiPlayer.h
+index b8adc10f..ba86c396 100644
+--- a/saiplayer/SaiPlayer.h
++++ b/saiplayer/SaiPlayer.h
+@@ -117,6 +117,12 @@ namespace saiplayer
+                     _In_ uint32_t attr_count,
+                     _In_ sai_attribute_t *attr_list);
+ 
++            sai_status_t handle_l2mc(
++                    _In_ const std::string &str_object_id,
++                    _In_ sai_common_api_t api,
++                    _In_ uint32_t attr_count,
++                    _In_ sai_attribute_t *attr_list);
++
+             sai_status_t handle_inseg(
+                     _In_ const std::string &str_object_id,
+                     _In_ sai_common_api_t api,
+@@ -165,6 +171,24 @@ namespace saiplayer
+                     _In_ uint32_t attr_count,
+                     _In_ sai_attribute_t *attr_list);
+ 
++            sai_status_t handle_dash_outbound_port_map_port_range(
++                    _In_ const std::string &str_object_id,
++                    _In_ sai_common_api_t api,
++                    _In_ uint32_t attr_count,
++                    _In_ sai_attribute_t *attr_list);
++
++            sai_status_t handle_dash_global_trusted_vni(
++                    _In_ const std::string &str_object_id,
++                    _In_ sai_common_api_t api,
++                    _In_ uint32_t attr_count,
++                    _In_ sai_attribute_t *attr_list);
++
++            sai_status_t handle_dash_eni_trusted_vni(
++                    _In_ const std::string &str_object_id,
++                    _In_ sai_common_api_t api,
++                    _In_ uint32_t attr_count,
++                    _In_ sai_attribute_t *attr_list);
++
+             void match_redis_with_rec(
+                     _In_ sai_object_type_t object_type,
+                     _In_ uint32_t get_attr_count,
+diff --git a/stub.pl b/stub.pl
+index 237c6292..26ebec9c 100755
+--- a/stub.pl
++++ b/stub.pl
+@@ -105,7 +105,7 @@ sub GetData
+ sub SanitizeData
+ {
+     $DATA =~ s/SAI_OBJECT_TYPE_\w*(START|END|NULL|MAX)//gms;
+-    $DATA =~ s/SAI_API_\w*(START|END|UNSPECIFIED|MAX|EXTENSIONS_RANGE_BASE)//gms;
++    $DATA =~ s/SAI_API_\w*(START|END|UNSPECIFIED|MAX|EXTENSIONS_RANGE_BASE|CUSTOM_RANGE_BASE)//gms;
+ }
+ 
+ sub ExtractData
+@@ -378,7 +378,7 @@ sub CreateGlobalApis
+         Write "    SWSS_LOG_ENTER();";
+         Write "";
+ 
+-        if ($fun =~ /(bulkObjectClearStats|bulkObjectGetStats|dbgGenerateDump|getMaximumAttributeCount|getObjectKey|bulkGetAttribute|dbgGenerateDump|tamTelemetryGetData|getObjectCount|queryObjectStage)/)
++        if ($fun =~ /(bulkObjectClearStats|bulkObjectGetStats|dbgGenerateDump|getMaximumAttributeCount|getObjectKey|bulkGetAttribute|dbgGenerateDump|tamTelemetryGetData|getObjectCount|queryObjectStage|queryStatsStCapability)/)
+         {
+             Write "    SWSS_LOG_ERROR(\"FIXME, no implementation for $fun!\");";
+             Write "    return SAI_STATUS_NOT_IMPLEMENTED;";
+diff --git a/syncd/AsicView.cpp b/syncd/AsicView.cpp
+index 43c06ffd..c937fc3a 100644
+--- a/syncd/AsicView.cpp
++++ b/syncd/AsicView.cpp
+@@ -91,6 +91,11 @@ void AsicView::fromDump(
+                 m_soFdbs[o->m_str_object_id] = o;
+                 break;
+ 
++            case SAI_OBJECT_TYPE_L2MC_ENTRY:
++                sai_deserialize_l2mc_entry(o->m_str_object_id, o->m_meta_key.objectkey.key.l2mc_entry);
++                m_soL2mcs[o->m_str_object_id] = o;
++                break;
++
+             case SAI_OBJECT_TYPE_NEIGHBOR_ENTRY:
+                 sai_deserialize_neighbor_entry(o->m_str_object_id, o->m_meta_key.objectkey.key.neighbor_entry);
+                 m_soNeighbors[o->m_str_object_id] = o;
+@@ -692,6 +697,11 @@ void AsicView::asicCreateObject(
+                 m_soFdbs[currentObj->m_str_object_id] = currentObj;
+                 break;
+ 
++            case SAI_OBJECT_TYPE_L2MC_ENTRY:
++                //sai_deserialize_l2mc_entry(currentObj->m_str_object_id, currentObj->m_meta_key.objectkey.key.l2mc_entry);
++                m_soL2mcs[currentObj->m_str_object_id] = currentObj;
++                break;
++
+             case SAI_OBJECT_TYPE_NEIGHBOR_ENTRY:
+                 //sai_deserialize_neighbor_entry(currentObj->m_str_object_id, currentObj->m_meta_key.objectkey.key.neighbor_entry);
+                 m_soNeighbors[currentObj->m_str_object_id] = currentObj;
+@@ -842,6 +852,10 @@ void AsicView::asicRemoveObject(
+                 m_soFdbs.erase(currentObj->m_str_object_id);
+                 break;
+ 
++            case SAI_OBJECT_TYPE_L2MC_ENTRY:
++                m_soL2mcs.erase(currentObj->m_str_object_id);
++                break;
++
+             case SAI_OBJECT_TYPE_NEIGHBOR_ENTRY:
+                 m_soNeighbors.erase(currentObj->m_str_object_id);
+                 break;
+diff --git a/syncd/AsicView.h b/syncd/AsicView.h
+index ce797581..01a782dd 100644
+--- a/syncd/AsicView.h
++++ b/syncd/AsicView.h
+@@ -273,6 +273,7 @@ namespace syncd
+             // TODO convert to something like nonObjectIdMap
+ 
+             StrObjectIdToSaiObjectHash m_soFdbs;
++            StrObjectIdToSaiObjectHash m_soL2mcs;
+             StrObjectIdToSaiObjectHash m_soNeighbors;
+             StrObjectIdToSaiObjectHash m_soRoutes;
+             StrObjectIdToSaiObjectHash m_soNatEntries;
+diff --git a/syncd/BestCandidateFinder.cpp b/syncd/BestCandidateFinder.cpp
+index 1ff05c35..eabd8797 100644
+--- a/syncd/BestCandidateFinder.cpp
++++ b/syncd/BestCandidateFinder.cpp
+@@ -2354,6 +2354,86 @@ std::shared_ptr<SaiObj> BestCandidateFinder::findCurrentBestMatchForFdbEntry(
+             currentFdbObj->getObjectStatus());
+ }
+ 
++/**
++ * @brief Find current best match for L2MC.
++ *
++ * For L2MC we don't need to iterate via all current L2MCs, we can do dictionary
++ * lookup, but we need to do smart trick, since temporary object was processed
++ * we just need to check whether VID in l2mc_entry struct is matched/final and
++ * it has RID assigned from current view. If, RID exists, we can use that RID
++ * to get VID of current view, exchange in l2mc_entry struct and do dictionary
++ * lookup on serialized l2mc_entry.
++ *
++ * With this approach for many entries this is the quickest possible way. In
++ * case when RID doesn't exist, that means we have invalid l2mc entry, so we must
++ * return null.
++ *
++ * @param m_currentView Current view.
++ * @param m_temporaryView Temporary view.
++ * @param temporaryObj Temporary object.
++ *
++ * @return Best match object if found or nullptr.
++ */
++std::shared_ptr<SaiObj> BestCandidateFinder::findCurrentBestMatchForL2mcEntry(
++        _In_ const std::shared_ptr<const SaiObj> &temporaryObj)
++{
++    SWSS_LOG_ENTER();
++
++    /*
++     * Make a copy here to not destroy object data, later
++     * on this data should be read only.
++     */
++
++    sai_object_meta_key_t mk = temporaryObj->m_meta_key;
++
++    if (!exchangeTemporaryVidToCurrentVid(mk))
++    {
++        /*
++         * Not all oids inside struct object were translated, so there is no
++         * matching object in current view, we need to return null.
++         */
++
++        return nullptr;
++    }
++
++    std::string str_l2mc_entry = sai_serialize_l2mc_entry(mk.objectkey.key.l2mc_entry);
++
++    /*
++     * Now when we have serialized l2mc entry with temporary VIDs
++     * replaced to current VIDs we can do dictionary lookup for l2mc.
++     */
++
++    auto currentL2mcIt = m_currentView.m_soL2mcs.find(str_l2mc_entry);
++
++    if (currentL2mcIt == m_currentView.m_soL2mcs.end())
++    {
++        SWSS_LOG_DEBUG("unable to find l2mc entry %s in current asic view", str_l2mc_entry.c_str());
++
++        return nullptr;
++    }
++
++    /*
++     * We found the same l2mc entry in current view! Just one extra check
++     * of object status if it's not processed yet.
++     */
++
++    auto currentL2mcObj = currentL2mcIt->second;
++
++    if (currentL2mcObj->getObjectStatus() == SAI_OBJECT_STATUS_NOT_PROCESSED)
++    {
++        return currentL2mcObj;
++    }
++
++    /*
++     * If we are here, that means this l2mc was already processed, which
++     * can indicate a bug or somehow duplicated entries.
++     */
++
++    SWSS_LOG_THROW("found l2mc entry %s in current view, but it status is %d, FATAL",
++            str_l2mc_entry.c_str(),
++            currentL2mcObj->getObjectStatus());
++}
++
+ std::shared_ptr<SaiObj> BestCandidateFinder::findCurrentBestMatchForSwitch(
+         _In_ const std::shared_ptr<const SaiObj> &temporaryObj)
+ {
+@@ -2511,6 +2591,9 @@ std::shared_ptr<SaiObj> BestCandidateFinder::findCurrentBestMatch(
+         case SAI_OBJECT_TYPE_FDB_ENTRY:
+             return findCurrentBestMatchForFdbEntry(temporaryObj);
+ 
++        case SAI_OBJECT_TYPE_L2MC_ENTRY:
++            return findCurrentBestMatchForL2mcEntry(temporaryObj);
++
+         case SAI_OBJECT_TYPE_NAT_ENTRY:
+             return findCurrentBestMatchForNatEntry(temporaryObj);
+ 
+diff --git a/syncd/BestCandidateFinder.h b/syncd/BestCandidateFinder.h
+index e1d8cd59..87466596 100644
+--- a/syncd/BestCandidateFinder.h
++++ b/syncd/BestCandidateFinder.h
+@@ -123,6 +123,9 @@ namespace syncd
+             std::shared_ptr<SaiObj> findCurrentBestMatchForFdbEntry(
+                     _In_ const std::shared_ptr<const SaiObj> &temporaryObj);
+ 
++            std::shared_ptr<SaiObj> findCurrentBestMatchForL2mcEntry(
++                    _In_ const std::shared_ptr<const SaiObj> &temporaryObj);
++
+             std::shared_ptr<SaiObj> findCurrentBestMatchForSwitch(
+                     _In_ const std::shared_ptr<const SaiObj> &temporaryObj);
+ 
+diff --git a/syncd/ComparisonLogic.cpp b/syncd/ComparisonLogic.cpp
+index 95962559..6225f7b3 100644
+--- a/syncd/ComparisonLogic.cpp
++++ b/syncd/ComparisonLogic.cpp
+@@ -998,6 +998,10 @@ void ComparisonLogic::createNewObjectFromTemporaryObject(
+                 currentObj->m_str_object_id = sai_serialize_fdb_entry(currentObj->m_meta_key.objectkey.key.fdb_entry);
+                 break;
+ 
++            case SAI_OBJECT_TYPE_L2MC_ENTRY:
++                currentObj->m_str_object_id = sai_serialize_l2mc_entry(currentObj->m_meta_key.objectkey.key.l2mc_entry);
++                break;
++
+             case SAI_OBJECT_TYPE_NAT_ENTRY:
+                 currentObj->m_str_object_id = sai_serialize_nat_entry(currentObj->m_meta_key.objectkey.key.nat_entry);
+                 break;
+diff --git a/syncd/NotificationHandler.cpp b/syncd/NotificationHandler.cpp
+index 2815d8e3..aeca77b7 100644
+--- a/syncd/NotificationHandler.cpp
++++ b/syncd/NotificationHandler.cpp
+@@ -78,6 +78,7 @@ void NotificationHandler::updateNotificationsPointers(
+      */
+ 
+     sai_metadata_update_attribute_notification_pointers(&m_switchNotifications, attr_count, attr_list);
++    
+ }
+ 
+ // TODO use same Notification class from sairedis lib
+diff --git a/syncd/SaiSwitch.cpp b/syncd/SaiSwitch.cpp
+index 2ad5a992..bb7ddb0e 100644
+--- a/syncd/SaiSwitch.cpp
++++ b/syncd/SaiSwitch.cpp
+@@ -169,24 +169,28 @@ void SaiSwitch::getVxlanDefaultRouterMacAddress(
+ sai_switch_type_t SaiSwitch::getSwitchType() const
+ {
+     SWSS_LOG_ENTER();
++    sai_switch_type_t switch_type;
+     sai_attribute_t attr;
+ 
+     attr.id = SAI_SWITCH_ATTR_TYPE;
+ 
+     sai_status_t status = m_vendorSai->get(SAI_OBJECT_TYPE_SWITCH, m_switch_rid, 1, &attr);
+-
+     if (status != SAI_STATUS_SUCCESS)
+     {
+         SWSS_LOG_WARN("failed to get switch type with status: %s, assume default SAI_SWITCH_TYPE_NPU",
+                 sai_serialize_status(status).c_str());
+ 
+         // Set to SAI_SWITCH_TYPE_NPU and move on
+-        attr.value.s32 = SAI_SWITCH_TYPE_NPU;
++        switch_type = SAI_SWITCH_TYPE_NPU;
++    }
++    else
++    {
++        switch_type = (sai_switch_type_t) attr.value.s32;
+     }
+ 
+-    SWSS_LOG_INFO("switch type: '%s'", (attr.value.s32 == SAI_SWITCH_TYPE_NPU ? "SAI_SWITCH_TYPE_NPU" : "SAI_SWITCH_TYPE_PHY"));
++    SWSS_LOG_INFO("switch type: '%s'", sai_serialize_switch_type(switch_type).c_str());
+ 
+-    return (sai_switch_type_t) attr.value.s32;
++    return switch_type;
+ }
+ 
+ #define MAX_HARDWARE_INFO_LENGTH 0x1000
+diff --git a/syncd/SingleReiniter.cpp b/syncd/SingleReiniter.cpp
+index f757ba51..d151027f 100644
+--- a/syncd/SingleReiniter.cpp
++++ b/syncd/SingleReiniter.cpp
+@@ -54,6 +54,7 @@ std::shared_ptr<SaiSwitch> SingleReiniter::hardReinit()
+ 
+     processSwitches();
+     processFdbs();
++    processL2mcs();
+     processNeighbors();
+     processOids();
+     processRoutes(true);
+@@ -118,6 +119,10 @@ void SingleReiniter::prepareAsicState()
+                 m_fdbs[strObjectId] = key;
+                 break;
+ 
++            case SAI_OBJECT_TYPE_L2MC_ENTRY:
++                m_l2mcs[strObjectId] = key;
++                break;
++
+             case SAI_OBJECT_TYPE_NEIGHBOR_ENTRY:
+                 m_neighbors[strObjectId] = key;
+                 break;
+@@ -390,6 +395,44 @@ void SingleReiniter::processFdbs()
+     }
+ }
+ 
++void SingleReiniter::processL2mcs()
++{
++    SWSS_LOG_ENTER();
++
++    for (auto &kv: m_l2mcs)
++    {
++        const std::string &strL2mcEntry = kv.first;
++        const std::string &asicKey = kv.second;
++
++        sai_object_meta_key_t meta_key;
++
++        meta_key.objecttype = SAI_OBJECT_TYPE_L2MC_ENTRY;
++
++        sai_deserialize_l2mc_entry(strL2mcEntry, meta_key.objectkey.key.l2mc_entry);
++
++        processStructNonObjectIds(meta_key);
++
++        std::shared_ptr<SaiAttributeList> list = m_attributesLists[asicKey];
++
++        sai_attribute_t *attrList = list->get_attr_list();
++
++        uint32_t attrCount = list->get_attr_count();
++
++        processAttributesForOids(SAI_OBJECT_TYPE_L2MC_ENTRY, attrCount, attrList);
++
++        sai_status_t status = m_vendorSai->create(&meta_key.objectkey.key.l2mc_entry, attrCount, attrList);
++
++        if (status != SAI_STATUS_SUCCESS)
++        {
++            listFailedAttributes(SAI_OBJECT_TYPE_L2MC_ENTRY, attrCount, attrList);
++
++            SWSS_LOG_THROW("failed to create_l2mc_entry %s: %s",
++                    strL2mcEntry.c_str(),
++                    sai_serialize_status(status).c_str());
++        }
++    }
++}
++
+ void SingleReiniter::processNeighbors()
+ {
+     SWSS_LOG_ENTER();
+diff --git a/syncd/SingleReiniter.h b/syncd/SingleReiniter.h
+index e33b26af..6a0e6e45 100644
+--- a/syncd/SingleReiniter.h
++++ b/syncd/SingleReiniter.h
+@@ -56,6 +56,8 @@ namespace syncd
+ 
+             void processFdbs();
+ 
++            void processL2mcs();
++
+             void processNeighbors();
+ 
+             void processOids();
+@@ -114,6 +116,7 @@ namespace syncd
+             StringHash m_oids;
+             StringHash m_switches;
+             StringHash m_fdbs;
++            StringHash m_l2mcs;
+             StringHash m_routes;
+             StringHash m_neighbors;
+             StringHash m_nats;
+diff --git a/syncd/SwitchNotifications.h b/syncd/SwitchNotifications.h
+index 6901855a..e46f99b8 100644
+--- a/syncd/SwitchNotifications.h
++++ b/syncd/SwitchNotifications.h
+@@ -119,8 +119,11 @@ namespace syncd
+                             .on_port_host_tx_ready = &Slot<context>::onPortHostTxReady,
+                             .on_twamp_session_event = &Slot<context>::onTwampSessionEvent,
+                             .on_icmp_echo_session_state_change = nullptr,
++                            .on_extended_port_state_change = nullptr,
++                            .on_tam_tel_type_config_change = nullptr,
+                             .on_ha_set_event = nullptr,
+                             .on_ha_scope_event = nullptr,
++
+                             }) { }
+ 
+                 virtual ~Slot() {}
+diff --git a/syncd/Syncd.cpp b/syncd/Syncd.cpp
+index 5afb9873..b1b0b0bc 100644
+--- a/syncd/Syncd.cpp
++++ b/syncd/Syncd.cpp
+@@ -1097,6 +1097,30 @@ sai_status_t Syncd::processBulkCreateEntry(
+         }
+         break;
+ 
++        // TODO: Uncomment when SAI bulk API will be implemented for L2MC
++        /*
++        case SAI_OBJECT_TYPE_L2MC_ENTRY:
++        {
++            std::vector<sai_l2mc_entry_t> entries(object_count);
++            for (uint32_t it = 0; it < object_count; it++)
++            {
++                sai_deserialize_l2mc_entry(objectIds[it], entries[it]);
++
++                entries[it].switch_id = m_translator->translateVidToRid(entries[it].switch_id);
++                entries[it].bv_id = m_translator->translateVidToRid(entries[it].bv_id);
++            }
++
++            status = m_vendorSai->bulkCreate(
++                    object_count,
++                    entries.data(),
++                    attr_counts.data(),
++                    attr_lists.data(),
++                    mode,
++                    statuses.data());
++        }
++        break;
++        */
++
+         case SAI_OBJECT_TYPE_NAT_ENTRY:
+         {
+             std::vector<sai_nat_entry_t> entries(object_count);
+@@ -1313,6 +1337,71 @@ sai_status_t Syncd::processBulkCreateEntry(
+         }
+         break;
+ 
++        case SAI_OBJECT_TYPE_OUTBOUND_PORT_MAP_PORT_RANGE_ENTRY:
++        {
++            std::vector<sai_outbound_port_map_port_range_entry_t> entries(object_count);
++
++            for (uint32_t it = 0; it < object_count; it++)
++            {
++                sai_deserialize_outbound_port_map_port_range_entry(objectIds[it], entries[it]);
++
++                entries[it].switch_id = m_translator->translateVidToRid(entries[it].switch_id);
++                entries[it].outbound_port_map_id = m_translator->translateVidToRid(entries[it].outbound_port_map_id);
++            }
++
++            status = m_vendorSai->bulkCreate(
++                    object_count,
++                    entries.data(),
++                    attr_counts.data(),
++                    attr_lists.data(),
++                    mode,
++                    statuses.data());
++        }
++        break;
++
++        case SAI_OBJECT_TYPE_GLOBAL_TRUSTED_VNI_ENTRY:
++        {
++            std::vector<sai_global_trusted_vni_entry_t> entries(object_count);
++
++            for (uint32_t it = 0; it < object_count; it++)
++            {
++                sai_deserialize_global_trusted_vni_entry(objectIds[it], entries[it]);
++
++                entries[it].switch_id = m_translator->translateVidToRid(entries[it].switch_id);
++            }
++
++            status = m_vendorSai->bulkCreate(
++                    object_count,
++                    entries.data(),
++                    attr_counts.data(),
++                    attr_lists.data(),
++                    mode,
++                    statuses.data());
++        }
++        break;
++
++        case SAI_OBJECT_TYPE_ENI_TRUSTED_VNI_ENTRY:
++        {
++            std::vector<sai_eni_trusted_vni_entry_t> entries(object_count);
++
++            for (uint32_t it = 0; it < object_count; it++)
++            {
++                sai_deserialize_eni_trusted_vni_entry(objectIds[it], entries[it]);
++
++                entries[it].switch_id = m_translator->translateVidToRid(entries[it].switch_id);
++                entries[it].eni_id = m_translator->translateVidToRid(entries[it].eni_id);
++            }
++
++            status = m_vendorSai->bulkCreate(
++                    object_count,
++                    entries.data(),
++                    attr_counts.data(),
++                    attr_lists.data(),
++                    mode,
++                    statuses.data());
++        }
++        break;
++
+         default:
+             return SAI_STATUS_NOT_SUPPORTED;
+     }
+@@ -1400,6 +1489,29 @@ sai_status_t Syncd::processBulkRemoveEntry(
+         }
+         break;
+ 
++        // TODO: Uncomment when SAI bulk API will be implemented for L2MC
++        /*
++        case SAI_OBJECT_TYPE_L2MC_ENTRY:
++        {
++            std::vector<sai_l2mc_entry_t> entries(object_count);
++            for (uint32_t it = 0; it < object_count; it++)
++            {
++                sai_deserialize_l2mc_entry(objectIds[it], entries[it]);
++
++                entries[it].switch_id = m_translator->translateVidToRid(entries[it].switch_id);
++                entries[it].bv_id = m_translator->translateVidToRid(entries[it].bv_id);
++            }
++
++            status = m_vendorSai->bulkRemove(
++                    object_count,
++                    entries.data(),
++                    mode,
++                    statuses.data());
++
++        }
++        break;
++        */
++
+         case SAI_OBJECT_TYPE_NAT_ENTRY:
+         {
+             std::vector<sai_nat_entry_t> entries(object_count);
+@@ -1596,6 +1708,65 @@ sai_status_t Syncd::processBulkRemoveEntry(
+         }
+         break;
+ 
++        case SAI_OBJECT_TYPE_OUTBOUND_PORT_MAP_PORT_RANGE_ENTRY:
++        {
++            std::vector<sai_outbound_port_map_port_range_entry_t> entries(object_count);
++            for (uint32_t it = 0; it < object_count; it++)
++            {
++                sai_deserialize_outbound_port_map_port_range_entry(objectIds[it], entries[it]);
++
++                entries[it].switch_id = m_translator->translateVidToRid(entries[it].switch_id);
++                entries[it].outbound_port_map_id = m_translator->translateVidToRid(entries[it].outbound_port_map_id);
++            }
++
++            status = m_vendorSai->bulkRemove(
++                    object_count,
++                    entries.data(),
++                    mode,
++                    statuses.data());
++
++        }
++        break;
++
++        case SAI_OBJECT_TYPE_GLOBAL_TRUSTED_VNI_ENTRY:
++        {
++            std::vector<sai_global_trusted_vni_entry_t> entries(object_count);
++            for (uint32_t it = 0; it < object_count; it++)
++            {
++                sai_deserialize_global_trusted_vni_entry(objectIds[it], entries[it]);
++
++                entries[it].switch_id = m_translator->translateVidToRid(entries[it].switch_id);
++            }
++
++            status = m_vendorSai->bulkRemove(
++                    object_count,
++                    entries.data(),
++                    mode,
++                    statuses.data());
++
++        }
++        break;
++
++        case SAI_OBJECT_TYPE_ENI_TRUSTED_VNI_ENTRY:
++        {
++            std::vector<sai_eni_trusted_vni_entry_t> entries(object_count);
++            for (uint32_t it = 0; it < object_count; it++)
++            {
++                sai_deserialize_eni_trusted_vni_entry(objectIds[it], entries[it]);
++
++                entries[it].switch_id = m_translator->translateVidToRid(entries[it].switch_id);
++                entries[it].eni_id = m_translator->translateVidToRid(entries[it].eni_id);
++            }
++
++            status = m_vendorSai->bulkRemove(
++                    object_count,
++                    entries.data(),
++                    mode,
++                    statuses.data());
++
++        }
++        break;
++
+         default:
+             return SAI_STATUS_NOT_SUPPORTED;
+     }
+@@ -1694,6 +1865,30 @@ sai_status_t Syncd::processBulkSetEntry(
+         }
+         break;
+ 
++        // TODO: Uncomment when SAI bulk API will be implemented for L2MC
++        /*
++        case SAI_OBJECT_TYPE_L2MC_ENTRY:
++        {
++            std::vector<sai_l2mc_entry_t> entries(object_count);
++            for (uint32_t it = 0; it < object_count; it++)
++            {
++                sai_deserialize_l2mc_entry(objectIds[it], entries[it]);
++
++                entries[it].switch_id = m_translator->translateVidToRid(entries[it].switch_id);
++                entries[it].bv_id = m_translator->translateVidToRid(entries[it].bv_id);
++            }
++
++            status = m_vendorSai->bulkSet(
++                    object_count,
++                    entries.data(),
++                    attr_lists.data(),
++                    mode,
++                    statuses.data());
++
++        }
++        break;
++        */
++
+         case SAI_OBJECT_TYPE_NAT_ENTRY:
+         {
+             std::vector<sai_nat_entry_t> entries(object_count);
+@@ -1841,6 +2036,10 @@ sai_status_t Syncd::processBulkEntry(
+                 sai_deserialize_fdb_entry(objectIds[idx], metaKey.objectkey.key.fdb_entry);
+                 break;
+ 
++            case SAI_OBJECT_TYPE_L2MC_ENTRY:
++                sai_deserialize_l2mc_entry(objectIds[idx], metaKey.objectkey.key.l2mc_entry);
++                break;
++
+             case SAI_OBJECT_TYPE_INSEG_ENTRY:
+                 sai_deserialize_inseg_entry(objectIds[idx], metaKey.objectkey.key.inseg_entry);
+                 break;
+@@ -1873,6 +2072,18 @@ sai_status_t Syncd::processBulkEntry(
+                 sai_deserialize_outbound_ca_to_pa_entry(objectIds[idx], metaKey.objectkey.key.outbound_ca_to_pa_entry);
+                 break;
+ 
++            case SAI_OBJECT_TYPE_OUTBOUND_PORT_MAP_PORT_RANGE_ENTRY:
++                sai_deserialize_outbound_port_map_port_range_entry(objectIds[idx], metaKey.objectkey.key.outbound_port_map_port_range_entry);
++                break;
++
++            case SAI_OBJECT_TYPE_GLOBAL_TRUSTED_VNI_ENTRY:
++                sai_deserialize_global_trusted_vni_entry(objectIds[idx], metaKey.objectkey.key.global_trusted_vni_entry);
++                break;
++
++            case SAI_OBJECT_TYPE_ENI_TRUSTED_VNI_ENTRY:
++                sai_deserialize_eni_trusted_vni_entry(objectIds[idx], metaKey.objectkey.key.eni_trusted_vni_entry);
++                break;
++
+             default:
+                 SWSS_LOG_THROW("object %s not implemented, FIXME", sai_serialize_object_type(objectType).c_str());
+         }
+diff --git a/syncd/VendorSai.cpp b/syncd/VendorSai.cpp
+index fd9f0662..60daa3d8 100644
+--- a/syncd/VendorSai.cpp
++++ b/syncd/VendorSai.cpp
+@@ -53,6 +53,7 @@ VendorSai::VendorSai()
+         .query_attribute_enum_values_capability = &sai_query_attribute_enum_values_capability,
+         .query_object_stage = nullptr,
+         .query_stats_capability = &sai_query_stats_capability,
++        .query_stats_st_capability = nullptr,
+         .switch_id_query = &sai_switch_id_query,
+         .tam_telemetry_get_data = nullptr,
+     };
+@@ -506,6 +507,22 @@ sai_status_t VendorSai::bulkCreate(
+             ptr = m_apis.dash_meter_api->create_meter_rules;
+             break;
+ 
++        case SAI_OBJECT_TYPE_DASH_TUNNEL:
++            ptr = m_apis.dash_tunnel_api->create_dash_tunnels;
++            break;
++
++        case SAI_OBJECT_TYPE_DASH_TUNNEL_MEMBER:
++            ptr = m_apis.dash_tunnel_api->create_dash_tunnel_members;
++            break;
++
++        case SAI_OBJECT_TYPE_DASH_TUNNEL_NEXT_HOP:
++            ptr = m_apis.dash_tunnel_api->create_dash_tunnel_next_hops;
++            break;
++
++        case SAI_OBJECT_TYPE_OUTBOUND_PORT_MAP:
++            ptr = m_apis.dash_outbound_port_map_api->create_outbound_port_maps;
++            break;
++
+         default:
+             SWSS_LOG_ERROR("not implemented %s, FIXME", sai_serialize_object_type(object_type).c_str());
+             return SAI_STATUS_NOT_IMPLEMENTED;
+@@ -593,6 +610,22 @@ sai_status_t VendorSai::bulkRemove(
+             ptr = m_apis.dash_meter_api->remove_meter_rules;
+             break;
+ 
++        case SAI_OBJECT_TYPE_DASH_TUNNEL:
++            ptr = m_apis.dash_tunnel_api->remove_dash_tunnels;
++            break;
++
++        case SAI_OBJECT_TYPE_DASH_TUNNEL_MEMBER:
++            ptr = m_apis.dash_tunnel_api->remove_dash_tunnel_members;
++            break;
++
++        case SAI_OBJECT_TYPE_DASH_TUNNEL_NEXT_HOP:
++            ptr = m_apis.dash_tunnel_api->remove_dash_tunnel_next_hops;
++            break;
++
++        case SAI_OBJECT_TYPE_OUTBOUND_PORT_MAP:
++            ptr = m_apis.dash_outbound_port_map_api->remove_outbound_port_maps;
++            break;
++
+         default:
+             SWSS_LOG_ERROR("not implemented %s, FIXME", sai_serialize_object_type(object_type).c_str());
+             return SAI_STATUS_NOT_IMPLEMENTED;
+@@ -1097,6 +1130,114 @@ sai_status_t VendorSai::bulkCreate(
+             object_statuses);
+ }
+ 
++sai_status_t VendorSai::bulkCreate(
++        _In_ uint32_t object_count,
++        _In_ const sai_prefix_compression_entry_t* entries,
++        _In_ const uint32_t *attr_count,
++        _In_ const sai_attribute_t **attr_list,
++        _In_ sai_bulk_op_error_mode_t mode,
++        _Out_ sai_status_t *object_statuses)
++{
++    MUTEX();
++    SWSS_LOG_ENTER();
++    VENDOR_CHECK_API_INITIALIZED();
++
++    if (!m_apis.prefix_compression_api->create_prefix_compression_entries)
++    {
++        SWSS_LOG_INFO("create_prefix_compression_entries is not supported");
++        return SAI_STATUS_NOT_SUPPORTED;
++    }
++
++    return m_apis.prefix_compression_api->create_prefix_compression_entries(
++            object_count,
++            entries,
++            attr_count,
++            attr_list,
++            mode,
++            object_statuses);
++}
++
++sai_status_t VendorSai::bulkCreate(
++        _In_ uint32_t object_count,
++        _In_ const sai_outbound_port_map_port_range_entry_t* entries,
++        _In_ const uint32_t *attr_count,
++        _In_ const sai_attribute_t **attr_list,
++        _In_ sai_bulk_op_error_mode_t mode,
++        _Out_ sai_status_t *object_statuses)
++{
++    MUTEX();
++    SWSS_LOG_ENTER();
++    VENDOR_CHECK_API_INITIALIZED();
++
++    if (!m_apis.dash_outbound_port_map_api->create_outbound_port_map_port_range_entries)
++    {
++        SWSS_LOG_INFO("create_outbound_port_map_port_range_entries is not supported");
++        return SAI_STATUS_NOT_SUPPORTED;
++    }
++
++    return m_apis.dash_outbound_port_map_api->create_outbound_port_map_port_range_entries(
++            object_count,
++            entries,
++            attr_count,
++            attr_list,
++            mode,
++            object_statuses);
++}
++
++sai_status_t VendorSai::bulkCreate(
++        _In_ uint32_t object_count,
++        _In_ const sai_global_trusted_vni_entry_t* entries,
++        _In_ const uint32_t *attr_count,
++        _In_ const sai_attribute_t **attr_list,
++        _In_ sai_bulk_op_error_mode_t mode,
++        _Out_ sai_status_t *object_statuses)
++{
++    MUTEX();
++    SWSS_LOG_ENTER();
++    VENDOR_CHECK_API_INITIALIZED();
++
++    if (!m_apis.dash_trusted_vni_api->create_global_trusted_vni_entries)
++    {
++        SWSS_LOG_INFO("create_global_trusted_vni_entries is not supported");
++        return SAI_STATUS_NOT_SUPPORTED;
++    }
++
++    return m_apis.dash_trusted_vni_api->create_global_trusted_vni_entries(
++            object_count,
++            entries,
++            attr_count,
++            attr_list,
++            mode,
++            object_statuses);
++}
++
++sai_status_t VendorSai::bulkCreate(
++        _In_ uint32_t object_count,
++        _In_ const sai_eni_trusted_vni_entry_t* entries,
++        _In_ const uint32_t *attr_count,
++        _In_ const sai_attribute_t **attr_list,
++        _In_ sai_bulk_op_error_mode_t mode,
++        _Out_ sai_status_t *object_statuses)
++{
++    MUTEX();
++    SWSS_LOG_ENTER();
++    VENDOR_CHECK_API_INITIALIZED();
++
++    if (!m_apis.dash_trusted_vni_api->create_eni_trusted_vni_entries)
++    {
++        SWSS_LOG_INFO("create_eni_trusted_vni_entries is not supported");
++        return SAI_STATUS_NOT_SUPPORTED;
++    }
++
++    return m_apis.dash_trusted_vni_api->create_eni_trusted_vni_entries(
++            object_count,
++            entries,
++            attr_count,
++            attr_list,
++            mode,
++            object_statuses);
++}
++
+ // BULK REMOVE
+ 
+ sai_status_t VendorSai::bulkRemove(
+@@ -1445,6 +1586,98 @@ sai_status_t VendorSai::bulkRemove(
+             object_statuses);
+ }
+ 
++sai_status_t VendorSai::bulkRemove(
++        _In_ uint32_t object_count,
++        _In_ const sai_prefix_compression_entry_t *entries,
++        _In_ sai_bulk_op_error_mode_t mode,
++        _Out_ sai_status_t *object_statuses)
++{
++    MUTEX();
++    SWSS_LOG_ENTER();
++    VENDOR_CHECK_API_INITIALIZED();
++
++    if (!m_apis.prefix_compression_api->remove_prefix_compression_entries)
++    {
++        SWSS_LOG_INFO("remove_prefix_compression_entries is not supported");
++        return SAI_STATUS_NOT_SUPPORTED;
++    }
++
++    return m_apis.prefix_compression_api->remove_prefix_compression_entries(
++            object_count,
++            entries,
++            mode,
++            object_statuses);
++}
++
++sai_status_t VendorSai::bulkRemove(
++        _In_ uint32_t object_count,
++        _In_ const sai_outbound_port_map_port_range_entry_t *entries,
++        _In_ sai_bulk_op_error_mode_t mode,
++        _Out_ sai_status_t *object_statuses)
++{
++    MUTEX();
++    SWSS_LOG_ENTER();
++    VENDOR_CHECK_API_INITIALIZED();
++
++    if (!m_apis.dash_outbound_port_map_api->remove_outbound_port_map_port_range_entries)
++    {
++        SWSS_LOG_INFO("remove_outbound_port_map_port_range_entries is not supported");
++        return SAI_STATUS_NOT_SUPPORTED;
++    }
++
++    return m_apis.dash_outbound_port_map_api->remove_outbound_port_map_port_range_entries(
++            object_count,
++            entries,
++            mode,
++            object_statuses);
++}
++
++sai_status_t VendorSai::bulkRemove(
++        _In_ uint32_t object_count,
++        _In_ const sai_global_trusted_vni_entry_t *entries,
++        _In_ sai_bulk_op_error_mode_t mode,
++        _Out_ sai_status_t *object_statuses)
++{
++    MUTEX();
++    SWSS_LOG_ENTER();
++    VENDOR_CHECK_API_INITIALIZED();
++
++    if (!m_apis.dash_trusted_vni_api->remove_global_trusted_vni_entries)
++    {
++        SWSS_LOG_INFO("remove_global_trusted_vni_entries is not supported");
++        return SAI_STATUS_NOT_SUPPORTED;
++    }
++
++    return m_apis.dash_trusted_vni_api->remove_global_trusted_vni_entries(
++            object_count,
++            entries,
++            mode,
++            object_statuses);
++}
++
++sai_status_t VendorSai::bulkRemove(
++        _In_ uint32_t object_count,
++        _In_ const sai_eni_trusted_vni_entry_t *entries,
++        _In_ sai_bulk_op_error_mode_t mode,
++        _Out_ sai_status_t *object_statuses)
++{
++    MUTEX();
++    SWSS_LOG_ENTER();
++    VENDOR_CHECK_API_INITIALIZED();
++
++    if (!m_apis.dash_trusted_vni_api->remove_eni_trusted_vni_entries)
++    {
++        SWSS_LOG_INFO("remove_eni_trusted_vni_entries is not supported");
++        return SAI_STATUS_NOT_SUPPORTED;
++    }
++
++    return m_apis.dash_trusted_vni_api->remove_eni_trusted_vni_entries(
++            object_count,
++            entries,
++            mode,
++            object_statuses);
++}
++
+ // BULK SET
+ 
+ sai_status_t VendorSai::bulkSet(
+@@ -1723,6 +1956,62 @@ sai_status_t VendorSai::bulkSet(
+     return SAI_STATUS_NOT_SUPPORTED;
+ }
+ 
++sai_status_t VendorSai::bulkSet(
++        _In_ uint32_t object_count,
++        _In_ const sai_prefix_compression_entry_t *entries,
++        _In_ const sai_attribute_t *attr_list,
++        _In_ sai_bulk_op_error_mode_t mode,
++        _Out_ sai_status_t *object_statuses)
++{
++    MUTEX();
++    SWSS_LOG_ENTER();
++    VENDOR_CHECK_API_INITIALIZED();
++
++    return SAI_STATUS_NOT_SUPPORTED;
++}
++
++sai_status_t VendorSai::bulkSet(
++        _In_ uint32_t object_count,
++        _In_ const sai_outbound_port_map_port_range_entry_t *entries,
++        _In_ const sai_attribute_t *attr_list,
++        _In_ sai_bulk_op_error_mode_t mode,
++        _Out_ sai_status_t *object_statuses)
++{
++    MUTEX();
++    SWSS_LOG_ENTER();
++    VENDOR_CHECK_API_INITIALIZED();
++
++    return SAI_STATUS_NOT_SUPPORTED;
++}
++
++sai_status_t VendorSai::bulkSet(
++        _In_ uint32_t object_count,
++        _In_ const sai_global_trusted_vni_entry_t *entries,
++        _In_ const sai_attribute_t *attr_list,
++        _In_ sai_bulk_op_error_mode_t mode,
++        _Out_ sai_status_t *object_statuses)
++{
++    MUTEX();
++    SWSS_LOG_ENTER();
++    VENDOR_CHECK_API_INITIALIZED();
++
++    return SAI_STATUS_NOT_SUPPORTED;
++}
++
++sai_status_t VendorSai::bulkSet(
++        _In_ uint32_t object_count,
++        _In_ const sai_eni_trusted_vni_entry_t *entries,
++        _In_ const sai_attribute_t *attr_list,
++        _In_ sai_bulk_op_error_mode_t mode,
++        _Out_ sai_status_t *object_statuses)
++{
++    MUTEX();
++    SWSS_LOG_ENTER();
++    VENDOR_CHECK_API_INITIALIZED();
++
++    return SAI_STATUS_NOT_SUPPORTED;
++}
++
+ // NON QUAD API
+ 
+ sai_status_t VendorSai::flushFdbEntries(
+diff --git a/syncd/scripts/poesyncdmgrd b/syncd/scripts/poesyncdmgrd
+new file mode 100755
+index 00000000..8a5b9203
+--- /dev/null
++++ b/syncd/scripts/poesyncdmgrd
+@@ -0,0 +1,76 @@
++#!/usr/bin/env python3
++
++import os
++import signal
++import subprocess
++import sys
++import syslog
++import time
++
++
++SYSLOG_IDENTIFIER = os.path.basename(__file__)
++
++EXIT_SUCCESS = 0
++EXIT_INSUFFICIENT_PERMISSIONS = 1
++EXIT_UNKNOWN = 2
++
++running = True
++exit_code = EXIT_UNKNOWN
++
++
++def fatal_signal_handler(sig, frame):
++    global running
++
++    signal_name = signal.Signals(sig).name
++
++    syslog.syslog(syslog.LOG_NOTICE, 'Caught signal {} - exiting...'.format(signal_name))
++    exit_code = sig + 128
++    running = False
++
++
++def main():
++    # Only privileged users can run this daemon
++    if os.geteuid() != 0:
++        print('Root privileges required for this operation')
++        return EXIT_INSUFFICIENT_PERMISSIONS
++
++    syslog.openlog(SYSLOG_IDENTIFIER)
++
++    # Register our signal handlers
++    signal.signal(signal.SIGTERM, fatal_signal_handler)
++
++    # Check if a poe config exists
++    if not os.path.isfile('/usr/share/sonic/hwsku/poe_config.json'):
++        syslog.syslog(syslog.LOG_NOTICE, 'PoE is not supported on this platform. Exiting ...')
++        syslog.closelog()
++        time.sleep(2)
++        return EXIT_SUCCESS
++
++    # Spawn poe syncd process
++    cmd = '/usr/bin/syncd -s -p /etc/sai.d/poe.profile -x /usr/share/sonic/hwsku/context_config.json -g 1'
++    proc = subprocess.Popen(cmd.split(), close_fds=True)
++
++    global running
++
++    # Check all of our subprocesses. If any exit, we should too.
++    while running:
++        proc.poll()
++        if proc.returncode is not None:
++            syslog.syslog(syslog.LOG_NOTICE, 'Subprocess PID {} exited. Shutting down ...'.format(proc.pid))
++            running = False
++            break
++        time.sleep(1)
++
++    # If we get here, either the subprocess exited or we recieved a signal to exit
++    # so we send SIGTERM to the subprocesses (if it is still running) before exiting
++    if proc.returncode is None:
++        syslog.syslog(syslog.LOG_INFO, 'Terminating PID {} ...'.format(proc.pid))
++        proc.terminate()
++
++    syslog.closelog()
++
++    return exit_code
++
++
++if __name__ == '__main__':
++    sys.exit(main())
+diff --git a/syncd/scripts/syncd_init_common.sh b/syncd/scripts/syncd_init_common.sh
+index 516a480e..e22064b5 100644
+--- a/syncd/scripts/syncd_init_common.sh
++++ b/syncd/scripts/syncd_init_common.sh
+@@ -405,8 +405,12 @@ config_syncd_marvell()
+     CMD_ARGS+=" -p $HWSKU_DIR/sai.profile"
+ 
+     export MRVL_PSAI_SONIC=1
++    if [ -f "$HWSKU_DIR/context_config.json" ]; then
++        CMD_ARGS+=" -x $HWSKU_DIR/context_config.json -g 0"
++    fi
+ 
+     [ -e /dev/net/tun ] || ( mkdir -p /dev/net && mknod /dev/net/tun c 10 200 )
++    export MRVL_PSAI_SONIC=1
+ }
+ 
+ config_syncd_barefoot()
+diff --git a/tests/NVDAMBF2H536C.pl b/tests/NVDAMBF2H536C.pl
+index f0dc64f5..c2c21866 100755
+--- a/tests/NVDAMBF2H536C.pl
++++ b/tests/NVDAMBF2H536C.pl
+@@ -13,6 +13,9 @@ sub test_dashapi_replay
+     fresh_start;
+ 
+     play "dashapis.rec";
++
++    # Normally exit for collecting gcov data
++    request_cold_shutdown;
+ }
+ 
+ sub test_dashapi_replay_bulk
+@@ -20,11 +23,12 @@ sub test_dashapi_replay_bulk
+     fresh_start_bulk;
+ 
+     play "dashapis.rec";
++
++    # Normally exit for collecting gcov data
++    request_cold_shutdown;
+ }
+ 
+ # RUN
+ 
+ test_dashapi_replay;
+ test_dashapi_replay_bulk;
+-
+-kill_syncd;
+diff --git a/tests/NVDAMBF2H536C/dashapis.rec b/tests/NVDAMBF2H536C/dashapis.rec
+index 878dc162..0f4a3a28 100644
+--- a/tests/NVDAMBF2H536C/dashapis.rec
++++ b/tests/NVDAMBF2H536C/dashapis.rec
+@@ -310,3 +310,32 @@
+ 2022-11-17.15:01:04.318591|R|SAI_OBJECT_TYPE_OUTBOUND_CA_TO_PA_ENTRY||{"dip":"192.1.1.1","dst_vnet_id":"oid:0x0e0080000000b9","switch_id":"oid:0x21000000000000"}||{"dip":"fe80::886a:feff:fe31:bfe0","dst_vnet_id":"oid:0x0e0080000000ba","switch_id":"oid:0x21000000000000"}
+ 2022-11-17.15:01:04.319049|r|SAI_OBJECT_TYPE_VNET:oid:0x0e0080000000b9
+ 2022-11-17.15:01:04.319471|r|SAI_OBJECT_TYPE_VNET:oid:0x0e0080000000ba
++2025-04-28.15:01:04.190856|#|For OUTBOUND_PORT_MAP, OUTBOUND_PORT_MAP_PORT_RANGE_ENTRY, GLOBAL_TRUSTED_VNI_ENTRY, ENI_TRUSTED_VNI_ENTRY
++2025-04-28.15:01:04.190857|c|SAI_OBJECT_TYPE_VNET:oid:0x0e008000000067|SAI_VNET_ATTR_VNI=100
++2025-04-28.15:01:04.191389|c|SAI_OBJECT_TYPE_ENI:oid:0x07008000000068|SAI_ENI_ATTR_VNET_ID=oid:0x0e008000000067
++2025-04-28.15:01:04.192404|c|SAI_OBJECT_TYPE_OUTBOUND_PORT_MAP:oid:0x1c008000000069|NULL=NULL
++2025-04-28.15:01:04.318068|C|SAI_OBJECT_TYPE_OUTBOUND_PORT_MAP_PORT_RANGE_ENTRY||{"dst_port_range":"1000,1010","outbound_port_map_id":"oid:0x1c008000000069","switch_id":"oid:0x21000000000000"}|SAI_OUTBOUND_PORT_MAP_PORT_RANGE_ENTRY_ATTR_BACKEND_IP=1.1.1.1
++2025-04-28.15:01:04.318068|C|SAI_OBJECT_TYPE_GLOBAL_TRUSTED_VNI_ENTRY||{"vni_range":"123,124","switch_id":"oid:0x21000000000000"}|SAI_GLOBAL_TRUSTED_VNI_ENTRY_ATTR_ACTION=SAI_GLOBAL_TRUSTED_VNI_ENTRY_ACTION_PERMIT
++2025-04-28.15:01:04.318068|C|SAI_OBJECT_TYPE_ENI_TRUSTED_VNI_ENTRY||{"vni_range":"1234,1235","eni_id":"oid:0x07008000000068","switch_id":"oid:0x21000000000000"}|SAI_ENI_TRUSTED_VNI_ENTRY_ATTR_ACTION=SAI_ENI_TRUSTED_VNI_ENTRY_ACTION_PERMIT
++2025-04-28.15:01:04.318068|R|SAI_OBJECT_TYPE_OUTBOUND_PORT_MAP_PORT_RANGE_ENTRY||{"dst_port_range":"1000,1010","outbound_port_map_id":"oid:0x1c008000000069","switch_id":"oid:0x21000000000000"}
++2025-04-28.15:01:04.318068|R|SAI_OBJECT_TYPE_GLOBAL_TRUSTED_VNI_ENTRY||{"vni_range":"123,124","switch_id":"oid:0x21000000000000"}
++2025-04-28.15:01:04.318068|R|SAI_OBJECT_TYPE_ENI_TRUSTED_VNI_ENTRY||{"vni_range":"1234,1235","eni_id":"oid:0x07008000000068","switch_id":"oid:0x21000000000000"}
++2025-04-28.15:01:04.318068|@|200
++2025-04-28.15:01:04.318068|c|SAI_OBJECT_TYPE_OUTBOUND_PORT_MAP_PORT_RANGE_ENTRY:{"dst_port_range":"2000,2010","outbound_port_map_id":"oid:0x1c008000000069","switch_id":"oid:0x21000000000000"}|SAI_OUTBOUND_PORT_MAP_PORT_RANGE_ENTRY_ATTR_BACKEND_IP=1.1.1.1
++2025-04-28.15:01:04.318068|s|SAI_OBJECT_TYPE_OUTBOUND_PORT_MAP_PORT_RANGE_ENTRY:{"dst_port_range":"2000,2010","outbound_port_map_id":"oid:0x1c008000000069","switch_id":"oid:0x21000000000000"}|SAI_OUTBOUND_PORT_MAP_PORT_RANGE_ENTRY_ATTR_BACKEND_IP=2.1.1.1
++2025-04-28.15:01:04.318068|g|SAI_OBJECT_TYPE_OUTBOUND_PORT_MAP_PORT_RANGE_ENTRY:{"dst_port_range":"2000,2010","outbound_port_map_id":"oid:0x1c008000000069","switch_id":"oid:0x21000000000000"}|SAI_OUTBOUND_PORT_MAP_PORT_RANGE_ENTRY_ATTR_BACKEND_IP=0.0.0.0
++2022-11-17.15:01:04.318068|G|SAI_STATUS_SUCCESS|SAI_OUTBOUND_PORT_MAP_PORT_RANGE_ENTRY_ATTR_BACKEND_IP=2.1.1.1
++2025-04-28.15:01:04.318068|c|SAI_OBJECT_TYPE_GLOBAL_TRUSTED_VNI_ENTRY:{"vni_range":"223,224","switch_id":"oid:0x21000000000000"}|SAI_GLOBAL_TRUSTED_VNI_ENTRY_ATTR_ACTION=SAI_GLOBAL_TRUSTED_VNI_ENTRY_ACTION_PERMIT
++2025-04-28.15:01:04.318068|s|SAI_OBJECT_TYPE_GLOBAL_TRUSTED_VNI_ENTRY:{"vni_range":"223,224","switch_id":"oid:0x21000000000000"}|SAI_GLOBAL_TRUSTED_VNI_ENTRY_ATTR_ACTION=SAI_GLOBAL_TRUSTED_VNI_ENTRY_ACTION_PERMIT
++2025-04-28.15:01:04.318068|g|SAI_OBJECT_TYPE_GLOBAL_TRUSTED_VNI_ENTRY:{"vni_range":"223,224","switch_id":"oid:0x21000000000000"}|SAI_GLOBAL_TRUSTED_VNI_ENTRY_ATTR_ACTION=SAI_GLOBAL_TRUSTED_VNI_ENTRY_ACTION_PERMIT
++2022-11-17.15:01:04.318068|G|SAI_STATUS_SUCCESS|SAI_GLOBAL_TRUSTED_VNI_ENTRY_ATTR_ACTION=SAI_GLOBAL_TRUSTED_VNI_ENTRY_ACTION_PERMIT
++2025-04-28.15:01:04.318068|c|SAI_OBJECT_TYPE_ENI_TRUSTED_VNI_ENTRY:{"vni_range":"2234,2235","eni_id":"oid:0x07008000000068","switch_id":"oid:0x21000000000000"}|SAI_ENI_TRUSTED_VNI_ENTRY_ATTR_ACTION=SAI_ENI_TRUSTED_VNI_ENTRY_ACTION_PERMIT
++2025-04-28.15:01:04.318068|s|SAI_OBJECT_TYPE_ENI_TRUSTED_VNI_ENTRY:{"vni_range":"2234,2235","eni_id":"oid:0x07008000000068","switch_id":"oid:0x21000000000000"}|SAI_ENI_TRUSTED_VNI_ENTRY_ATTR_ACTION=SAI_ENI_TRUSTED_VNI_ENTRY_ACTION_PERMIT
++2025-04-28.15:01:04.318068|g|SAI_OBJECT_TYPE_ENI_TRUSTED_VNI_ENTRY:{"vni_range":"2234,2235","eni_id":"oid:0x07008000000068","switch_id":"oid:0x21000000000000"}|SAI_ENI_TRUSTED_VNI_ENTRY_ATTR_ACTION=SAI_ENI_TRUSTED_VNI_ENTRY_ACTION_PERMIT
++2022-11-17.15:01:04.318068|G|SAI_STATUS_SUCCESS|SAI_ENI_TRUSTED_VNI_ENTRY_ATTR_ACTION=SAI_ENI_TRUSTED_VNI_ENTRY_ACTION_PERMIT
++2025-04-28.15:01:04.318068|r|SAI_OBJECT_TYPE_OUTBOUND_PORT_MAP_PORT_RANGE_ENTRY:{"dst_port_range":"2000,2010","outbound_port_map_id":"oid:0x1c008000000069","switch_id":"oid:0x21000000000000"}
++2025-04-28.15:01:04.318068|r|SAI_OBJECT_TYPE_GLOBAL_TRUSTED_VNI_ENTRY:{"vni_range":"223,224","switch_id":"oid:0x21000000000000"}
++2025-04-28.15:01:04.318068|r|SAI_OBJECT_TYPE_ENI_TRUSTED_VNI_ENTRY:{"vni_range":"2234,2235","eni_id":"oid:0x07008000000068","switch_id":"oid:0x21000000000000"}
++2025-04-28.15:01:04.192404|r|SAI_OBJECT_TYPE_OUTBOUND_PORT_MAP:oid:0x1c008000000069
++2025-04-28.15:01:04.195220|r|SAI_OBJECT_TYPE_ENI:oid:0x07008000000068
++2025-04-28.15:01:04.196064|r|SAI_OBJECT_TYPE_VNET:oid:0x0e008000000067
+diff --git a/tests/aspell.en.pws b/tests/aspell.en.pws
+index 8c3a3a36..d014d83f 100644
+--- a/tests/aspell.en.pws
++++ b/tests/aspell.en.pws
+@@ -317,6 +317,8 @@ pn
+ PN
+ policer
+ PORTs
++POE
++PSE
+ pre
+ printf
+ ptr
+diff --git a/tests/utils.pm b/tests/utils.pm
+index 489e5bb5..6242b83d 100644
+--- a/tests/utils.pm
++++ b/tests/utils.pm
+@@ -87,6 +87,14 @@ sub request_warm_shutdown
+     sleep 2;
+ }
+ 
++sub request_cold_shutdown
++{
++    print color('bright_blue') . "Requesting syncd cold shutdown" . color('reset') . "\n";
++    `../syncd/syncd_request_shutdown -c`;
++
++    sleep 2;
++}
++
+ sub play_common
+ {
+     my @params = @_;
+@@ -200,7 +208,8 @@ BEGIN
+ {
+     our @ISA    = qw(Exporter);
+     our @EXPORT = qw/ color
+-    kill_syncd flush_redis start_syncd play fresh_start fresh_start_bulk start_syncd_warm request_warm_shutdown
++    kill_syncd flush_redis start_syncd play fresh_start fresh_start_bulk
++    start_syncd_warm request_warm_shutdown request_cold_shutdown
+     sync_start_syncd sync_fresh_start sync_start_syncd_warm sync_start_syncd sync_play
+     /;
+ 
+diff --git a/unittest/lib/test_sai_redis_poe.cpp b/unittest/lib/test_sai_redis_poe.cpp
+new file mode 100644
+index 00000000..a79deaa2
+--- /dev/null
++++ b/unittest/lib/test_sai_redis_poe.cpp
+@@ -0,0 +1,33 @@
++#include <gtest/gtest.h>
++
++extern "C" {
++#include "sai.h"
++}
++
++#include "swss/logger.h"
++
++TEST(libsairedis, poe)
++{
++    sai_poe_api_t *api = nullptr;
++
++    sai_api_query(SAI_API_POE, (void**)&api);
++
++    EXPECT_NE(api, nullptr);
++
++    sai_object_id_t id;
++
++    EXPECT_NE(SAI_STATUS_SUCCESS, api->create_poe_device(&id,0,0,0));
++    EXPECT_NE(SAI_STATUS_SUCCESS, api->remove_poe_device(0));
++    EXPECT_NE(SAI_STATUS_SUCCESS, api->set_poe_device_attribute(0,0));
++    EXPECT_NE(SAI_STATUS_SUCCESS, api->get_poe_device_attribute(0,0,0));
++
++    EXPECT_NE(SAI_STATUS_SUCCESS, api->create_poe_pse(&id,0,0,0));
++    EXPECT_NE(SAI_STATUS_SUCCESS, api->remove_poe_pse(0));
++    EXPECT_NE(SAI_STATUS_SUCCESS, api->set_poe_pse_attribute(0,0));
++    EXPECT_NE(SAI_STATUS_SUCCESS, api->get_poe_pse_attribute(0,0,0));
++
++    EXPECT_NE(SAI_STATUS_SUCCESS, api->create_poe_port(&id,0,0,0));
++    EXPECT_NE(SAI_STATUS_SUCCESS, api->remove_poe_port(0));
++    EXPECT_NE(SAI_STATUS_SUCCESS, api->set_poe_port_attribute(0,0));
++    EXPECT_NE(SAI_STATUS_SUCCESS, api->get_poe_port_attribute(0,0,0));
++}
+diff --git a/unittest/meta/TestMeta.cpp b/unittest/meta/TestMeta.cpp
+index 0b0d35b2..d31ed4a4 100644
+--- a/unittest/meta/TestMeta.cpp
++++ b/unittest/meta/TestMeta.cpp
+@@ -1841,3 +1841,12 @@ TEST(Meta, remove_meter_bucket_entry)
+ 
+     EXPECT_EQ(SAI_STATUS_INVALID_PARAMETER, sai.remove(e));
+ }
++
++TEST(Meta, remove_prefix_compression_entry)
++{
++    Meta sai(std::make_shared<MetaTestSaiInterface>());
++
++    sai_prefix_compression_entry_t* e = nullptr;
++
++    EXPECT_EQ(SAI_STATUS_INVALID_PARAMETER, sai.remove(e));
++}
+diff --git a/unittest/meta/TestSaiSerialize.cpp b/unittest/meta/TestSaiSerialize.cpp
+index b7e0c97d..b795b694 100644
+--- a/unittest/meta/TestSaiSerialize.cpp
++++ b/unittest/meta/TestSaiSerialize.cpp
+@@ -122,6 +122,7 @@ TEST(SaiSerialize, sai_serialize_attr_value)
+             case SAI_ATTR_VALUE_TYPE_TIMESPEC:
+             case SAI_ATTR_VALUE_TYPE_PORT_ERR_STATUS_LIST:
+             case SAI_ATTR_VALUE_TYPE_PORT_EYE_VALUES_LIST:
++            case SAI_ATTR_VALUE_TYPE_PORT_PAM4_EYE_VALUES_LIST:
+             case SAI_ATTR_VALUE_TYPE_FABRIC_PORT_REACHABILITY:
+             case SAI_ATTR_VALUE_TYPE_PRBS_RX_STATE:
+             case SAI_ATTR_VALUE_TYPE_SEGMENT_LIST:
+@@ -1347,3 +1348,14 @@ TEST(SaiSerialize, serialize_number)
+     EXPECT_EQ(sn, -0x12345678);
+     EXPECT_EQ(u,   0x12345678);
+ }
++
++TEST(SaiSerialize, sai_serialize_prefix_compression_entry)
++{
++    sai_prefix_compression_entry_t e;
++
++    memset(&e, 0, sizeof(e));
++
++    auto s = sai_serialize_prefix_compression_entry(e);
++
++    sai_deserialize_prefix_compression_entry(s, e);
++}
+diff --git a/unittest/syncd/TestVendorSai.cpp b/unittest/syncd/TestVendorSai.cpp
+index 241ad723..76234173 100644
+--- a/unittest/syncd/TestVendorSai.cpp
++++ b/unittest/syncd/TestVendorSai.cpp
+@@ -1566,13 +1566,210 @@ TEST(VendorSai, bulk_meter_rules)
+     EXPECT_EQ(SAI_STATUS_SUCCESS, sai.remove((sai_object_type_t)SAI_OBJECT_TYPE_METER_POLICY, meter_policy1));
+ }
+ 
+-TEST(VendorSai, logSet_logGet)
++TEST_F(VendorSaiTest, bulk_prefix_compression_entry)
++{
++    sai_prefix_compression_entry_t *e = nullptr;
++
++    // metadata will fail
++    EXPECT_EQ(SAI_STATUS_INVALID_PARAMETER,
++            m_vsai->bulkCreate(0, e, nullptr, nullptr, SAI_BULK_OP_ERROR_MODE_STOP_ON_ERROR, nullptr));
++
++    EXPECT_EQ(SAI_STATUS_INVALID_PARAMETER,
++            m_vsai->bulkRemove(0, e, SAI_BULK_OP_ERROR_MODE_STOP_ON_ERROR, nullptr));
++
++    EXPECT_EQ(SAI_STATUS_NOT_SUPPORTED,
++            m_vsai->bulkSet(0, e, nullptr, SAI_BULK_OP_ERROR_MODE_STOP_ON_ERROR, nullptr));
++}
++
++TEST(VendorSai, bulk_dash_tunnel)
++{
++    VendorSai sai;
++    sai.apiInitialize(0, &test_services);
++
++    sai_object_id_t switchid = create_switch(sai);
++
++    sai_ip_address_t tunnel_dip1 = {};
++    sai_ip_address_t tunnel_nhop_dip1 = {};
++    sai_ip_address_t tunnel_nhop_dip2 = {};
++    tunnel_dip1.addr_family = tunnel_nhop_dip1.addr_family = tunnel_nhop_dip2.addr_family = SAI_IP_ADDR_FAMILY_IPV4;
++    inet_pton(AF_INET, "192.168.0.1", &tunnel_dip1.addr.ip4);
++    inet_pton(AF_INET, "192.168.0.2", &tunnel_nhop_dip1.addr.ip4);
++    inet_pton(AF_INET, "192.168.0.3", &tunnel_nhop_dip2.addr.ip4);
++
++    // DASH Tunnel
++    sai_attribute_t tunnel_attrs0[] = {
++        {.id = SAI_DASH_TUNNEL_ATTR_DIP, .value = (sai_attribute_value_t){.ipaddr = tunnel_dip1}},
++	{.id = SAI_DASH_TUNNEL_ATTR_DASH_ENCAPSULATION, .value = (sai_attribute_value_t){.s32 = SAI_DASH_ENCAPSULATION_VXLAN}},
++	{.id = SAI_DASH_TUNNEL_ATTR_TUNNEL_KEY, .value = (sai_attribute_value_t){.s32 = 100}},
++    };
++
++     sai_attribute_t tunnel_attrs1[] = {
++        {.id = SAI_DASH_TUNNEL_ATTR_MAX_MEMBER_SIZE, .value = (sai_attribute_value_t){.s32 = 2}},
++	{.id = SAI_DASH_TUNNEL_ATTR_DASH_ENCAPSULATION, .value = (sai_attribute_value_t){.s32 = SAI_DASH_ENCAPSULATION_VXLAN}},
++	{.id = SAI_DASH_TUNNEL_ATTR_TUNNEL_KEY, .value = (sai_attribute_value_t){.s32 = 200}},
++    };
++
++    const sai_attribute_t *tunnel_attr_list[] = {
++        tunnel_attrs0,
++        tunnel_attrs1,
++    };
++
++    constexpr uint32_t tunnels_count = sizeof(tunnel_attr_list) / sizeof(sai_attribute_t*);
++    constexpr uint32_t tunnel_attrs_count = sizeof(tunnel_attrs0) / sizeof(sai_attribute_t);
++
++    uint32_t tunnel_attr_count[tunnels_count] = {tunnel_attrs_count, tunnel_attrs_count};
++    sai_object_id_t tunnels[tunnels_count];
++    sai_status_t statuses[tunnels_count] = {};
++
++    EXPECT_EQ(SAI_STATUS_SUCCESS, sai.bulkCreate((sai_object_type_t)SAI_OBJECT_TYPE_DASH_TUNNEL, switchid, tunnels_count, tunnel_attr_count, tunnel_attr_list, SAI_BULK_OP_ERROR_MODE_STOP_ON_ERROR, tunnels, statuses));
++    for (uint32_t i = 0; i < tunnels_count; i++) {
++        EXPECT_EQ(SAI_STATUS_SUCCESS, statuses[i]);
++    }
++
++    // DASH Tunnel next hop
++     sai_attribute_t tunnel_nhop_attrs0[] = {
++        {.id = SAI_DASH_TUNNEL_NEXT_HOP_ATTR_DIP, .value = (sai_attribute_value_t){.ipaddr = tunnel_nhop_dip1}},
++     };
++     sai_attribute_t tunnel_nhop_attrs1[] = {
++        {.id = SAI_DASH_TUNNEL_NEXT_HOP_ATTR_DIP, .value = (sai_attribute_value_t){.ipaddr = tunnel_nhop_dip2}},
++     };
++
++    const sai_attribute_t *tunnel_nhop_attr_list[] = {
++        tunnel_nhop_attrs0,
++        tunnel_nhop_attrs1,
++    };
++
++    constexpr uint32_t tunnel_nhop_count = sizeof(tunnel_nhop_attr_list) / sizeof(sai_attribute_t*);
++    constexpr uint32_t tunnel_nhop_attrs_count = sizeof(tunnel_nhop_attrs0) / sizeof(sai_attribute_t);
++
++    uint32_t tunnel_nhop_attr_count[] = {tunnel_nhop_attrs_count, tunnel_nhop_attrs_count};
++    sai_object_id_t tunnel_nhops[tunnel_nhop_count];
++    sai_status_t tunnel_nhop_statuses[tunnel_nhop_count] = {};
++
++    EXPECT_EQ(SAI_STATUS_SUCCESS, sai.bulkCreate((sai_object_type_t)SAI_OBJECT_TYPE_DASH_TUNNEL_NEXT_HOP, switchid, tunnel_nhop_count, tunnel_nhop_attr_count, tunnel_nhop_attr_list, SAI_BULK_OP_ERROR_MODE_STOP_ON_ERROR, tunnel_nhops, tunnel_nhop_statuses));
++    for (uint32_t i = 0; i < tunnel_nhop_count; i++) {
++        EXPECT_EQ(SAI_STATUS_SUCCESS, tunnel_nhop_statuses[i]);
++    }
++
++    // DASH Tunnel member
++     sai_attribute_t tunnel_member_attrs0[] = {
++        {.id = SAI_DASH_TUNNEL_MEMBER_ATTR_DASH_TUNNEL_ID, .value = (sai_attribute_value_t){.oid = tunnels[1]}},
++        {.id = SAI_DASH_TUNNEL_MEMBER_ATTR_DASH_TUNNEL_NEXT_HOP_ID, .value = (sai_attribute_value_t){.oid = tunnel_nhops[0]}},
++     };
++     sai_attribute_t tunnel_member_attrs1[] = {
++        {.id = SAI_DASH_TUNNEL_MEMBER_ATTR_DASH_TUNNEL_ID, .value = (sai_attribute_value_t){.oid = tunnels[1]}},
++        {.id = SAI_DASH_TUNNEL_MEMBER_ATTR_DASH_TUNNEL_NEXT_HOP_ID, .value = (sai_attribute_value_t){.oid = tunnel_nhops[1]}},
++     };
++
++    const sai_attribute_t *tunnel_member_attr_list[] = {
++        tunnel_member_attrs0,
++        tunnel_member_attrs1,
++    };
++
++    constexpr uint32_t tunnel_member_count = sizeof(tunnel_member_attr_list) / sizeof(sai_attribute_t*);
++    constexpr uint32_t tunnel_member_attrs_count = sizeof(tunnel_member_attrs0) / sizeof(sai_attribute_t);
++
++    uint32_t tunnel_member_attr_count[] = {tunnel_member_attrs_count, tunnel_member_attrs_count};
++    sai_object_id_t tunnel_members[tunnel_member_count];
++    sai_status_t tunnel_member_statuses[tunnel_member_count] = {};
++
++    EXPECT_EQ(SAI_STATUS_SUCCESS, sai.bulkCreate((sai_object_type_t)SAI_OBJECT_TYPE_DASH_TUNNEL_MEMBER, switchid, tunnel_member_count, tunnel_member_attr_count, tunnel_member_attr_list, SAI_BULK_OP_ERROR_MODE_STOP_ON_ERROR, tunnel_members, tunnel_member_statuses));
++    for (uint32_t i = 0; i < tunnel_member_count; i++) {
++        EXPECT_EQ(SAI_STATUS_SUCCESS, tunnel_member_statuses[i]);
++    }
++
++    // Remove all
++    EXPECT_EQ(SAI_STATUS_SUCCESS, sai.bulkRemove((sai_object_type_t)SAI_OBJECT_TYPE_DASH_TUNNEL_MEMBER, tunnel_member_count, tunnel_members, SAI_BULK_OP_ERROR_MODE_STOP_ON_ERROR, tunnel_member_statuses));
++    for (uint32_t i = 0; i < tunnel_member_count; i++) {
++        EXPECT_EQ(SAI_STATUS_SUCCESS, tunnel_member_statuses[i]);
++    }
++
++    EXPECT_EQ(SAI_STATUS_SUCCESS, sai.bulkRemove((sai_object_type_t)SAI_OBJECT_TYPE_DASH_TUNNEL_NEXT_HOP, tunnel_nhop_count, tunnel_nhops, SAI_BULK_OP_ERROR_MODE_STOP_ON_ERROR, tunnel_nhop_statuses));
++    for (uint32_t i = 0; i < tunnel_nhop_count; i++) {
++        EXPECT_EQ(SAI_STATUS_SUCCESS, tunnel_nhop_statuses[i]);
++    }
++
++    EXPECT_EQ(SAI_STATUS_SUCCESS, sai.bulkRemove((sai_object_type_t)SAI_OBJECT_TYPE_DASH_TUNNEL, tunnels_count, tunnels, SAI_BULK_OP_ERROR_MODE_STOP_ON_ERROR, statuses));
++    for (uint32_t i = 0; i < tunnels_count; i++) {
++        EXPECT_EQ(SAI_STATUS_SUCCESS, statuses[i]);
++    }
++}
++
++TEST(VendorSai, bulk_outbound_port_map)
+ {
+     VendorSai sai;
+     sai.apiInitialize(0, &test_services);
+ 
+-    EXPECT_EQ(SAI_STATUS_SUCCESS, sai.logSet(SAI_API_PORT, SAI_LOG_LEVEL_DEBUG));
++    sai_object_id_t switchid = create_switch(sai);
++
++    sai_attribute_t port_map_attrs[] = {
++        {.id = SAI_OUTBOUND_PORT_MAP_ATTR_COUNTER_ID, .value = (sai_attribute_value_t){.oid = SAI_NULL_OBJECT_ID}},
++    };
++
++    const sai_attribute_t *port_map_attr_list[] = {
++        port_map_attrs,
++        port_map_attrs,
++    };
++    constexpr uint32_t port_map_count = sizeof(port_map_attr_list) / sizeof(sai_attribute_t*);
++
++    uint32_t port_map_attr_count[port_map_count] = {0, 0};
++    sai_object_id_t port_maps[port_map_count];
++    sai_status_t statuses[port_map_count] = {};
++
++    EXPECT_EQ(SAI_STATUS_SUCCESS, sai.bulkCreate((sai_object_type_t)SAI_OBJECT_TYPE_OUTBOUND_PORT_MAP,
++              switchid, port_map_count, port_map_attr_count, port_map_attr_list, SAI_BULK_OP_ERROR_MODE_STOP_ON_ERROR, port_maps, statuses));
++    for (uint32_t i = 0; i < port_map_count; i++) {
++        EXPECT_EQ(SAI_STATUS_SUCCESS, statuses[i]);
++    }
++
++    EXPECT_EQ(SAI_STATUS_SUCCESS, sai.bulkRemove((sai_object_type_t)SAI_OBJECT_TYPE_OUTBOUND_PORT_MAP,
++              port_map_count, port_maps, SAI_BULK_OP_ERROR_MODE_STOP_ON_ERROR, statuses));
++    for (uint32_t i = 0; i < port_map_count; i++) {
++        EXPECT_EQ(SAI_STATUS_SUCCESS, statuses[i]);
++    }
++}
++
++TEST_F(VendorSaiTest, bulk_outbound_port_map_port_range_entry)
++{
++    sai_outbound_port_map_port_range_entry_t *e = nullptr;
++
++    // metadata will fail
++    EXPECT_EQ(SAI_STATUS_INVALID_PARAMETER,
++            m_vsai->bulkCreate(0, e, nullptr, nullptr, SAI_BULK_OP_ERROR_MODE_STOP_ON_ERROR, nullptr));
++
++    EXPECT_EQ(SAI_STATUS_INVALID_PARAMETER,
++            m_vsai->bulkRemove(0, e, SAI_BULK_OP_ERROR_MODE_STOP_ON_ERROR, nullptr));
++
++    EXPECT_EQ(SAI_STATUS_NOT_SUPPORTED,
++            m_vsai->bulkSet(0, e, nullptr, SAI_BULK_OP_ERROR_MODE_STOP_ON_ERROR, nullptr));
++}
++
++TEST_F(VendorSaiTest, bulk_global_trusted_vni_entry)
++{
++    sai_global_trusted_vni_entry_t *e = nullptr;
++
++    // metadata will fail
++    EXPECT_EQ(SAI_STATUS_INVALID_PARAMETER,
++            m_vsai->bulkCreate(0, e, nullptr, nullptr, SAI_BULK_OP_ERROR_MODE_STOP_ON_ERROR, nullptr));
+ 
+-    EXPECT_EQ(SAI_LOG_LEVEL_DEBUG, sai.logGet(SAI_API_PORT));
+-    EXPECT_EQ(SAI_LOG_LEVEL_NOTICE, sai.logGet(SAI_API_SWITCH));
++    EXPECT_EQ(SAI_STATUS_INVALID_PARAMETER,
++            m_vsai->bulkRemove(0, e, SAI_BULK_OP_ERROR_MODE_STOP_ON_ERROR, nullptr));
++
++    EXPECT_EQ(SAI_STATUS_NOT_SUPPORTED,
++            m_vsai->bulkSet(0, e, nullptr, SAI_BULK_OP_ERROR_MODE_STOP_ON_ERROR, nullptr));
++}
++
++TEST_F(VendorSaiTest, bulk_eni_trusted_vni_entry)
++{
++    sai_eni_trusted_vni_entry_t *e = nullptr;
++
++    // metadata will fail
++    EXPECT_EQ(SAI_STATUS_INVALID_PARAMETER,
++            m_vsai->bulkCreate(0, e, nullptr, nullptr, SAI_BULK_OP_ERROR_MODE_STOP_ON_ERROR, nullptr));
++
++    EXPECT_EQ(SAI_STATUS_INVALID_PARAMETER,
++            m_vsai->bulkRemove(0, e, SAI_BULK_OP_ERROR_MODE_STOP_ON_ERROR, nullptr));
++
++    EXPECT_EQ(SAI_STATUS_NOT_SUPPORTED,
++            m_vsai->bulkSet(0, e, nullptr, SAI_BULK_OP_ERROR_MODE_STOP_ON_ERROR, nullptr));
+ }
+diff --git a/unittest/vslib/Makefile.am b/unittest/vslib/Makefile.am
+index 092bcf04..37a44cdf 100644
+--- a/unittest/vslib/Makefile.am
++++ b/unittest/vslib/Makefile.am
+@@ -42,6 +42,7 @@ tests_SOURCES = main.cpp \
+ 				TestSwitchNvdaMBF2H536C.cpp \
+ 				TestSwitchBCM56850.cpp \
+ 				TestSwitchBCM81724.cpp \
++				TestSwitchPoe.cpp \
+ 				TestSwitchStateBaseMACsec.cpp \
+ 				TestMACsecManager.cpp \
+ 				TestSwitchStateBase.cpp \
+diff --git a/unittest/vslib/TestSwitchConfig.cpp b/unittest/vslib/TestSwitchConfig.cpp
+index 36cd9c62..3b82c752 100644
+--- a/unittest/vslib/TestSwitchConfig.cpp
++++ b/unittest/vslib/TestSwitchConfig.cpp
+@@ -19,6 +19,9 @@ TEST(SwitchConfig, parseSaiSwitchType)
+ 
+     EXPECT_TRUE(SwitchConfig::parseSaiSwitchType(SAI_VALUE_SAI_SWITCH_TYPE_PHY, type));
+     EXPECT_EQ(type, SAI_SWITCH_TYPE_PHY);
++
++    EXPECT_TRUE(SwitchConfig::parseSaiSwitchType(SAI_VALUE_SAI_SWITCH_TYPE_POE, type));
++    EXPECT_EQ(type, SAI_SWITCH_TYPE_POE);
+ }
+ 
+ TEST(SwitchConfig, parseSwitchType)
+@@ -36,6 +39,9 @@ TEST(SwitchConfig, parseSwitchType)
+ 
+     EXPECT_TRUE(SwitchConfig::parseSwitchType(SAI_VALUE_VS_SWITCH_TYPE_MLNX2700, type));
+     EXPECT_EQ(type, SAI_VS_SWITCH_TYPE_MLNX2700);
++
++    EXPECT_TRUE(SwitchConfig::parseSwitchType(SAI_VALUE_VS_SWITCH_TYPE_POE, type));
++    EXPECT_EQ(type, SAI_VS_SWITCH_TYPE_POE);
+ }
+ 
+ 
+diff --git a/unittest/vslib/TestSwitchPoe.cpp b/unittest/vslib/TestSwitchPoe.cpp
+new file mode 100644
+index 00000000..eede39bd
+--- /dev/null
++++ b/unittest/vslib/TestSwitchPoe.cpp
+@@ -0,0 +1,173 @@
++#include "SwitchPoE.h"
++
++#include "meta/sai_serialize.h"
++
++#include <gtest/gtest.h>
++
++#include <memory>
++
++using namespace saivs;
++
++TEST(SwitchPoE, ctr)
++{
++    auto sc = std::make_shared<SwitchConfig>(0, "");
++    auto signal = std::make_shared<Signal>();
++    auto eventQueue = std::make_shared<EventQueue>(signal);
++
++    sc->m_saiSwitchType = SAI_SWITCH_TYPE_POE;
++    sc->m_switchType = SAI_VS_SWITCH_TYPE_POE;
++    sc->m_bootType = SAI_VS_BOOT_TYPE_COLD;
++    sc->m_useTapDevice = false;
++    sc->m_laneMap = LaneMap::getDefaultLaneMap(0);
++    sc->m_eventQueue = eventQueue;
++
++    auto scc = std::make_shared<SwitchConfigContainer>();
++
++    scc->insert(sc);
++
++    SwitchPoE sw(
++            0x2100000000,
++            std::make_shared<RealObjectIdManager>(0, scc),
++            sc);
++
++    SwitchPoE sw2(
++            0x2100000000,
++            std::make_shared<RealObjectIdManager>(0, scc),
++            sc,
++            nullptr);
++
++    sai_attribute_t attr;
++
++    attr.id = SAI_SWITCH_ATTR_INIT_SWITCH;
++    attr.value.booldata = true;
++
++    EXPECT_EQ(sw.initialize_default_objects(1, &attr), SAI_STATUS_SUCCESS);
++}
++
++TEST(SwitchPoE, refresh_read_only)
++{
++    auto sc = std::make_shared<SwitchConfig>(0, "");
++    auto signal = std::make_shared<Signal>();
++    auto eventQueue = std::make_shared<EventQueue>(signal);
++
++    sc->m_saiSwitchType = SAI_SWITCH_TYPE_POE;
++    sc->m_switchType = SAI_VS_SWITCH_TYPE_POE;
++    sc->m_bootType = SAI_VS_BOOT_TYPE_COLD;
++    sc->m_useTapDevice = false;
++    sc->m_laneMap = LaneMap::getDefaultLaneMap(0);
++    sc->m_eventQueue = eventQueue;
++
++    auto scc = std::make_shared<SwitchConfigContainer>();
++
++    scc->insert(sc);
++
++    auto mgr = std::make_shared<RealObjectIdManager>(0, scc);
++
++    auto switchId = mgr->allocateNewSwitchObjectId("");
++    auto strSwitchId = sai_serialize_object_id(switchId);
++
++    SwitchPoE sw(switchId, mgr, sc);
++
++    const uint32_t oidListLength = 5;
++    sai_object_id_t oidList[oidListLength];
++    sai_attribute_t attrs[2];
++
++    attrs[0].id = SAI_SWITCH_ATTR_INIT_SWITCH;
++    attrs[0].value.booldata = true;
++    EXPECT_EQ(sw.initialize_default_objects(1, attrs), SAI_STATUS_SUCCESS);
++
++    attrs[0].id = SAI_SWITCH_ATTR_DEFAULT_1Q_BRIDGE_ID;
++    attrs[0].value.oid = SAI_NULL_OBJECT_ID;
++    EXPECT_EQ(sw.get(SAI_OBJECT_TYPE_SWITCH, strSwitchId, 1, attrs), SAI_STATUS_NOT_IMPLEMENTED);
++
++    attrs[0].id = SAI_SWITCH_ATTR_POE_DEVICE_LIST;
++    attrs[0].value.objlist.count = oidListLength;
++    attrs[0].value.objlist.list = oidList;
++    EXPECT_EQ(sw.get(SAI_OBJECT_TYPE_SWITCH, strSwitchId, 1, attrs), SAI_STATUS_SUCCESS);
++    EXPECT_EQ(attrs[0].value.objlist.count, 0);
++
++    // create POE device, PSE, and 2 POE ports
++
++    // device
++    sai_object_id_t devId = mgr->allocateNewObjectId(SAI_OBJECT_TYPE_POE_DEVICE, switchId);
++    auto strDevId = sai_serialize_object_id(devId);
++    attrs[0].id = SAI_POE_DEVICE_ATTR_HARDWARE_INFO;
++    strncpy(attrs[0].value.chardata, "hw info", sizeof(attrs[0].value.chardata) - 1);
++    EXPECT_EQ(sw.create(SAI_OBJECT_TYPE_POE_DEVICE, strDevId, switchId, 1, attrs), SAI_STATUS_SUCCESS);
++
++    // PSE
++    sai_object_id_t pseId = mgr->allocateNewObjectId(SAI_OBJECT_TYPE_POE_PSE, switchId);
++    auto strPseId = sai_serialize_object_id(pseId);
++    attrs[0].id = SAI_POE_PSE_ATTR_ID;
++    attrs[0].value.u32 = 1;
++    attrs[1].id = SAI_POE_PSE_ATTR_DEVICE_ID;
++    attrs[1].value.oid = devId;
++    EXPECT_EQ(sw.create(SAI_OBJECT_TYPE_POE_PSE, strPseId, switchId, 2, attrs), SAI_STATUS_SUCCESS);
++
++    // port 1
++    sai_object_id_t firstPortId = mgr->allocateNewObjectId(SAI_OBJECT_TYPE_POE_PORT, switchId);
++    auto strFirstPortId = sai_serialize_object_id(firstPortId);
++    attrs[0].id = SAI_POE_PORT_ATTR_FRONT_PANEL_ID;
++    attrs[0].value.u32 = 1;
++    attrs[1].id = SAI_POE_PORT_ATTR_DEVICE_ID;
++    attrs[1].value.oid = devId;
++    EXPECT_EQ(sw.create(SAI_OBJECT_TYPE_POE_PORT, strFirstPortId, switchId, 2, attrs), SAI_STATUS_SUCCESS);
++
++    // port 2
++    sai_object_id_t secondPortId = mgr->allocateNewObjectId(SAI_OBJECT_TYPE_POE_PORT, switchId);
++    auto strSecondPortId = sai_serialize_object_id(secondPortId);
++    attrs[0].id = SAI_POE_PORT_ATTR_FRONT_PANEL_ID;
++    attrs[0].value.u32 = 2;
++    EXPECT_EQ(sw.create(SAI_OBJECT_TYPE_POE_PORT, strSecondPortId, switchId, 2, attrs), SAI_STATUS_SUCCESS);
++
++    // verify number of created objects
++    attrs[0].id = SAI_SWITCH_ATTR_POE_DEVICE_LIST;
++    attrs[0].value.objlist.count = oidListLength;
++    attrs[0].value.objlist.list = oidList;
++    EXPECT_EQ(sw.get(SAI_OBJECT_TYPE_SWITCH, strSwitchId, 1, attrs), SAI_STATUS_SUCCESS);
++    EXPECT_EQ(attrs[0].value.objlist.count, 1);
++
++    attrs[0].id = SAI_POE_DEVICE_ATTR_POE_PSE_LIST;
++    attrs[0].value.objlist.count = oidListLength;
++    EXPECT_EQ(sw.get(SAI_OBJECT_TYPE_POE_DEVICE, strDevId, 1, attrs), SAI_STATUS_SUCCESS);
++    EXPECT_EQ(attrs[0].value.objlist.count, 1);
++
++    attrs[0].id = SAI_POE_DEVICE_ATTR_POE_PORT_LIST;
++    attrs[0].value.objlist.count = oidListLength;
++    EXPECT_EQ(sw.get(SAI_OBJECT_TYPE_POE_DEVICE, strDevId, 1, attrs), SAI_STATUS_SUCCESS);
++    EXPECT_EQ(attrs[0].value.objlist.count, 2);
++
++    // verify readonly values
++    attrs[0].id = SAI_POE_DEVICE_ATTR_HARDWARE_INFO;
++    EXPECT_EQ(sw.get(SAI_OBJECT_TYPE_POE_DEVICE, strDevId, 1, attrs), SAI_STATUS_SUCCESS);
++    attrs[0].id = SAI_POE_DEVICE_ATTR_TOTAL_POWER;
++    EXPECT_EQ(sw.get(SAI_OBJECT_TYPE_POE_DEVICE, strDevId, 1, attrs), SAI_STATUS_SUCCESS);
++    attrs[0].id = SAI_POE_DEVICE_ATTR_POWER_CONSUMPTION;
++    EXPECT_EQ(sw.get(SAI_OBJECT_TYPE_POE_DEVICE, strDevId, 1, attrs), SAI_STATUS_SUCCESS);
++    attrs[0].id = SAI_POE_DEVICE_ATTR_VERSION;
++    EXPECT_EQ(sw.get(SAI_OBJECT_TYPE_POE_DEVICE, strDevId, 1, attrs), SAI_STATUS_SUCCESS);
++
++    attrs[0].id = SAI_POE_PSE_ATTR_TEMPERATURE;
++    EXPECT_EQ(sw.get(SAI_OBJECT_TYPE_POE_PSE, strPseId, 1, attrs), SAI_STATUS_SUCCESS);
++    attrs[0].id = SAI_POE_PSE_ATTR_STATUS;
++    EXPECT_EQ(sw.get(SAI_OBJECT_TYPE_POE_PSE, strPseId, 1, attrs), SAI_STATUS_SUCCESS);
++    attrs[0].id = SAI_POE_PSE_ATTR_SOFTWARE_VERSION;
++    EXPECT_EQ(sw.get(SAI_OBJECT_TYPE_POE_PSE, strPseId, 1, attrs), SAI_STATUS_SUCCESS);
++    attrs[0].id = SAI_POE_PSE_ATTR_HARDWARE_VERSION;
++    EXPECT_EQ(sw.get(SAI_OBJECT_TYPE_POE_PSE, strPseId, 1, attrs), SAI_STATUS_SUCCESS);
++    attrs[0].id = SAI_POE_PSE_ATTR_ID;
++    EXPECT_EQ(sw.get(SAI_OBJECT_TYPE_POE_PSE, strPseId, 1, attrs), SAI_STATUS_SUCCESS);
++    attrs[0].id = SAI_POE_PSE_ATTR_DEVICE_ID;
++    EXPECT_EQ(sw.get(SAI_OBJECT_TYPE_POE_PSE, strPseId, 1, attrs), SAI_STATUS_SUCCESS);
++
++    attrs[0].id = SAI_POE_PORT_ATTR_STANDARD;
++    EXPECT_EQ(sw.get(SAI_OBJECT_TYPE_POE_PORT, strFirstPortId, 1, attrs), SAI_STATUS_SUCCESS);
++    attrs[0].id = SAI_POE_PORT_ATTR_CONSUMPTION;
++    EXPECT_EQ(sw.get(SAI_OBJECT_TYPE_POE_PORT, strFirstPortId, 1, attrs), SAI_STATUS_SUCCESS);
++    attrs[0].id = SAI_POE_PORT_ATTR_STATUS;
++    EXPECT_EQ(sw.get(SAI_OBJECT_TYPE_POE_PORT, strFirstPortId, 1, attrs), SAI_STATUS_SUCCESS);
++    attrs[0].id = SAI_POE_PORT_ATTR_FRONT_PANEL_ID;
++    EXPECT_EQ(sw.get(SAI_OBJECT_TYPE_POE_PORT, strFirstPortId, 1, attrs), SAI_STATUS_SUCCESS);
++    attrs[0].id = SAI_POE_PORT_ATTR_DEVICE_ID;
++    EXPECT_EQ(sw.get(SAI_OBJECT_TYPE_POE_PORT, strFirstPortId, 1, attrs), SAI_STATUS_SUCCESS);
++}
+diff --git a/unittest/vslib/test_sai_vs_poe.cpp b/unittest/vslib/test_sai_vs_poe.cpp
+new file mode 100644
+index 00000000..a79deaa2
+--- /dev/null
++++ b/unittest/vslib/test_sai_vs_poe.cpp
+@@ -0,0 +1,33 @@
++#include <gtest/gtest.h>
++
++extern "C" {
++#include "sai.h"
++}
++
++#include "swss/logger.h"
++
++TEST(libsairedis, poe)
++{
++    sai_poe_api_t *api = nullptr;
++
++    sai_api_query(SAI_API_POE, (void**)&api);
++
++    EXPECT_NE(api, nullptr);
++
++    sai_object_id_t id;
++
++    EXPECT_NE(SAI_STATUS_SUCCESS, api->create_poe_device(&id,0,0,0));
++    EXPECT_NE(SAI_STATUS_SUCCESS, api->remove_poe_device(0));
++    EXPECT_NE(SAI_STATUS_SUCCESS, api->set_poe_device_attribute(0,0));
++    EXPECT_NE(SAI_STATUS_SUCCESS, api->get_poe_device_attribute(0,0,0));
++
++    EXPECT_NE(SAI_STATUS_SUCCESS, api->create_poe_pse(&id,0,0,0));
++    EXPECT_NE(SAI_STATUS_SUCCESS, api->remove_poe_pse(0));
++    EXPECT_NE(SAI_STATUS_SUCCESS, api->set_poe_pse_attribute(0,0));
++    EXPECT_NE(SAI_STATUS_SUCCESS, api->get_poe_pse_attribute(0,0,0));
++
++    EXPECT_NE(SAI_STATUS_SUCCESS, api->create_poe_port(&id,0,0,0));
++    EXPECT_NE(SAI_STATUS_SUCCESS, api->remove_poe_port(0));
++    EXPECT_NE(SAI_STATUS_SUCCESS, api->set_poe_port_attribute(0,0));
++    EXPECT_NE(SAI_STATUS_SUCCESS, api->get_poe_port_attribute(0,0,0));
++}
+diff --git a/vslib/Makefile.am b/vslib/Makefile.am
+index ab6b68a3..64f20e23 100644
+--- a/vslib/Makefile.am
++++ b/vslib/Makefile.am
+@@ -49,6 +49,7 @@ libSaiVS_a_SOURCES = \
+ 					  SwitchContainer.cpp \
+ 					  Switch.cpp \
+ 					  SwitchMLNX2700.cpp \
++					  SwitchPoE.cpp \
+ 					  SwitchNvdaMBF2H536C.cpp \
+ 					  SwitchStateBase.cpp \
+ 					  SwitchStateBaseFdb.cpp \
+diff --git a/vslib/SwitchConfig.cpp b/vslib/SwitchConfig.cpp
+index 510c1af0..573a08ab 100644
+--- a/vslib/SwitchConfig.cpp
++++ b/vslib/SwitchConfig.cpp
+@@ -41,11 +41,16 @@ bool SwitchConfig::parseSaiSwitchType(
+     {
+         saiSwitchType = SAI_SWITCH_TYPE_PHY;
+     }
++    else if (st == SAI_VALUE_SAI_SWITCH_TYPE_POE)
++    {
++        saiSwitchType = SAI_SWITCH_TYPE_POE;
++    }
+     else
+     {
+-        SWSS_LOG_ERROR("unknown SAI switch type: '%s', expected (%s|%s)",
++        SWSS_LOG_ERROR("unknown SAI switch type: '%s', expected (%s|%s|%s)",
+                 saiSwitchTypeStr,
+                 SAI_VALUE_SAI_SWITCH_TYPE_NPU,
++                SAI_VALUE_SAI_SWITCH_TYPE_POE,
+                 SAI_VALUE_SAI_SWITCH_TYPE_PHY);
+ 
+         return false;
+@@ -74,6 +79,10 @@ bool SwitchConfig::parseSwitchType(
+     {
+         switchType = SAI_VS_SWITCH_TYPE_BCM81724;
+     }
++    else if (st == SAI_VALUE_VS_SWITCH_TYPE_POE)
++    {
++        switchType = SAI_VS_SWITCH_TYPE_POE;
++    }
+     else if (st == SAI_VALUE_VS_SWITCH_TYPE_MLNX2700)
+     {
+         switchType = SAI_VS_SWITCH_TYPE_MLNX2700;
+@@ -97,6 +106,7 @@ bool SwitchConfig::parseSwitchType(
+                 SAI_VALUE_VS_SWITCH_TYPE_BCM81724,
+                 SAI_VALUE_VS_SWITCH_TYPE_BCM56850,
+                 SAI_VALUE_VS_SWITCH_TYPE_BCM56971B0,
++                SAI_VALUE_VS_SWITCH_TYPE_POE,
+                 SAI_VALUE_VS_SWITCH_TYPE_MLNX2700,
+                 SAI_VALUE_VS_SWITCH_TYPE_NVDA_MBF2H536C,
+                 SAI_VALUE_VS_SWITCH_TYPE_DPU_SIMU_2P
+diff --git a/vslib/SwitchConfig.h b/vslib/SwitchConfig.h
+index b22a0963..fdf97470 100644
+--- a/vslib/SwitchConfig.h
++++ b/vslib/SwitchConfig.h
+@@ -28,6 +28,8 @@ namespace saivs
+ 
+         SAI_VS_SWITCH_TYPE_NVDA_MBF2H536C,
+ 
++        SAI_VS_SWITCH_TYPE_POE,
++
+     } sai_vs_switch_type_t;
+ 
+     typedef enum _sai_vs_boot_type_t
+diff --git a/vslib/SwitchPoE.cpp b/vslib/SwitchPoE.cpp
+new file mode 100644
+index 00000000..4b48a93e
+--- /dev/null
++++ b/vslib/SwitchPoE.cpp
+@@ -0,0 +1,348 @@
++#include "SwitchPoE.h"
++
++#include "swss/logger.h"
++#include "meta/sai_serialize.h"
++
++#include <algorithm>
++
++using namespace saivs;
++
++SwitchPoE::SwitchPoE(
++        _In_ sai_object_id_t switch_id,
++        _In_ std::shared_ptr<RealObjectIdManager> manager,
++        _In_ std::shared_ptr<SwitchConfig> config):
++    SwitchStateBase(switch_id, manager, config)
++{
++    SWSS_LOG_ENTER();
++
++    // empty
++}
++
++SwitchPoE::SwitchPoE(
++    _In_ sai_object_id_t switch_id,
++    _In_ std::shared_ptr<RealObjectIdManager> manager,
++    _In_ std::shared_ptr<SwitchConfig> config,
++    _In_ std::shared_ptr<WarmBootState> warmBootState):
++    SwitchStateBase(switch_id, manager, config, warmBootState)
++{
++    SWSS_LOG_ENTER();
++
++    // empty
++}
++
++SwitchPoE::~SwitchPoE()
++{
++    SWSS_LOG_ENTER();
++
++    // empty
++}
++
++sai_status_t SwitchPoE::set_switch_default_attributes()
++{
++    SWSS_LOG_ENTER();
++
++    sai_status_t ret;
++
++    // Fill this with supported SAI_OBJECT_TYPEs
++    int32_t supported_obj_list[] = {
++        SAI_OBJECT_TYPE_NULL,
++        SAI_OBJECT_TYPE_POE_DEVICE,
++        SAI_OBJECT_TYPE_POE_PSE,
++        SAI_OBJECT_TYPE_POE_PORT,
++    };
++    sai_attribute_t attr;
++
++    attr.id = SAI_SWITCH_ATTR_POE_DEVICE_LIST;
++    attr.value.objlist.count = 0;
++    attr.value.objlist.list = NULL;
++    CHECK_STATUS(set(SAI_OBJECT_TYPE_SWITCH, m_switch_id, &attr));
++
++    attr.id = SAI_SWITCH_ATTR_WARM_RECOVER;
++    attr.value.booldata = false;
++    CHECK_STATUS(set(SAI_OBJECT_TYPE_SWITCH, m_switch_id, &attr));
++
++    attr.id = SAI_SWITCH_ATTR_TYPE;
++    attr.value.s32 = SAI_SWITCH_TYPE_POE;
++    CHECK_STATUS(set(SAI_OBJECT_TYPE_SWITCH, m_switch_id, &attr));
++
++    // v0.1
++    attr.id = SAI_SWITCH_ATTR_FIRMWARE_MAJOR_VERSION;
++    attr.value.u32 = 0;
++    CHECK_STATUS(set(SAI_OBJECT_TYPE_SWITCH, m_switch_id, &attr));
++
++    attr.id = SAI_SWITCH_ATTR_FIRMWARE_MINOR_VERSION;
++    attr.value.u32 = 1;
++    CHECK_STATUS(set(SAI_OBJECT_TYPE_SWITCH, m_switch_id, &attr));
++
++    attr.id = SAI_SWITCH_ATTR_SUPPORTED_OBJECT_TYPE_LIST;
++    attr.value.s32list.count = sizeof(supported_obj_list) / sizeof(int32_t);
++    attr.value.s32list.list = supported_obj_list;
++    ret = set(SAI_OBJECT_TYPE_SWITCH, m_switch_id, &attr);
++
++    return ret;
++}
++
++sai_status_t SwitchPoE::initialize_default_objects(
++    _In_ uint32_t attr_count,
++    _In_ const sai_attribute_t *attr_list)
++{
++    SWSS_LOG_ENTER();
++
++    CHECK_STATUS(set_switch_default_attributes());
++
++    return SAI_STATUS_SUCCESS;
++}
++
++sai_status_t SwitchPoE::create(
++        _In_ sai_object_type_t object_type,
++        _In_ const std::string &serializedObjectId,
++        _In_ sai_object_id_t switch_id,
++        _In_ uint32_t attr_count,
++        _In_ const sai_attribute_t *attr_list)
++{
++    SWSS_LOG_ENTER();
++
++    if (object_type == SAI_OBJECT_TYPE_POE_DEVICE)
++    {
++        sai_object_id_t object_id;
++        sai_deserialize_object_id(serializedObjectId, object_id);
++        return createPoeDevice(object_id, switch_id, attr_count, attr_list);
++    }
++
++    if (object_type == SAI_OBJECT_TYPE_POE_PORT)
++    {
++        sai_object_id_t object_id;
++        sai_deserialize_object_id(serializedObjectId, object_id);
++        return createPoePort(object_id, switch_id, attr_count, attr_list);
++    }
++
++    return create_internal(object_type, serializedObjectId, switch_id, attr_count, attr_list);
++}
++
++sai_status_t SwitchPoE::createPoeDevice(
++        _In_ sai_object_id_t object_id,
++        _In_ sai_object_id_t switch_id,
++        _In_ uint32_t attr_count,
++        _In_ const sai_attribute_t *attr_list)
++{
++    SWSS_LOG_ENTER();
++
++    auto sid = sai_serialize_object_id(object_id);
++
++    auto power_limit = sai_metadata_get_attr_by_id(SAI_POE_DEVICE_ATTR_POWER_LIMIT_MODE, attr_count, attr_list);
++
++    CHECK_STATUS(create_internal(SAI_OBJECT_TYPE_POE_DEVICE, sid, switch_id, attr_count, attr_list));
++
++    sai_attribute_t attr;
++
++    /* if not set in create_internal then use default values*/
++    if (!power_limit)
++    {
++        attr.id = SAI_POE_DEVICE_ATTR_POWER_LIMIT_MODE;
++        attr.value.u32 = SAI_POE_DEVICE_LIMIT_MODE_CLASS;
++        CHECK_STATUS(set(SAI_OBJECT_TYPE_POE_DEVICE, object_id, &attr));
++    }
++
++    /* update the list of all POE devices on switch */
++    m_poe_device_list.push_back(object_id);
++
++    auto device_count = (uint32_t)m_poe_device_list.size();
++    attr.id = SAI_SWITCH_ATTR_POE_DEVICE_LIST;
++    attr.value.objlist.count = device_count;
++    attr.value.objlist.list = m_poe_device_list.data();
++    CHECK_STATUS(set(SAI_OBJECT_TYPE_SWITCH, switch_id, &attr));
++
++    return SAI_STATUS_SUCCESS;
++}
++
++sai_status_t SwitchPoE::createPoePort(
++        _In_ sai_object_id_t object_id,
++        _In_ sai_object_id_t switch_id,
++        _In_ uint32_t attr_count,
++        _In_ const sai_attribute_t *attr_list)
++{
++    SWSS_LOG_ENTER();
++
++    auto sid = sai_serialize_object_id(object_id);
++
++    auto power_limit = sai_metadata_get_attr_by_id(SAI_POE_PORT_ATTR_POWER_LIMIT, attr_count, attr_list);
++    auto power_priority = sai_metadata_get_attr_by_id(SAI_POE_PORT_ATTR_POWER_PRIORITY, attr_count, attr_list);
++
++    CHECK_STATUS(create_internal(SAI_OBJECT_TYPE_POE_PORT, sid, switch_id, attr_count, attr_list));
++
++    sai_attribute_t attr;
++
++    /* default admin state is down as defined in SAI */
++    attr.id = SAI_POE_PORT_ATTR_ADMIN_ENABLED_STATE;
++    attr.value.booldata = false;
++    CHECK_STATUS(set(SAI_OBJECT_TYPE_POE_PORT, object_id, &attr));
++
++    /* if not set in create_internal then use default values*/
++    if (!power_limit)
++    {
++        attr.id = SAI_POE_PORT_ATTR_POWER_LIMIT;
++        attr.value.u32 = 0;
++        CHECK_STATUS(set(SAI_OBJECT_TYPE_POE_PORT, object_id, &attr));
++    }
++    if (!power_priority)
++    {
++        attr.id = SAI_POE_PORT_ATTR_POWER_PRIORITY;
++        attr.value.u32 = SAI_POE_PORT_POWER_PRIORITY_TYPE_HIGH;
++        CHECK_STATUS(set(SAI_OBJECT_TYPE_POE_PORT, object_id, &attr));
++    }
++    return SAI_STATUS_SUCCESS;
++}
++
++sai_status_t SwitchPoE::refresh_read_only(
++        _In_ const sai_attr_metadata_t *meta,
++        _In_ sai_object_id_t object_id)
++{
++    SWSS_LOG_ENTER();
++
++    sai_attribute_t attr;
++    attr.id = meta->attrid;
++    if (meta->objecttype == SAI_OBJECT_TYPE_POE_DEVICE)
++    {
++        switch (meta->attrid)
++        {
++        case SAI_POE_DEVICE_ATTR_HARDWARE_INFO:
++            strncpy(attr.value.chardata, "hardware info", sizeof(attr.value.chardata));
++            return set(meta->objecttype, object_id, &attr);
++        case SAI_POE_DEVICE_ATTR_POE_PSE_LIST:
++            return refresh_poe_pse_list(meta, object_id);
++        case SAI_POE_DEVICE_ATTR_POE_PORT_LIST:
++            return refresh_poe_port_list(meta, object_id);
++        case SAI_POE_DEVICE_ATTR_TOTAL_POWER:
++            attr.value.u32 = 100;
++            return set(meta->objecttype, object_id, &attr);
++        case SAI_POE_DEVICE_ATTR_POWER_CONSUMPTION:
++            attr.value.u32 = 10000;
++            return set(meta->objecttype, object_id, &attr);
++        case SAI_POE_DEVICE_ATTR_VERSION:
++            strncpy(attr.value.chardata, "version", sizeof(attr.value.chardata));
++            return set(meta->objecttype, object_id, &attr);
++        }
++
++    }
++    if (meta->objecttype == SAI_OBJECT_TYPE_POE_PSE)
++    {
++        switch (meta->attrid)
++        {
++        case SAI_POE_PSE_ATTR_TEMPERATURE:
++            attr.value.u32 = 25;
++            return set(meta->objecttype, object_id, &attr);
++        case SAI_POE_PSE_ATTR_STATUS:
++            attr.value.u32 = SAI_POE_PSE_STATUS_TYPE_ACTIVE;
++            return set(meta->objecttype, object_id, &attr);
++        case SAI_POE_PSE_ATTR_SOFTWARE_VERSION:
++            strncpy(attr.value.chardata, "software version", sizeof(attr.value.chardata));
++            return set(meta->objecttype, object_id, &attr);
++        case SAI_POE_PSE_ATTR_HARDWARE_VERSION:
++            strncpy(attr.value.chardata, "hardware version", sizeof(attr.value.chardata));
++            return set(meta->objecttype, object_id, &attr);
++        case SAI_POE_PSE_ATTR_ID:
++        case SAI_POE_PSE_ATTR_DEVICE_ID:
++            return SAI_STATUS_SUCCESS;
++        }
++    }
++    if (meta->objecttype == SAI_OBJECT_TYPE_POE_PORT)
++    {
++        switch (meta->attrid)
++        {
++        case SAI_POE_PORT_ATTR_STANDARD:
++            attr.value.u32 = SAI_POE_PORT_STANDARD_TYPE_BT_TYPE3;
++            return set(meta->objecttype, object_id, &attr);
++        case SAI_POE_PORT_ATTR_CONSUMPTION:
++            /* random values */
++            attr.value.portpowerconsumption = (sai_poe_port_power_consumption_t){
++                .active_channel=SAI_POE_PORT_ACTIVE_CHANNEL_TYPE_A_AND_B,
++                .voltage=50000,
++                .current=200,
++                .consumption=10000,
++                .signature_type=SAI_POE_PORT_SIGNATURE_TYPE_DUAL,
++                .class_method=SAI_POE_PORT_CLASS_METHOD_TYPE_AUTO_CLASS,
++                .measured_class_a=1,
++                .assigned_class_a=2,
++                .measured_class_b=3,
++                .assigned_class_b=4
++            };
++            return set(meta->objecttype, object_id, &attr);
++        case SAI_POE_PORT_ATTR_STATUS:
++            attr.value.u32 = SAI_POE_PORT_STATUS_TYPE_DELIVERING_POWER;
++            return set(meta->objecttype, object_id, &attr);
++        case SAI_POE_PORT_ATTR_FRONT_PANEL_ID:
++        case SAI_POE_PORT_ATTR_DEVICE_ID:
++            return SAI_STATUS_SUCCESS;
++        }
++    }
++
++    auto mmeta = m_meta.lock();
++
++    if (mmeta)
++    {
++        if (mmeta->meta_unittests_enabled())
++        {
++            SWSS_LOG_NOTICE("unittests enabled, SET could be performed on %s, not recalculating", meta->attridname);
++
++            return SAI_STATUS_SUCCESS;
++        }
++    }
++    else
++    {
++        SWSS_LOG_WARN("meta pointer expired");
++    }
++
++    SWSS_LOG_WARN("need to recalculate RO: %s", meta->attridname);
++
++    return SAI_STATUS_NOT_IMPLEMENTED;
++}
++
++sai_status_t SwitchPoE::refresh_poe_pse_list(
++        _In_ const sai_attr_metadata_t *meta,
++        _In_ sai_object_id_t poe_device_id)
++{
++    SWSS_LOG_ENTER();
++
++    sai_attribute_t attr;
++    attr.id = SAI_POE_PSE_ATTR_DEVICE_ID;
++    attr.value.oid = poe_device_id;
++
++    findObjects(SAI_OBJECT_TYPE_POE_PSE, attr, m_poe_pse_list);
++    std::sort(m_poe_pse_list.begin(), m_poe_pse_list.end());
++
++    auto pse_count = (uint32_t)m_poe_pse_list.size();
++
++    attr.id = SAI_POE_DEVICE_ATTR_POE_PSE_LIST;
++    attr.value.objlist.count = pse_count;
++    attr.value.objlist.list = m_poe_pse_list.data();
++
++    CHECK_STATUS(set(SAI_OBJECT_TYPE_POE_DEVICE, poe_device_id, &attr));
++
++    SWSS_LOG_NOTICE("refreshed POE PSE list, current PSE number: %u", pse_count);
++    return SAI_STATUS_SUCCESS;
++}
++
++sai_status_t SwitchPoE::refresh_poe_port_list(
++        _In_ const sai_attr_metadata_t *meta,
++        _In_ sai_object_id_t poe_device_id)
++{
++    SWSS_LOG_ENTER();
++
++    sai_attribute_t attr;
++    attr.id = SAI_POE_PORT_ATTR_DEVICE_ID;
++    attr.value.oid = poe_device_id;
++
++    findObjects(SAI_OBJECT_TYPE_POE_PORT, attr, m_poe_port_list);
++    std::sort(m_poe_port_list.begin(), m_poe_port_list.end());
++
++    auto port_count = (uint32_t)m_poe_port_list.size();
++
++    attr.id = SAI_POE_DEVICE_ATTR_POE_PORT_LIST;
++    attr.value.objlist.count = port_count;
++    attr.value.objlist.list = m_poe_port_list.data();
++
++    CHECK_STATUS(set(SAI_OBJECT_TYPE_POE_DEVICE, poe_device_id, &attr));
++
++    SWSS_LOG_NOTICE("refreshed POE port list, current port number: %u", port_count);
++    return SAI_STATUS_SUCCESS;
++}
+diff --git a/vslib/SwitchPoE.h b/vslib/SwitchPoE.h
+new file mode 100644
+index 00000000..6a16eb44
+--- /dev/null
++++ b/vslib/SwitchPoE.h
+@@ -0,0 +1,68 @@
++#pragma once
++
++#include "SwitchStateBase.h"
++
++namespace saivs
++{
++    class SwitchPoE:
++        public SwitchStateBase
++    {
++        public:
++
++            SwitchPoE(
++                    _In_ sai_object_id_t switch_id,
++                    _In_ std::shared_ptr<RealObjectIdManager> manager,
++                    _In_ std::shared_ptr<SwitchConfig> config);
++
++            SwitchPoE(
++                    _In_ sai_object_id_t switch_id,
++                    _In_ std::shared_ptr<RealObjectIdManager> manager,
++                    _In_ std::shared_ptr<SwitchConfig> config,
++                    _In_ std::shared_ptr<WarmBootState> warmBootState);
++
++            virtual ~SwitchPoE();
++
++            virtual sai_status_t create(
++                    _In_ sai_object_type_t object_type,
++                    _In_ const std::string &serializedObjectId,
++                    _In_ sai_object_id_t switch_id,
++                    _In_ uint32_t attr_count,
++                    _In_ const sai_attribute_t *attr_list) override;
++
++        protected:
++            std::vector<sai_object_id_t> m_poe_device_list;
++            std::vector<sai_object_id_t> m_poe_pse_list;
++            std::vector<sai_object_id_t> m_poe_port_list;
++
++            sai_status_t createPoeDevice(
++                    _In_ sai_object_id_t object_id,
++                    _In_ sai_object_id_t switch_id,
++                    _In_ uint32_t attr_count,
++                    _In_ const sai_attribute_t *attr_list);
++
++            sai_status_t createPoePort(
++                    _In_ sai_object_id_t object_id,
++                    _In_ sai_object_id_t switch_id,
++                    _In_ uint32_t attr_count,
++                    _In_ const sai_attribute_t *attr_list);
++
++            virtual sai_status_t refresh_read_only(
++                    _In_ const sai_attr_metadata_t *meta,
++                    _In_ sai_object_id_t object_id) override;
++
++            virtual sai_status_t refresh_poe_pse_list(
++                    _In_ const sai_attr_metadata_t *meta,
++                    _In_ sai_object_id_t poe_device_id);
++
++            virtual sai_status_t refresh_poe_port_list(
++                    _In_ const sai_attr_metadata_t *meta,
++                    _In_ sai_object_id_t poe_device_id);
++
++        public:
++            virtual sai_status_t set_switch_default_attributes();
++            virtual sai_status_t initialize_default_objects(
++                    _In_ uint32_t attr_count,
++                    _In_ const sai_attribute_t *attr_list) override;
++
++    };
++}
+diff --git a/vslib/SwitchStateBase.cpp b/vslib/SwitchStateBase.cpp
+index dcf765ab..7f132434 100644
+--- a/vslib/SwitchStateBase.cpp
++++ b/vslib/SwitchStateBase.cpp
+@@ -2056,6 +2056,16 @@ sai_status_t SwitchStateBase::refresh_bridge_port_list(
+     return SAI_STATUS_NOT_IMPLEMENTED;
+ }
+ 
++sai_status_t SwitchStateBase::refresh_port_poe_port_id(
++        _In_ sai_object_id_t port_id)
++{
++    SWSS_LOG_ENTER();
++
++    SWSS_LOG_ERROR("implement in child class");
++
++    return SAI_STATUS_NOT_IMPLEMENTED;
++}
++
+ sai_status_t SwitchStateBase::refresh_vlan_member_list(
+         _In_ const sai_attr_metadata_t *meta,
+         _In_ sai_object_id_t vlan_id)
+@@ -2477,6 +2487,9 @@ sai_status_t SwitchStateBase::refresh_read_only(
+ 
+             case SAI_PORT_ATTR_OPER_SPEED:
+                 return refresh_port_oper_speed(object_id);
++
++            case SAI_PORT_ATTR_POE_PORT_ID:
++                return refresh_port_poe_port_id(object_id);
+         }
+     }
+ 
+diff --git a/vslib/SwitchStateBase.h b/vslib/SwitchStateBase.h
+index cbbcc982..18f81f1e 100644
+--- a/vslib/SwitchStateBase.h
++++ b/vslib/SwitchStateBase.h
+@@ -150,6 +150,9 @@ namespace saivs
+                     _In_ const sai_attr_metadata_t *meta,
+                     _In_ sai_object_id_t bridge_id);
+ 
++            virtual sai_status_t refresh_port_poe_port_id(
++                    _In_ sai_object_id_t port_id);
++
+             virtual sai_status_t refresh_vlan_member_list(
+                     _In_ const sai_attr_metadata_t *meta,
+                     _In_ sai_object_id_t vlan_id);
+diff --git a/vslib/VirtualSwitchSaiInterface.cpp b/vslib/VirtualSwitchSaiInterface.cpp
+index d866f5ac..64759144 100644
+--- a/vslib/VirtualSwitchSaiInterface.cpp
++++ b/vslib/VirtualSwitchSaiInterface.cpp
+@@ -10,6 +10,7 @@
+ #include "meta/Globals.h"
+ 
+ #include "SwitchStateBase.h"
++#include "SwitchPoE.h"
+ #include "SwitchBCM81724.h"
+ #include "SwitchBCM56850.h"
+ #include "SwitchBCM56971B0.h"
+@@ -601,6 +602,11 @@ std::shared_ptr<SwitchStateBase> VirtualSwitchSaiInterface::init_switch(
+             m_switchStateMap[switch_id] = std::make_shared<SwitchNvdaMBF2H536C>(switch_id, m_realObjectIdManager, config, warmBootState);
+             break;
+ 
++        case SAI_VS_SWITCH_TYPE_POE:
++
++            m_switchStateMap[switch_id] = std::make_shared<SwitchPoE>(switch_id, m_realObjectIdManager, config, warmBootState);
++            break;
++
+         default:
+ 
+             SWSS_LOG_WARN("unknown switch type: %d", config->m_switchType);
+diff --git a/vslib/sai_vs_poe.cpp b/vslib/sai_vs_poe.cpp
+new file mode 100644
+index 00000000..b4b9aa9c
+--- /dev/null
++++ b/vslib/sai_vs_poe.cpp
+@@ -0,0 +1,12 @@
++#include "sai_vs.h"
++
++VS_GENERIC_QUAD(POE_DEVICE,poe_device);
++VS_GENERIC_QUAD(POE_PSE,poe_pse);
++VS_GENERIC_QUAD(POE_PORT,poe_port);
++
++const sai_poe_api_t vs_poe_api = {
++
++    VS_GENERIC_QUAD_API(poe_device)
++    VS_GENERIC_QUAD_API(poe_pse)
++    VS_GENERIC_QUAD_API(poe_port)
++};
+diff --git a/vslib/saivs.h b/vslib/saivs.h
+index 62c3d59d..e5b54c33 100644
+--- a/vslib/saivs.h
++++ b/vslib/saivs.h
+@@ -9,6 +9,7 @@ extern "C" {
+ 
+ #define SAI_VALUE_SAI_SWITCH_TYPE_NPU       "SAI_SWITCH_TYPE_NPU"
+ #define SAI_VALUE_SAI_SWITCH_TYPE_PHY       "SAI_SWITCH_TYPE_PHY"
++#define SAI_VALUE_SAI_SWITCH_TYPE_POE       "SAI_SWITCH_TYPE_POE"
+ 
+ /**
+  * @def SAI_KEY_VS_INTERFACE_LANE_MAP_FILE
+@@ -102,6 +103,7 @@ extern "C" {
+ #define SAI_VALUE_VS_SWITCH_TYPE_MLNX2700          "SAI_VS_SWITCH_TYPE_MLNX2700"
+ #define SAI_VALUE_VS_SWITCH_TYPE_NVDA_MBF2H536C    "SAI_VS_SWITCH_TYPE_NVDA_MBF2H536C"
+ #define SAI_VALUE_VS_SWITCH_TYPE_DPU_SIMU_2P       "SAI_VS_SWITCH_TYPE_DPU_SIMU_2P"
++#define SAI_VALUE_VS_SWITCH_TYPE_POE               "SAI_VS_SWITCH_TYPE_POE"
+ 
+ /*
+  * Values for SAI_KEY_BOOT_TYPE (defined in saiswitch.h)
+-- 
+2.25.1
+
