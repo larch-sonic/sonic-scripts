@@ -227,7 +227,7 @@ update_sai_version()
 {
     # Update SAI version if needed
     pushd src/sonic-sairedis/SAI
-
+    CUR_DIR=$(basename `pwd`)
     SAI_commit=`git rev-parse HEAD`
     if [ "$CUR_DIR" != "SAI" ]; then
         log "ERROR: Need to be at SAI git clone path"
@@ -241,6 +241,7 @@ update_sai_version()
         git checkout ${SAI_COMMIT}
     fi
     popd
+	CUR_DIR=$(basename `pwd`)
 }
 
 main()

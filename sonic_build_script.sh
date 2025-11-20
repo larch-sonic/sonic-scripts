@@ -19,9 +19,9 @@ DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 MIRROR="publicmirror.azurecr.io"
 VERSION_CONTROL_COMPONENTS="deb,py2,py3,web,git,docker"
 REL_BUILD_TSTAMP=$(date +'%d-%m-%Y_%H-%M')
-CACHE_DIR=/var/cache/sonic-mrvl
-ARTIFACTS_DIR=/sonic-artifacts
-DIR_PREFIX="ABU"
+CACHE_DIR=/var/cache/sonic
+ARTIFACTS_DIR=/artifacts
+DIR_PREFIX="Larch"
 ENABLE_DOCKER_BASE_PULL_YN="ENABLE_DOCKER_BASE_PULL=y"
 
 # Determine "wrong" architecture sub-string vs MACHINE_ARCH
@@ -73,10 +73,10 @@ print_usage()
 echo """
 Example:
 ./sonic_build_script.sh -b 202411 -p marvell -a arm64 \\
-  --patch_script https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/master/larch_sonic_patch_script.sh -r \\
+  --patch_script https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/main/larch_sonic_patch_script.sh -r \\
   -c 021569412
 ./sonic_build_script.sh -b master -p marvell-prestera -a arm64 \\
-  --patch_script https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/master/larch_sonic_patch_script.sh -r
+  --patch_script https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/main/larch_sonic_patch_script.sh -r
 ./sonic_build_script.sh -b master -p marvell-prestera -a arm64 \\
   --patch_script /wrk/sonic-scripts/larch_sonic_patch_script.sh -r \\
   --SAI http://10.2.141.103:8080/mrvllibsai/mrvllibsai_1.16.1-1_arm64.deb
@@ -292,7 +292,7 @@ check_free_space()
     local ALERT=$2
 
 	if [ -v CLEAN_WS ]; then
-	  df -H $dir | grep -vE '^Filesystem' | awk '{ print $5 " " $1 }' | while read -r output;
+	  df -h $dir | grep -vE '^Filesystem' | awk '{ print $5 " " $1 }' | while read -r output;
 	  do
 		echo "$output"
 		usep=$(echo "$output" | awk '{ print $1}' | cut -d'%' -f1 )
@@ -326,7 +326,7 @@ check_free_space()
 	  done
 	fi
 
-df -H $dir | grep -vE '^Filesystem' | awk '{ print $5 " " $1 }' | while read -r output;
+df -h $dir | grep -vE '^Filesystem' | awk '{ print $5 " " $1 }' | while read -r output;
 do
     usep=$(echo "$output" | awk '{ print $1}' | cut -d'%' -f1 )
     if [ $usep -ge $ALERT ]; then
