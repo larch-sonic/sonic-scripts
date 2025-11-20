@@ -20,6 +20,7 @@ CUR_DIR=$(basename `pwd`)
 LOG_FILE=patches_result.log
 FULL_PATH=`pwd`
 err_cnt=0
+SAI_COMMIT="v1.16.1"
 
 # VERIFY_PATCHES=Y may be selected by MRVL sonic_build_script.sh
 if [[ "$DEVEL" == "" || "$VERIFY_PATCHES" == "Y" ]]; then
@@ -222,6 +223,26 @@ apply_hwsku_changes()
 	fi
 }
 
+update_sai_version()
+{
+    # Update SAI version if needed
+    pushd src/sonic-sairedis/SAI
+
+    SAI_commit=`git rev-parse HEAD`
+    if [ "$CUR_DIR" != "SAI" ]; then
+        log "ERROR: Need to be at SAI git clone path"
+        pre_patch_help
+        exit
+    fi
+
+    if [ "${SAI_commit}" != "$SAI_COMMIT" ]; then
+        log "Checkout SAI commit to proceed"
+        log "git checkout ${SAI_COMMIT}"
+        git checkout ${SAI_COMMIT}
+    fi
+    popd
+}
+
 main()
 {
 	if [ "$CUR_DIR" != "sonic-buildimage" ]; then
@@ -253,7 +274,9 @@ main()
 	make init
 	git submodule sync --recursive
 	git submodule update --init --recursive
-
+	# Update SAI version
+	log "Update SAI version"
+	update_sai_version
 	log "Apply submodule patches"
 	# Apply submodule patches
 	apply_submodule_patches
@@ -263,7 +286,8 @@ main()
 	fi
 	log "Apply hwsku changes"
 	# Apply hwsku changes
-	apply_hwsku_changes
+	# No need to apply hwsku changes as they are part of patch files
+	#apply_hwsku_changes
 	log "Patch script - DONE"
 }
 

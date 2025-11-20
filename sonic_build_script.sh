@@ -447,15 +447,15 @@ patch_ws()
         else
             isUrl=
         fi
-        URL=${PATCH_SCRIPT_URL%marvell_sonic_patch_script.sh}
+        URL=${PATCH_SCRIPT_URL%larch_sonic_patch_script.sh}
         if [ "$isUrl" = "1" ]; then
             wget --timeout=2 -c $PATCH_SCRIPT_URL
         else
             cp $PATCH_SCRIPT_URL .
         fi
         commit_id_get_upstream
-        echo "bash marvell_sonic_patch_script.sh --branch ${BRANCH} --platform ${BUILD_PLATFORM} --arch ${BUILD_PLATFORM_ARCH} --url ${URL}" >> build_cmd.txt
-        bash marvell_sonic_patch_script.sh --branch ${BRANCH} --platform ${BUILD_PLATFORM} --arch ${BUILD_PLATFORM_ARCH} --url ${URL}
+        echo "bash larch_sonic_patch_script.sh --branch ${BRANCH} --platform ${BUILD_PLATFORM} --arch ${BUILD_PLATFORM_ARCH} --url ${URL}" >> build_cmd.txt
+        bash larch_sonic_patch_script.sh --branch ${BRANCH} --platform ${BUILD_PLATFORM} --arch ${BUILD_PLATFORM_ARCH} --url ${URL}
         check_error $? "patch_script"
         commit_id_update
 
@@ -487,7 +487,7 @@ build_ws()
         BUILD_OPTIONS="${BUILD_OPTIONS} DEFAULT_PASSWORD=${ADMIN_PASSWORD}"
     fi
 
-    # Check the init has already been done by marvell_sonic_patch_script.sh
+    # Check the init has already been done by larch_sonic_patch_script.sh
     if [ ! -d .git/modules/ ]; then
         echo "make init" >> build_cmd.txt
         make init
