@@ -1,0 +1,65 @@
+From 35c5bab3037cbf7ad1642fac8fb69b2f1fa955a1 Mon Sep 17 00:00:00 2001
+From: Kostiantyn Buravchenko <kburavchenko@larch-networks.com>
+Date: Mon, 24 Nov 2025 13:08:26 +0200
+Subject: [PATCH] Add missed files for WNC board
+
+---
+ .../files/etc/modules-load.d/marvell.conf                   | 3 +++
+ .../sonic-platform-larch/files/etc/modules-load.d/mpls.conf | 2 ++
+ .../sonic-platform-larch/files/etc/sysctl.d/90-mpls.conf    | 1 +
+ .../sonic-platform-larch/files/etc/sysctl.d/98-sysctl.conf  | 6 ++++++
+ .../sonic-platform-larch/files/etc/sysctl.d/z-sysctl.conf   | 1 +
+ 5 files changed, 13 insertions(+)
+ create mode 100644 platform/marvell/sonic-platform-larch/files/etc/modules-load.d/marvell.conf
+ create mode 100644 platform/marvell/sonic-platform-larch/files/etc/modules-load.d/mpls.conf
+ create mode 100644 platform/marvell/sonic-platform-larch/files/etc/sysctl.d/90-mpls.conf
+ create mode 100644 platform/marvell/sonic-platform-larch/files/etc/sysctl.d/98-sysctl.conf
+ create mode 120000 platform/marvell/sonic-platform-larch/files/etc/sysctl.d/z-sysctl.conf
+
+diff --git a/platform/marvell/sonic-platform-larch/files/etc/modules-load.d/marvell.conf b/platform/marvell/sonic-platform-larch/files/etc/modules-load.d/marvell.conf
+new file mode 100644
+index 000000000..eec44bb96
+--- /dev/null
++++ b/platform/marvell/sonic-platform-larch/files/etc/modules-load.d/marvell.conf
+@@ -0,0 +1,3 @@
++eeprom
++mvcpss
++psample
+diff --git a/platform/marvell/sonic-platform-larch/files/etc/modules-load.d/mpls.conf b/platform/marvell/sonic-platform-larch/files/etc/modules-load.d/mpls.conf
+new file mode 100644
+index 000000000..dce41059a
+--- /dev/null
++++ b/platform/marvell/sonic-platform-larch/files/etc/modules-load.d/mpls.conf
+@@ -0,0 +1,2 @@
++mpls_router
++mpls_iptunnel
+diff --git a/platform/marvell/sonic-platform-larch/files/etc/sysctl.d/90-mpls.conf b/platform/marvell/sonic-platform-larch/files/etc/sysctl.d/90-mpls.conf
+new file mode 100644
+index 000000000..a81a2ca69
+--- /dev/null
++++ b/platform/marvell/sonic-platform-larch/files/etc/sysctl.d/90-mpls.conf
+@@ -0,0 +1 @@
++net.mpls.platform_labels = 100000
+diff --git a/platform/marvell/sonic-platform-larch/files/etc/sysctl.d/98-sysctl.conf b/platform/marvell/sonic-platform-larch/files/etc/sysctl.d/98-sysctl.conf
+new file mode 100644
+index 000000000..3a5e0c527
+--- /dev/null
++++ b/platform/marvell/sonic-platform-larch/files/etc/sysctl.d/98-sysctl.conf
+@@ -0,0 +1,6 @@
++net.ipv4.neigh.default.gc_thresh1=98304
++net.ipv4.neigh.default.gc_thresh2=99304
++net.ipv4.neigh.default.gc_thresh3=109304
++net.ipv6.neigh.default.gc_thresh1=131072
++net.ipv6.neigh.default.gc_thresh2=132072
++net.ipv6.neigh.default.gc_thresh3=133072
+diff --git a/platform/marvell/sonic-platform-larch/files/etc/sysctl.d/z-sysctl.conf b/platform/marvell/sonic-platform-larch/files/etc/sysctl.d/z-sysctl.conf
+new file mode 120000
+index 000000000..01787b557
+--- /dev/null
++++ b/platform/marvell/sonic-platform-larch/files/etc/sysctl.d/z-sysctl.conf
+@@ -0,0 +1 @@
++98-sysctl.conf
+\ No newline at end of file
+-- 
+2.25.1
+
