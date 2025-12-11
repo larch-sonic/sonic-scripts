@@ -1,0 +1,43 @@
+From 25dd4928221ceb3f6f653f501713cc9b30d0ee04 Mon Sep 17 00:00:00 2001
+From: Kostiantyn Buravchenko <kburavchenko@larch-networks.com>
+Date: Mon, 15 Dec 2025 17:10:15 +0200
+Subject: [PATCH] Fix device tree issue
+
+---
+ platform/marvell/sonic_fit.its | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/platform/marvell/sonic_fit.its b/platform/marvell/sonic_fit.its
+index b14c4886a..f8c3d8dbe 100644
+--- a/platform/marvell/sonic_fit.its
++++ b/platform/marvell/sonic_fit.its
+@@ -209,7 +209,7 @@
+                 algo = "sha1";
+             };
+         };
+-        fdt_cn9131 {
++        fdt_cn9131_larch {
+             description = "Flattened Device Tree blob";
+             data = /incbin/("/boot/cn9131-ext-98cx.dtb");
+             type = "flat_dt";
+@@ -415,7 +415,7 @@
+         conf_cn9131-ext-98cx {
+             description = "Boot Linux kernel with FDT blob + ramdisk for CN9131";
+             kernel = "kernel_octeon";
+-            fdt = "fdt_cn9131";
++            fdt = "fdt_cn9131_larch";
+             ramdisk = "ramdisk_common";
+             hash@1 {
+                 algo = "sha1";
+@@ -424,7 +424,7 @@
+         conf_cn9130-eps6800 {
+             description = "Boot Linux kernel with FDT blob + ramdisk for CN9131";
+             kernel = "kernel_octeon";
+-            fdt = "fdt_cn9130";
++            fdt = "fdt_cn9131_larch";
+             ramdisk = "ramdisk_common";
+             hash@1 {
+                 algo = "sha1";
+-- 
+2.25.1
+
