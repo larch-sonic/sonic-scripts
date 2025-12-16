@@ -37,7 +37,7 @@ jobs:
 
       # Runs a single command using the runners shell
       - name: Start to build Community Sonic using a script
-        run: ./sonic_build_script.sh -b 202411 -p marvell -a arm64 --patch_script https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/main/larch_sonic_patch_script.sh -r -c b6a493b43d73831a7a40180ef428ef50185bc8ed
+        run: ./sonic_build_script.sh -b 202411 -p marvell -a arm64 --patch_script https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/${{ github.head_ref || github.ref_name }}/larch_sonic_patch_script.sh -r -c b6a493b43d73831a7a40180ef428ef50185bc8ed --other_build_options "SONIC_BUILD_JOBS=8"
       
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
