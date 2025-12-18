@@ -1,0 +1,47 @@
+From c9ab70cc1fd92b28d7f8575831c24f058f00f659 Mon Sep 17 00:00:00 2001
+From: Kostiantyn Buravchenko <kburavchenko@larch-networks.com>
+Date: Mon, 22 Dec 2025 15:28:56 +0200
+Subject: [PATCH] Add marvell-larch-sim platform support
+
+---
+ syncd/scripts/syncd_init_common.sh | 17 ++++++++++++++++-
+ 1 file changed, 16 insertions(+), 1 deletion(-)
+
+diff --git a/syncd/scripts/syncd_init_common.sh b/syncd/scripts/syncd_init_common.sh
+index e22064b5..b774ff0b 100644
+--- a/syncd/scripts/syncd_init_common.sh
++++ b/syncd/scripts/syncd_init_common.sh
+@@ -413,6 +413,19 @@ config_syncd_marvell()
+     export MRVL_PSAI_SONIC=1
+ }
+ 
++config_syncd_marvell_larch_sim()
++{
++    CMD_ARGS+=" -p $HWSKU_DIR/sai.profile"
++
++    export MRVL_PSAI_SONIC=1
++    if [ -f "$HWSKU_DIR/context_config.json" ]; then
++        CMD_ARGS+=" -x $HWSKU_DIR/context_config.json -g 0"
++    fi
++
++    [ -e /dev/net/tun ] || ( mkdir -p /dev/net && mknod /dev/net/tun c 10 200 )
++    export MRVL_PSAI_SONIC=1
++}
++
+ config_syncd_barefoot()
+ {
+     PROFILE_FILE="$HWSKU_DIR/sai.profile"
+@@ -606,7 +619,9 @@ config_syncd()
+         config_syncd_centec
+     elif [ "$SONIC_ASIC_TYPE" == "marvell" ]; then
+         config_syncd_marvell
+-     elif [ "$SONIC_ASIC_TYPE" == "barefoot" ]; then
++    elif [ "$SONIC_ASIC_TYPE" == "marvell-larch-sim" ]; then
++        config_syncd_marvell_larch_sim
++    elif [ "$SONIC_ASIC_TYPE" == "barefoot" ]; then
+          config_syncd_barefoot
+     elif [ "$SONIC_ASIC_TYPE" == "nephos" ]; then
+         config_syncd_nephos
+-- 
+2.34.1
+

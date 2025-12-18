@@ -3,5 +3,6 @@
 0003-Update-libexpat1.patch|sonic-buildimage
 0004-Fix-device-tree-issue.patch|sonic-buildimage
 0005-Update-packages-in-host-image.patch|sonic-buildimage
+0006-Add-marvell-larch-sim-platfrom.patch|sonic-buildimage
 0001-Patch-for-SAI-to-support-Larch-changes.patch|src/sonic-sairedis/SAI
 0001-Move-sai-redis-to-SAI-v1.16.1-with-Larch-Networks-pa.patch|src/sonic-sairedis

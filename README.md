@@ -31,7 +31,7 @@ Example command:
 "./sonic_build_script.sh -b 202411 -p marvell -a arm64   --patch_script https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/main/larch_sonic_patch_script.sh -r -c b6a493b43d73831a7a40180ef428ef50185bc8ed" ,
 
 where: -b 202411 - original branch in the sonic-buildimage repository,
-       -p marvell - switch ASIC type(marvell - as Marvell Prestera family)
+       -p marvell - switch ASIC type(marvell - as Marvell Prestera family), marvell-larch-sim - simulation qemu image
        -a arm64 - device/board CPU architecture (arm64 or amd64)
        --patch_script https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/main/larch_sonic_patch_script.sh - patch script that make changes to original repos,
        -r - ENABLE_SYNCD_RPC=y,
@@ -68,6 +68,14 @@ for amd64:
     make configure NOBUSTER=1 NOBULLSEYE=1 PLATFORM=marvell PLATFORM_ARCH=amd64
     - Start building
     make SONIC_BUILD_JOBS=8 NOBUSTER=1 NOBULLSEYE=1 SONIC_DPKG_CACHE_METHOD=rwcache target/sonic-marvell.bin
+
+for amd64 simulation:
+    - Execute patch script
+    bash larch_sonic_patch_script.sh --branch 202411 --platform marvell-larch-sim --arch amd64 --url https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/main/
+    -  Configure the build system for target
+    make configure NOBUSTER=1 NOBULLSEYE=1 PLATFORM=marvell-larch-sim PLATFORM_ARCH=amd64
+    - Start building
+    make SONIC_BUILD_JOBS=8 NOBUSTER=1 NOBULLSEYE=1 SONIC_DPKG_CACHE_METHOD=rwcache target/sonic-vs.img.gz
 
 
 
