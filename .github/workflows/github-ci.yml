@@ -17,10 +17,10 @@ on:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  build:
+  # This workflow contains a single job called "build_arm64"
+  build_arm64:
     # The type of runner that the job will run on
-    runs-on: self-hosted
+    runs-on: ARM64
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -39,8 +39,96 @@ jobs:
       - name: Start to build Community Sonic using a script
         run: ./sonic_build_script.sh -b 202411 -p marvell -a arm64 --patch_script https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/${{ github.head_ref || github.ref_name }}/larch_sonic_patch_script.sh -r -c b6a493b43d73831a7a40180ef428ef50185bc8ed --other_build_options "SONIC_BUILD_JOBS=8"
       
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: sonic-image
-          path: ABM*/sonic-buildimage/target/sonic-marvell-arm64.bin
+      # - name: Upload build artifacts
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: sonic-image
+      #     path: ABM*/sonic-buildimage/target/sonic-marvell-arm64.bin
+      - name: Push images to sonic-larch-binaries 
+        if: ${{ github.event_name != 'pull_request' }}
+        env:
+          PUSH_TOKEN: ${{ secrets.BINARY_PUSH_TOKEN }}
+          REF_NAME: ${{ github.head_ref || github.ref_name }}
+          SRC_REPO: ${{ github.repository }}
+          SRC_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          SRC_BIN="ABM*/sonic-buildimage/target/sonic-marvell-arm64.bin"
+          ls -lah $SRC_BIN
+
+          rm -rf binaries_repo
+          git clone https://x-access-token:${PUSH_TOKEN}@github.com/larch-sonic/sonic-larch-binaries.git binaries_repo
+
+          DEST_DIR="binaries_repo/images/sonic/arm64"
+
+          mkdir -p "${DEST_DIR}"
+
+          cp -v $SRC_BIN "${DEST_DIR}/"
+
+          cd binaries_repo
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add images/sonic
+          git commit -m "Add SONiC image ${TS} (${REF_NAME}) from ${SRC_REPO}@${SHORT_SHA}" || true
+
+          git push origin HEAD:main
+
+  # This workflow contains a single job called "build_arm64"
+  build_sim_x86_64:
+    # The type of runner that the job will run on
+    runs-on: X64
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+
+      - name: Cleanup previous root-owned build artifacts
+        run: |
+          sudo rm -rf ABM-* || true
+
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+
+      - name: Print time
+        run: echo "Started at $(date)"
+
+      # Runs a single command using the runners shell
+      - name: Start to build Community Sonic using a script
+        run: ./sonic_build_script.sh -b 202411 -p marvell-larch-sim -a amd64 --patch_script https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/${{ github.head_ref || github.ref_name }}/larch_sonic_patch_script.sh -c b6a493b43d73831a7a40180ef428ef50185bc8ed --other_build_options "SONIC_BUILD_JOBS=8"
+      
+      # - name: Upload build artifacts
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: sonic-image
+      #     path: ABM*/sonic-buildimage/target/sonic-vs.img.gz
+      - name: Push images to sonic-larch-binaries 
+        if: ${{ github.event_name != 'pull_request' }}
+        env:
+          PUSH_TOKEN: ${{ secrets.BINARY_PUSH_TOKEN }}
+          REF_NAME: ${{ github.head_ref || github.ref_name }}
+          SRC_REPO: ${{ github.repository }}
+          SRC_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          SRC_BIN="ABM*/sonic-buildimage/target/sonic-vs.img.gz"
+          ls -lah $SRC_BIN
+
+          rm -rf binaries_repo
+          git clone https://x-access-token:${PUSH_TOKEN}@github.com/larch-sonic/sonic-larch-binaries.git binaries_repo
+
+          DEST_DIR="binaries_repo/images/sonic/amd64_sim"
+
+          mkdir -p "${DEST_DIR}"
+
+          cp -v $SRC_BIN "${DEST_DIR}/"
+
+          cd binaries_repo
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add images/sonic
+          git commit -m "Add SONiC image ${TS} (${REF_NAME}) from ${SRC_REPO}@${SHORT_SHA}" || true
+
+          git push origin HEAD:main
