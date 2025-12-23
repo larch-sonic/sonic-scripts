@@ -1,0 +1,61 @@
+From 67d09354cb50c538f091503da8fc559b13370bf8 Mon Sep 17 00:00:00 2001
+From: Alex Sakun <asakun@larch-networks.com>
+Date: Tue, 23 Dec 2025 04:10:49 +0200
+Subject: [PATCH] [PATCH] Add marvell-larch-sim platform support
+
+---
+ orchagent/copporch.cpp | 12 ++++++++----
+ orchagent/orch.h       |  1 +
+ 2 files changed, 9 insertions(+), 4 deletions(-)
+
+diff --git a/orchagent/copporch.cpp b/orchagent/copporch.cpp
+index 0fb6fe7b..05d9c5b9 100644
+--- a/orchagent/copporch.cpp
++++ b/orchagent/copporch.cpp
+@@ -191,13 +191,15 @@ void CoppOrch::initDefaultTrapIds()
+     /*
+      * Use a default trap priority > 0 to avoid undesirable packet trapping
+      * behavior on some platforms that use 0 as default SAI-internal priority.
+-     * Note: Mellanox and Marvell Prestera platforms don't support trap priority setting.
++     * Note: Mellanox, Marvell Prestera and Marvell Larch Sim platforms don't support trap priority setting.
+      * For Marvell platforms, string comparison is used to prevent sub-string matches with
+      * marvell-teralynx which does support trap priority.
+      */
+ 
+     char *platform = getenv("platform");
+-    if (!platform || (!strstr(platform, MLNX_PLATFORM_SUBSTRING) && (strcmp(platform, MRVL_PLATFORM_SUBSTRING) != 0)))
++    if (!platform || (!strstr(platform, MLNX_PLATFORM_SUBSTRING) &&
++                      (strcmp(platform, MRVL_PLATFORM_SUBSTRING) != 0) &&
++                      (strcmp(platform, MRVL_LARCH_SIM_PLATFORM_SUBSTRING) != 0)))
+     {
+         attr.id = SAI_HOSTIF_TRAP_ATTR_TRAP_PRIORITY;
+         attr.value.u32 = 1;
+@@ -1019,9 +1021,11 @@ bool CoppOrch::getAttribsFromTrapGroup (vector<FieldValueTuple> &fv_tuple,
+         else if (fvField(*i) == copp_trap_priority_field)
+         {
+             /* Mellanox platform doesn't support trap priority setting */
+-            /* Marvell platform doesn't support trap priority. */
++            /* Marvell and Marvell Larch Sim platforms don't support trap priority. */
+ 	    char *platform = getenv("platform");
+-	    if (!platform || (!strstr(platform, MLNX_PLATFORM_SUBSTRING) && (strcmp(platform, MRVL_PLATFORM_SUBSTRING) != 0)))
++	    if (!platform || (!strstr(platform, MLNX_PLATFORM_SUBSTRING) &&
++                              (strcmp(platform, MRVL_PLATFORM_SUBSTRING) != 0) &&
++                              (strcmp(platform, MRVL_LARCH_SIM_PLATFORM_SUBSTRING) != 0)))
+             {
+                 attr.id = SAI_HOSTIF_TRAP_ATTR_TRAP_PRIORITY,
+                     attr.value.u32 = (uint32_t)stoul(fvValue(*i));
+diff --git a/orchagent/orch.h b/orchagent/orch.h
+index 5e8939c5..347a3bb6 100644
+--- a/orchagent/orch.h
++++ b/orchagent/orch.h
+@@ -42,6 +42,7 @@ const char state_db_key_delimiter  = '|';
+ #define VS_PLATFORM_SUBSTRING   "vs"
+ #define NPS_PLATFORM_SUBSTRING  "nephos"
+ #define MRVL_PLATFORM_SUBSTRING "marvell"
++#define MRVL_LARCH_SIM_PLATFORM_SUBSTRING "marvell-larch-sim"
+ #define CISCO_8000_PLATFORM_SUBSTRING "cisco-8000"
+ #define XS_PLATFORM_SUBSTRING   "xsight"
+ 
+-- 
+2.34.1
+
