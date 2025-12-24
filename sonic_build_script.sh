@@ -521,6 +521,12 @@ build_ws()
         TARGET_FILE=sonic-${BUILD_PLATFORM}-${BUILD_PLATFORM_ARCH}.bin
         TARGET=target/sonic-${BUILD_PLATFORM}-${BUILD_PLATFORM_ARCH}.bin
     fi
+
+    if [ "${BUILD_PLATFORM}" == "marvell-larch-sim" ]; then
+        TARGET_FILE=sonic-vs.img.gz
+        TARGET=target/sonic-vs.img.gz
+    fi
+
     echo "make $BUILD_OPTIONS ${TARGET}" >> build_cmd.txt
     sync
     echo 3 | sudo tee /proc/sys/vm/drop_caches
