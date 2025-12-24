@@ -45,7 +45,7 @@ jobs:
       #     name: sonic-image
       #     path: ABM*/sonic-buildimage/target/sonic-marvell-arm64.bin
       - name: Push images to sonic-larch-binaries 
-        if: ${{ github.event_name != 'pull_request' }}
+        #if: ${{ github.event_name != 'pull_request' }}
         env:
           PUSH_TOKEN: ${{ secrets.BINARY_PUSH_TOKEN }}
           REF_NAME: ${{ github.head_ref || github.ref_name }}
@@ -75,6 +75,10 @@ jobs:
 
           git add images/sonic
           git commit -m "Add SONiC image ${TS} (${REF_NAME}) from ${SRC_REPO}@${SHORT_SHA}" || true
+
+          git remote -v
+          git remote set-url origin "https://x-access-token:${PUSH_TOKEN}@github.com/larch-sonic/sonic-larch-binaries.git"
+          git remote -v
 
           git push origin HEAD:main
 
@@ -106,7 +110,7 @@ jobs:
       #     name: sonic-image
       #     path: Larch*/sonic-buildimage/target/sonic-vs.img.gz
       - name: Push images to sonic-larch-binaries 
-        if: ${{ github.event_name != 'pull_request' }}
+        #if: ${{ github.event_name != 'pull_request' }}
         env:
           PUSH_TOKEN: ${{ secrets.BINARY_PUSH_TOKEN }}
           REF_NAME: ${{ github.head_ref || github.ref_name }}
@@ -136,5 +140,9 @@ jobs:
 
           git add images/sonic
           git commit -m "Add SONiC image ${TS} (${REF_NAME}) from ${SRC_REPO}@${SHORT_SHA}" || true
+
+          git remote -v
+          git remote set-url origin "https://x-access-token:${PUSH_TOKEN}@github.com/larch-sonic/sonic-larch-binaries.git"
+          git remote -v
 
           git push origin HEAD:main
