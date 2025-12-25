@@ -44,39 +44,78 @@ jobs:
       #   with:
       #     name: sonic-image
       #     path: ABM*/sonic-buildimage/target/sonic-marvell-arm64.bin
-      - name: Push images to sonic-larch-binaries 
+
+      - name: Publish ARM64 image to Releases (keep last 3)
         if: ${{ github.event_name != 'pull_request' }}
         env:
-          PUSH_TOKEN: ${{ secrets.BINARY_PUSH_TOKEN }}
+          GH_TOKEN: ${{ secrets.BINARY_PUSH_TOKEN }}
+          TARGET_REPO: larch-sonic/sonic-larch-binaries
+          CHANNEL: arm64
           REF_NAME: ${{ github.head_ref || github.ref_name }}
           SRC_REPO: ${{ github.repository }}
           SRC_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
 
+          FILE=(ABM*/sonic-buildimage/target/sonic-marvell-arm64.bin)
+          ls -lah "${FILE[@]}"
+
           TS="$(date -u +%Y%m%d-%H%M%S)"
           SHORT_SHA="${SRC_SHA:0:8}"
+          TAG="${CHANNEL}-${TS}-${REF_NAME}-${SHORT_SHA}"
+          TITLE="SONiC ${CHANNEL} ${REF_NAME} ${TS} (${SHORT_SHA})"
+          NOTES="Built from ${SRC_REPO}@${SRC_SHA}"
 
-          SRC_BIN="ABM*/sonic-buildimage/target/sonic-marvell-arm64.bin"
-          ls -lah $SRC_BIN
+          # Create release and upload asset
+          gh release create "$TAG" \
+            --repo "$TARGET_REPO" \
+            --title "$TITLE" \
+            --notes "$NOTES" \
+            "${FILE[0]}"
 
-          rm -rf binaries_repo
-          git clone https://x-access-token:${PUSH_TOKEN}@github.com/larch-sonic/sonic-larch-binaries.git binaries_repo
+          # Rotation: keep last 3 releases for CHANNEL (works with older gh)
+          mapfile -t TAGS < <(
+            gh release list --repo "$TARGET_REPO" --limit 200 \
+            | awk -v p="${CHANNEL}-" '$0 ~ p {print $NF}'
+          )
 
-          DEST_DIR="binaries_repo/images/sonic/arm64"
+          echo "Found ${#TAGS[@]} releases for ${CHANNEL}"
+          printf '%s\n' "${TAGS[@]}"
 
-          mkdir -p "${DEST_DIR}"
+          if [ "${#TAGS[@]}" -gt 3 ]; then
+            for ((i=3; i<${#TAGS[@]}; i++)); do
+              echo "Deleting old release: ${TAGS[$i]}"
+              gh release delete "${TAGS[$i]}" --repo "$TARGET_REPO" --yes
+            done
+          fi
 
-          cp -v $SRC_BIN "${DEST_DIR}/"
+      - name: Update arm64 latest release
+        if: ${{ github.event_name != 'pull_request' }}
+        env:
+          GH_TOKEN: ${{ secrets.BINARY_PUSH_TOKEN }}
+          TARGET_REPO: larch-sonic/sonic-larch-binaries
+          CHANNEL: arm64
+          REF_NAME: ${{ github.head_ref || github.ref_name }}
+          SRC_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
 
-          cd binaries_repo
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          FILE=(ABM*/sonic-buildimage/target/sonic-marvell-arm64.bin)
+          ls -lah "${FILE[@]}"
 
-          git add images/sonic
-          git commit -m "Add SONiC image ${TS} (${REF_NAME}) from ${SRC_REPO}@${SHORT_SHA}" || true
+          LATEST_TAG="${CHANNEL}-latest"
+          TITLE="SONiC ${CHANNEL} latest"
+          NOTES="Latest successful build from ${REF_NAME} @ ${SRC_SHA}"
 
-          git push origin HEAD:main
+          if gh release view "$LATEST_TAG" --repo "$TARGET_REPO" >/dev/null 2>&1; then
+            gh release delete "$LATEST_TAG" --repo "$TARGET_REPO" --yes
+          fi
+
+          gh release create "$LATEST_TAG" \
+            --repo "$TARGET_REPO" \
+            --title "$TITLE" \
+            --notes "$NOTES" \
+            "${FILE[0]}"
 
   # This workflow contains a single job called "build_arm64"
   build_sim_x86_64:
@@ -105,36 +144,75 @@ jobs:
       #   with:
       #     name: sonic-image
       #     path: Larch*/sonic-buildimage/target/sonic-vs.img.gz
-      - name: Push images to sonic-larch-binaries 
+      - name: Publish SIM image to Releases (keep last 3)
         if: ${{ github.event_name != 'pull_request' }}
         env:
-          PUSH_TOKEN: ${{ secrets.BINARY_PUSH_TOKEN }}
+          GH_TOKEN: ${{ secrets.BINARY_PUSH_TOKEN }}
+          TARGET_REPO: larch-sonic/sonic-larch-binaries
+          CHANNEL: amd64-sim
           REF_NAME: ${{ github.head_ref || github.ref_name }}
           SRC_REPO: ${{ github.repository }}
           SRC_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
 
+          FILE=(Larch*/sonic-buildimage/target/sonic-vs.img.gz)
+          ls -lah "${FILE[@]}"
+
           TS="$(date -u +%Y%m%d-%H%M%S)"
           SHORT_SHA="${SRC_SHA:0:8}"
+          TAG="${CHANNEL}-${TS}-${REF_NAME}-${SHORT_SHA}"
+          TITLE="SONiC ${CHANNEL} ${REF_NAME} ${TS} (${SHORT_SHA})"
+          NOTES="Built from ${SRC_REPO}@${SRC_SHA}"
 
-          SRC_BIN="Larch*/sonic-buildimage/target/sonic-vs.img.gz"
-          ls -lah $SRC_BIN
+          gh release create "$TAG" \
+            --repo "$TARGET_REPO" \
+            --title "$TITLE" \
+            --notes "$NOTES" \
+            "${FILE[0]}"
 
-          rm -rf binaries_repo
-          git clone https://x-access-token:${PUSH_TOKEN}@github.com/larch-sonic/sonic-larch-binaries.git binaries_repo
+          # Rotation: keep last 3 releases for CHANNEL (works with older gh)
+          mapfile -t TAGS < <(
+            gh release list --repo "$TARGET_REPO" --limit 200 \
+            | awk -v p="${CHANNEL}-" '$0 ~ p {print $NF}'
+          )
 
-          DEST_DIR="binaries_repo/images/sonic/amd64_sim"
+          echo "Found ${#TAGS[@]} releases for ${CHANNEL}"
+          printf '%s\n' "${TAGS[@]}"
 
-          mkdir -p "${DEST_DIR}"
+          if [ "${#TAGS[@]}" -gt 3 ]; then
+            for ((i=3; i<${#TAGS[@]}; i++)); do
+              echo "Deleting old release: ${TAGS[$i]}"
+              gh release delete "${TAGS[$i]}" --repo "$TARGET_REPO" --yes
+            done
+          fi
+      
+      - name: Update amd64-sim latest release
+        if: ${{ github.event_name != 'pull_request' }}
+        env:
+          GH_TOKEN: ${{ secrets.BINARY_PUSH_TOKEN }}
+          TARGET_REPO: larch-sonic/sonic-larch-binaries
+          CHANNEL: amd64-sim
+          REF_NAME: ${{ github.head_ref || github.ref_name }}
+          SRC_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
 
-          cp -v $SRC_BIN "${DEST_DIR}/"
+          FILE=(Larch*/sonic-buildimage/target/sonic-vs.img.gz)
+          ls -lah "${FILE[@]}"
 
-          cd binaries_repo
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          LATEST_TAG="${CHANNEL}-latest"
+          TITLE="SONiC ${CHANNEL} latest"
+          NOTES="Latest successful build from ${REF_NAME} @ ${SRC_SHA}"
 
-          git add images/sonic
-          git commit -m "Add SONiC image ${TS} (${REF_NAME}) from ${SRC_REPO}@${SHORT_SHA}" || true
+          # Якщо latest вже існує — видалити
+          if gh release view "$LATEST_TAG" --repo "$TARGET_REPO" >/dev/null 2>&1; then
+            gh release delete "$LATEST_TAG" --repo "$TARGET_REPO" --yes
+          fi
 
-          git push origin HEAD:main
+          # Створити latest заново
+          gh release create "$LATEST_TAG" \
+            --repo "$TARGET_REPO" \
+            --title "$TITLE" \
+            --notes "$NOTES" \
+            "${FILE[0]}"
