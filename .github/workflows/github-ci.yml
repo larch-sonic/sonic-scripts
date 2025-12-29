@@ -73,10 +73,11 @@ jobs:
             --notes "$NOTES" \
             "${FILE[0]}"
 
-          # Rotation: keep last 3 releases for CHANNEL (works with older gh)
+          # Rotation: keep last 3 releases for CHANNEL (robust without --json)
           mapfile -t TAGS < <(
             gh release list --repo "$TARGET_REPO" --limit 200 \
-            | awk -v p="${CHANNEL}-" '$0 ~ p {print $NF}'
+            | grep -oE "${CHANNEL}-[0-9]{8}-[0-9]{6}-[^[:space:]]+" \
+            | sort -r | head -n 200
           )
 
           echo "Found ${#TAGS[@]} releases for ${CHANNEL}"
@@ -128,6 +129,7 @@ jobs:
       - name: Cleanup previous root-owned build artifacts
         run: |
           sudo rm -rf Larch-* || true
+          sudo rm -rf ABM-* || true
 
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
@@ -171,10 +173,11 @@ jobs:
             --notes "$NOTES" \
             "${FILE[0]}"
 
-          # Rotation: keep last 3 releases for CHANNEL (works with older gh)
+          # Rotation: keep last 3 releases for CHANNEL (robust without --json)
           mapfile -t TAGS < <(
             gh release list --repo "$TARGET_REPO" --limit 200 \
-            | awk -v p="${CHANNEL}-" '$0 ~ p {print $NF}'
+            | grep -oE "${CHANNEL}-[0-9]{8}-[0-9]{6}-[^[:space:]]+" \
+            | sort -r | head -n 200
           )
 
           echo "Found ${#TAGS[@]} releases for ${CHANNEL}"
@@ -199,6 +202,108 @@ jobs:
           set -euo pipefail
 
           FILE=(Larch*/sonic-buildimage/target/sonic-vs.img.gz)
+          ls -lah "${FILE[@]}"
+
+          LATEST_TAG="${CHANNEL}-latest"
+          TITLE="SONiC ${CHANNEL} latest"
+          NOTES="Latest successful build from ${REF_NAME} @ ${SRC_SHA}"
+
+          # Якщо latest вже існує — видалити
+          if gh release view "$LATEST_TAG" --repo "$TARGET_REPO" >/dev/null 2>&1; then
+            gh release delete "$LATEST_TAG" --repo "$TARGET_REPO" --yes
+          fi
+
+          # Створити latest заново
+          gh release create "$LATEST_TAG" \
+            --repo "$TARGET_REPO" \
+            --title "$TITLE" \
+            --notes "$NOTES" \
+            "${FILE[0]}"
+
+  # This workflow contains a single job called "build_arm64"
+  build_x86_64:
+    # The type of runner that the job will run on
+    runs-on: X64
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+
+      - name: Cleanup previous root-owned build artifacts
+        run: |
+          sudo rm -rf Larch-* || true
+          sudo rm -rf ABM-* || true
+
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v4
+
+      - name: Print time
+        run: echo "Started at $(date)"
+
+      # Runs a single command using the runners shell
+      - name: Start to build Community Sonic using a script
+        run: ./sonic_build_script.sh -b 202411 -p marvell -a amd64 --patch_script https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/${{ github.head_ref || github.ref_name }}/larch_sonic_patch_script.sh -c b6a493b43d73831a7a40180ef428ef50185bc8ed --other_build_options "SONIC_BUILD_JOBS=8"
+      
+      # - name: Upload build artifacts
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: sonic-image
+      #     path: Larch*/sonic-buildimage/target/sonic-marvell.bin
+      - name: Publish x86 image to Releases (keep last 3)
+        if: ${{ github.event_name != 'pull_request' }}
+        env:
+          GH_TOKEN: ${{ secrets.BINARY_PUSH_TOKEN }}
+          TARGET_REPO: larch-sonic/sonic-larch-binaries
+          CHANNEL: amd64
+          REF_NAME: ${{ github.head_ref || github.ref_name }}
+          SRC_REPO: ${{ github.repository }}
+          SRC_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          FILE=(ABM*/sonic-buildimage/target/sonic-marvell.bin)
+          ls -lah "${FILE[@]}"
+
+          TS="$(date -u +%Y%m%d-%H%M%S)"
+          SHORT_SHA="${SRC_SHA:0:8}"
+          TAG="${CHANNEL}-${TS}-${REF_NAME}-${SHORT_SHA}"
+          TITLE="SONiC ${CHANNEL} ${REF_NAME} ${TS} (${SHORT_SHA})"
+          NOTES="Built from ${SRC_REPO}@${SRC_SHA}"
+
+          gh release create "$TAG" \
+            --repo "$TARGET_REPO" \
+            --title "$TITLE" \
+            --notes "$NOTES" \
+            "${FILE[0]}"
+
+          # Rotation: keep last 3 releases for CHANNEL (robust without --json)
+          mapfile -t TAGS < <(
+            gh release list --repo "$TARGET_REPO" --limit 200 \
+            | grep -oE "${CHANNEL}-[0-9]{8}-[0-9]{6}-[^[:space:]]+" \
+            | sort -r | head -n 200
+          )
+
+          echo "Found ${#TAGS[@]} releases for ${CHANNEL}"
+          printf '%s\n' "${TAGS[@]}"
+
+          if [ "${#TAGS[@]}" -gt 3 ]; then
+            for ((i=3; i<${#TAGS[@]}; i++)); do
+              echo "Deleting old release: ${TAGS[$i]}"
+              gh release delete "${TAGS[$i]}" --repo "$TARGET_REPO" --yes
+            done
+          fi
+      
+      - name: Update amd64 latest release
+        if: ${{ github.event_name != 'pull_request' }}
+        env:
+          GH_TOKEN: ${{ secrets.BINARY_PUSH_TOKEN }}
+          TARGET_REPO: larch-sonic/sonic-larch-binaries
+          CHANNEL: amd64
+          REF_NAME: ${{ github.head_ref || github.ref_name }}
+          SRC_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          FILE=(ABM*/sonic-buildimage/target/sonic-marvell.bin)
           ls -lah "${FILE[@]}"
 
           LATEST_TAG="${CHANNEL}-latest"
