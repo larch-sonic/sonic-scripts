@@ -20,7 +20,7 @@ CUR_DIR=$(basename `pwd`)
 LOG_FILE=patches_result.log
 FULL_PATH=`pwd`
 err_cnt=0
-SAI_COMMIT="v1.16.1"
+SAI_COMMIT="v1.17.1"
 
 # VERIFY_PATCHES=Y may be selected by MRVL sonic_build_script.sh
 if [[ "$DEVEL" == "" || "$VERIFY_PATCHES" == "Y" ]]; then
