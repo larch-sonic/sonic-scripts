@@ -38,6 +38,8 @@ where: -b 202411 - original branch in the sonic-buildimage repository,
        -c b6a493b43d73831a7a40180ef428ef50185bc8ed - checkout to static stable commit.
 
 
+./sonic_build_script.sh -b 202511 -p marvell-larch-sim -a amd64   --patch_script https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/202511/larch_sonic_patch_script.sh
+
 # Build manually
 1. Clone sonic-buildimage repository
 git clone git@github.com:larch-sonic/sonic-buildimage.git -b 202411

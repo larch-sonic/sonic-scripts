@@ -1,0 +1,25 @@
+From 5a3c57f5bcba854928342bdc568c3d2857ce136f Mon Sep 17 00:00:00 2001
+From: Kostiantyn Buravchenko <kburavchenko@larch-networks.com>
+Date: Thu, 15 Jan 2026 17:06:56 +0200
+Subject: [PATCH] Add larch platfrom support-sairedis
+
+---
+ syncd/scripts/syncd_init_common.sh | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/syncd/scripts/syncd_init_common.sh b/syncd/scripts/syncd_init_common.sh
+index 666a2566..4dc87844 100644
+--- a/syncd/scripts/syncd_init_common.sh
++++ b/syncd/scripts/syncd_init_common.sh
+@@ -619,6 +619,8 @@ config_syncd()
+         config_syncd_centec
+     elif [ "$SONIC_ASIC_TYPE" == "marvell-prestera" ]; then
+         config_syncd_marvell_prestera
++    elif [ "$SONIC_ASIC_TYPE" == "marvell-larch-sim" ]; then
++        config_syncd_marvell_prestera
+      elif [ "$SONIC_ASIC_TYPE" == "barefoot" ]; then
+          config_syncd_barefoot
+     elif [ "$SONIC_ASIC_TYPE" == "nephos" ]; then
+-- 
+2.34.1
+

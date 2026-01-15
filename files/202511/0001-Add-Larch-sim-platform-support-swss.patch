@@ -1,0 +1,52 @@
+From f9b3cc044c247a59bac97fac699888b80b428b9e Mon Sep 17 00:00:00 2001
+From: Kostiantyn Buravchenko <kburavchenko@larch-networks.com>
+Date: Thu, 15 Jan 2026 17:05:31 +0200
+Subject: [PATCH] Add Larch sim platform support-swss
+
+---
+ orchagent/copporch.cpp | 9 ++++++---
+ orchagent/orch.h       | 1 +
+ 2 files changed, 7 insertions(+), 3 deletions(-)
+
+diff --git a/orchagent/copporch.cpp b/orchagent/copporch.cpp
+index 05080c8d..3bd0897e 100644
+--- a/orchagent/copporch.cpp
++++ b/orchagent/copporch.cpp
+@@ -351,8 +351,9 @@ void CoppOrch::initDefaultTrapIds()
+      */
+ 
+     char *platform = getenv("platform");
+-    if (!platform || (!strstr(platform, MLNX_PLATFORM_SUBSTRING) && (!strstr(platform, MRVL_PRST_PLATFORM_SUBSTRING))))
+-    {
++    if (!platform || (!strstr(platform, MLNX_PLATFORM_SUBSTRING) &&
++                      (strcmp(platform, MRVL_PRST_PLATFORM_SUBSTRING) != 0) &&
++                      (strcmp(platform, MRVL_LARCH_SIM_PLATFORM_SUBSTRING) != 0))){
+         attr.id = SAI_HOSTIF_TRAP_ATTR_TRAP_PRIORITY;
+         attr.value.u32 = 1;
+         trap_id_attrs.push_back(attr);
+@@ -1186,7 +1187,9 @@ bool CoppOrch::getAttribsFromTrapGroup (vector<FieldValueTuple> &fv_tuple,
+             /* Mellanox platform doesn't support trap priority setting */
+             /* Marvell platform doesn't support trap priority. */
+ 	    char *platform = getenv("platform");
+-	    if (!platform || (!strstr(platform, MLNX_PLATFORM_SUBSTRING) && (!strstr(platform, MRVL_PRST_PLATFORM_SUBSTRING))))
++        if (!platform || (!strstr(platform, MLNX_PLATFORM_SUBSTRING) &&
++                          (strcmp(platform, MRVL_PRST_PLATFORM_SUBSTRING) != 0) &&
++                          (strcmp(platform, MRVL_LARCH_SIM_PLATFORM_SUBSTRING) != 0)))   
+             {
+                 attr.id = SAI_HOSTIF_TRAP_ATTR_TRAP_PRIORITY,
+                     attr.value.u32 = (uint32_t)stoul(fvValue(*i));
+diff --git a/orchagent/orch.h b/orchagent/orch.h
+index 007f4548..9e86623d 100644
+--- a/orchagent/orch.h
++++ b/orchagent/orch.h
+@@ -38,6 +38,7 @@ const char state_db_key_delimiter  = '|';
+ 
+ #define MRVL_TL_PLATFORM_SUBSTRING "marvell-teralynx"
+ #define MRVL_PRST_PLATFORM_SUBSTRING "marvell-prestera"
++#define MRVL_LARCH_SIM_PLATFORM_SUBSTRING "marvell-larch-sim"
+ #define MLNX_PLATFORM_SUBSTRING "mellanox"
+ #define BRCM_PLATFORM_SUBSTRING "broadcom"
+ #define BRCM_DNX_PLATFORM_SUBSTRING "broadcom-dnx"
+-- 
+2.34.1
+
