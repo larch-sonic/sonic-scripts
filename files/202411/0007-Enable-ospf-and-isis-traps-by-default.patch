@@ -1,0 +1,69 @@
+From b13fffbcc964ae82cb8cb06c33d24388a0fc2020 Mon Sep 17 00:00:00 2001
+From: Kostiantyn Buravchenko <kburavchenko@larch-networks.com>
+Date: Mon, 19 Jan 2026 14:56:04 +0200
+Subject: [PATCH] Enable ospf and isis traps by default
+
+---
+ .../frr/supervisord/supervisord.conf.j2       | 24 +++++++++++++++++++
+ files/image_config/copp/copp_cfg.j2           | 10 ++++++++
+ 2 files changed, 34 insertions(+)
+
+diff --git a/dockers/docker-fpm-frr/frr/supervisord/supervisord.conf.j2 b/dockers/docker-fpm-frr/frr/supervisord/supervisord.conf.j2
+index 9c726e564..551ce5955 100644
+--- a/dockers/docker-fpm-frr/frr/supervisord/supervisord.conf.j2
++++ b/dockers/docker-fpm-frr/frr/supervisord/supervisord.conf.j2
+@@ -118,6 +118,30 @@ stderr_logfile=syslog
+ dependent_startup=true
+ dependent_startup_wait_for=zebra:running
+ 
++[program:ospf6d]
++command=/usr/lib/frr/ospf6d
++priority=4
++stopsignal=KILL
++autostart=true
++autorestart=false
++startsecs=0
++stdout_logfile=syslog
++stderr_logfile=syslog
++dependent_startup=true
++dependent_startup_wait_for=zebra:running
++
++[program:isisd]
++command=/usr/lib/frr/isisd -A 127.0.0.1 -M snmp
++priority=5
++stopsignal=KILL
++autostart=false
++autorestart=false
++startsecs=0
++stdout_logfile=syslog
++stderr_logfile=syslog
++dependent_startup=true
++dependent_startup_wait_for=zebra:running
++
+ [program:pimd]
+ command=/usr/lib/frr/pimd -A 127.0.0.1
+ priority=5
+diff --git a/files/image_config/copp/copp_cfg.j2 b/files/image_config/copp/copp_cfg.j2
+index dcae06fc0..269157b6c 100755
+--- a/files/image_config/copp/copp_cfg.j2
++++ b/files/image_config/copp/copp_cfg.j2
+@@ -82,6 +82,16 @@
+ 		    "trap_ids": "bgp,bgpv6",
+ 		    "trap_group": "queue4_group1"
+ 	    },
++		"ospf": {
++            "trap_ids": "ospf,ospfv6",
++            "trap_group": "queue4_group1",
++            "always_enabled": "true"
++        },
++        "isis": {
++            "trap_ids": "isis",
++            "trap_group": "queue4_group1",
++            "always_enabled": "true"
++        },
+ 	    "lacp": {
+ 		    "trap_ids": "lacp",
+ 		    "trap_group": "queue4_group1",
+-- 
+2.34.1
+
