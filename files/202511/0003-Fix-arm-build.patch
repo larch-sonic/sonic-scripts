@@ -1,0 +1,25 @@
+From 1dab1cf6f6561b8b529c4f30149812eeedbf38d2 Mon Sep 17 00:00:00 2001
+From: Kostiantyn Buravchenko <kburavchenko@larch-networks.com>
+Date: Thu, 29 Jan 2026 12:13:57 +0200
+Subject: [PATCH] Fix arm build
+
+---
+ platform/marvell-prestera/one-image.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/platform/marvell-prestera/one-image.mk b/platform/marvell-prestera/one-image.mk
+index ecce50db9..c96a5d6fe 100644
+--- a/platform/marvell-prestera/one-image.mk
++++ b/platform/marvell-prestera/one-image.mk
+@@ -14,7 +14,7 @@ $(SONIC_ONE_IMAGE)_INSTALLS += $(LARCH_STATIC)
+ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(NOKIA_7215_PLATFORM) \
+ 				$(AC5X_RD98DX35xx_PLATFORM) \
+ 				$(AC5X_RD98DX35xxCN9131_PLATFORM) \
+-				$(AC5P_RD98DX45xxCN9131_PLATFORM)
++				$(AC5P_RD98DX45xxCN9131_PLATFORM) \
+ 				$(LN3848G_PLATFORM) \
+ 				$(LN3824G_PLATFORM) \
+ 				$(CANISMINOR_PLATFORM) \
+-- 
+2.25.1
+
