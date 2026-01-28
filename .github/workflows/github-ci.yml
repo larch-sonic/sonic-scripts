@@ -27,6 +27,7 @@ jobs:
 
       - name: Cleanup previous root-owned build artifacts
         run: |
+          sudo rm -rf ABP-* || true
           sudo rm -rf ABM-* || true
 
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -37,13 +38,13 @@ jobs:
 
       # Runs a single command using the runners shell
       - name: Start to build Community Sonic using a script
-        run: ./sonic_build_script.sh -b 202411 -p marvell -a arm64 --patch_script https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/${{ github.head_ref || github.ref_name }}/larch_sonic_patch_script.sh -r -c b6a493b43d73831a7a40180ef428ef50185bc8ed --other_build_options "SONIC_BUILD_JOBS=8"
+        run: ./sonic_build_script.sh -b 202511 -p marvell-prestera -a arm64 --patch_script https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/${{ github.head_ref || github.ref_name }}/larch_sonic_patch_script.sh -c ea0fcbf4fa89ea564ee11f47ceb080c0d830fc67 --other_build_options "SONIC_BUILD_JOBS=8"
       
       # - name: Upload build artifacts
       #   uses: actions/upload-artifact@v4
       #   with:
       #     name: sonic-image
-      #     path: ABM*/sonic-buildimage/target/sonic-marvell-arm64.bin
+      #     path: ABP*/sonic-buildimage/target/sonic-marvell-arm64.bin
 
       - name: Publish ARM64 image to Releases (keep last 3)
         if: ${{ github.event_name != 'pull_request' }}
@@ -57,7 +58,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          FILE=(ABM*/sonic-buildimage/target/sonic-marvell-arm64.bin)
+          FILE=(ABP*/sonic-buildimage/target/sonic-marvell-prestera-arm64.bin)
           ls -lah "${FILE[@]}"
 
           TS="$(date -u +%Y%m%d-%H%M%S)"
@@ -101,7 +102,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          FILE=(ABM*/sonic-buildimage/target/sonic-marvell-arm64.bin)
+          FILE=(ABP*/sonic-buildimage/target/sonic-marvell-prestera-arm64.bin)
           ls -lah "${FILE[@]}"
 
           LATEST_TAG="${CHANNEL}-latest"
@@ -129,6 +130,7 @@ jobs:
       - name: Cleanup previous root-owned build artifacts
         run: |
           sudo rm -rf Larch-* || true
+          sudo rm -rf ABP-* || true
           sudo rm -rf ABM-* || true
 
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -139,7 +141,7 @@ jobs:
 
       # Runs a single command using the runners shell
       - name: Start to build Community Sonic using a script
-        run: ./sonic_build_script.sh -b 202411 -p marvell-larch-sim -a amd64 --patch_script https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/${{ github.head_ref || github.ref_name }}/larch_sonic_patch_script.sh -c b6a493b43d73831a7a40180ef428ef50185bc8ed --other_build_options "SONIC_BUILD_JOBS=8"
+        run: ./sonic_build_script.sh -b 202511 -p marvell-larch-sim -a amd64 --patch_script https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/${{ github.head_ref || github.ref_name }}/larch_sonic_patch_script.sh -c ea0fcbf4fa89ea564ee11f47ceb080c0d830fc67 --other_build_options "SONIC_BUILD_JOBS=8"
       
       # - name: Upload build artifacts
       #   uses: actions/upload-artifact@v4
@@ -231,6 +233,7 @@ jobs:
       - name: Cleanup previous root-owned build artifacts
         run: |
           sudo rm -rf Larch-* || true
+          sudo rm -rf ABP-* || true
           sudo rm -rf ABM-* || true
 
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -241,13 +244,13 @@ jobs:
 
       # Runs a single command using the runners shell
       - name: Start to build Community Sonic using a script
-        run: ./sonic_build_script.sh -b 202411 -p marvell -a amd64 --patch_script https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/${{ github.head_ref || github.ref_name }}/larch_sonic_patch_script.sh -c b6a493b43d73831a7a40180ef428ef50185bc8ed --other_build_options "SONIC_BUILD_JOBS=8"
+        run: ./sonic_build_script.sh -b 202511 -p marvell-prestera -a amd64 --patch_script https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/${{ github.head_ref || github.ref_name }}/larch_sonic_patch_script.sh -c ea0fcbf4fa89ea564ee11f47ceb080c0d830fc67 --other_build_options "SONIC_BUILD_JOBS=8"
       
       # - name: Upload build artifacts
       #   uses: actions/upload-artifact@v4
       #   with:
       #     name: sonic-image
-      #     path: Larch*/sonic-buildimage/target/sonic-marvell.bin
+      #     path: ABP*/sonic-buildimage/target/sonic-marvell.bin
       - name: Publish x86 image to Releases (keep last 3)
         if: ${{ github.event_name != 'pull_request' }}
         env:
@@ -260,7 +263,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          FILE=(ABM*/sonic-buildimage/target/sonic-marvell.bin)
+          FILE=(ABP*/sonic-buildimage/target/sonic-marvell-prestera.bin)
           ls -lah "${FILE[@]}"
 
           TS="$(date -u +%Y%m%d-%H%M%S)"
@@ -303,7 +306,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          FILE=(ABM*/sonic-buildimage/target/sonic-marvell.bin)
+          FILE=(ABP*/sonic-buildimage/target/sonic-marvell-prestera.bin)
           ls -lah "${FILE[@]}"
 
           LATEST_TAG="${CHANNEL}-latest"
