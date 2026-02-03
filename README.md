@@ -28,7 +28,7 @@ Usage:
     --clean_dockers: clean up build dockers
 
 Example command:
-"./sonic_build_script.sh -b 202411 -p marvell -a arm64   --patch_script https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/main/larch_sonic_patch_script.sh -r -c b6a493b43d73831a7a40180ef428ef50185bc8ed" ,
+./sonic_build_script.sh -b 202411 -p marvell -a arm64   --patch_script https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/main/larch_sonic_patch_script.sh -r -c b6a493b43d73831a7a40180ef428ef50185bc8ed --other_build_options "SONIC_BUILD_JOBS=8 ,
 
 where: -b 202411 - original branch in the sonic-buildimage repository,
        -p marvell - switch ASIC type(marvell - as Marvell Prestera family), marvell-larch-sim - simulation qemu image
@@ -37,6 +37,8 @@ where: -b 202411 - original branch in the sonic-buildimage repository,
        -r - ENABLE_SYNCD_RPC=y,
        -c b6a493b43d73831a7a40180ef428ef50185bc8ed - checkout to static stable commit.
 
+
+./sonic_build_script.sh -b 202511 -p marvell-larch-sim -a amd64   --patch_script https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/202511/larch_sonic_patch_script.sh --other_build_options "SONIC_BUILD_JOBS=8"
 
 # Build manually
 1. Clone sonic-buildimage repository

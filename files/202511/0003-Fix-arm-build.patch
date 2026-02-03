@@ -1,0 +1,924 @@
+From 85850726a220df847f4b3ac4b4ba0c9178530563 Mon Sep 17 00:00:00 2001
+From: Kostiantyn Buravchenko <kburavchenko@larch-networks.com>
+Date: Thu, 29 Jan 2026 12:13:57 +0200
+Subject: [PATCH] Fix arm build
+
+---
+ platform/marvell-prestera/one-image.mk        |   2 +-
+ .../canisminor/modules/headers/pse.h          | 287 ------------------
+ .../canisminor/modules/tps23881.c             |   2 +-
+ .../common/modules/hwmon_cpld.c               |   3 +-
+ .../common/modules/hwmon_mcu.c                |   3 +-
+ .../common/modules/hwmon_psu.c                |   3 +-
+ .../common/modules/hwmon_sfp.c                |   8 +-
+ .../sonic-platform-larch/debian/rules         | 127 ++++----
+ .../ln3804gf-4xgf/utils/get-base-mac.py       |  20 ++
+ .../ln3804gf-8xgf/utils/get-base-mac.py       |  20 ++
+ .../qn-sr-100/utils/get-base-mac.py           |  20 ++
+ .../qn-sr-50/utils/get-base-mac.py            |  20 ++
+ .../wnc-rsem-w1-32/modules/dps1600.c          |   3 +-
+ .../wnc-rsem-w1-32/modules/wnc_hwmon.c        |   3 +-
+ .../wnc-rsem-w1-32/modules/wnc_sfp.c          |  33 +-
+ .../wnc-rsem-w1-32/modules/wnc_sfp_e.c        |   8 +-
+ platform/marvell-prestera/sonic_fit.its       |   6 +-
+ sonic-slave-trixie/Dockerfile.j2              |   1 +
+ 18 files changed, 183 insertions(+), 386 deletions(-)
+ create mode 100644 platform/marvell-prestera/sonic-platform-larch/ln3804gf-4xgf/utils/get-base-mac.py
+ create mode 100644 platform/marvell-prestera/sonic-platform-larch/ln3804gf-8xgf/utils/get-base-mac.py
+ create mode 100644 platform/marvell-prestera/sonic-platform-larch/qn-sr-100/utils/get-base-mac.py
+ create mode 100644 platform/marvell-prestera/sonic-platform-larch/qn-sr-50/utils/get-base-mac.py
+
+diff --git a/platform/marvell-prestera/one-image.mk b/platform/marvell-prestera/one-image.mk
+index ecce50db9..c96a5d6fe 100644
+--- a/platform/marvell-prestera/one-image.mk
++++ b/platform/marvell-prestera/one-image.mk
+@@ -14,7 +14,7 @@ $(SONIC_ONE_IMAGE)_INSTALLS += $(LARCH_STATIC)
+ $(SONIC_ONE_IMAGE)_LAZY_INSTALLS += $(NOKIA_7215_PLATFORM) \
+ 				$(AC5X_RD98DX35xx_PLATFORM) \
+ 				$(AC5X_RD98DX35xxCN9131_PLATFORM) \
+-				$(AC5P_RD98DX45xxCN9131_PLATFORM)
++				$(AC5P_RD98DX45xxCN9131_PLATFORM) \
+ 				$(LN3848G_PLATFORM) \
+ 				$(LN3824G_PLATFORM) \
+ 				$(CANISMINOR_PLATFORM) \
+diff --git a/platform/marvell-prestera/sonic-platform-larch/canisminor/modules/headers/pse.h b/platform/marvell-prestera/sonic-platform-larch/canisminor/modules/headers/pse.h
+index 5f23a70c9..37592dc83 100644
+--- a/platform/marvell-prestera/sonic-platform-larch/canisminor/modules/headers/pse.h
++++ b/platform/marvell-prestera/sonic-platform-larch/canisminor/modules/headers/pse.h
+@@ -15,297 +15,10 @@
+ struct phy_device;
+ struct pse_controller_dev;
+ 
+-/* Ethtool defines
+- * Added some new defines that appeared in the following kernel versions
+- */
+-
+-/**
+- * enum ethtool_podl_pse_admin_state - operational state of the PoDL PSE
+- *	functions. IEEE 802.3-2018 30.15.1.1.2 aPoDLPSEAdminState
+- * @ETHTOOL_PODL_PSE_ADMIN_STATE_UNKNOWN: state of PoDL PSE functions are
+- * 	unknown
+- * @ETHTOOL_PODL_PSE_ADMIN_STATE_DISABLED: PoDL PSE functions are disabled
+- * @ETHTOOL_PODL_PSE_ADMIN_STATE_ENABLED: PoDL PSE functions are enabled
+- */
+-// enum ethtool_podl_pse_admin_state {
+-// 	ETHTOOL_PODL_PSE_ADMIN_STATE_UNKNOWN = 1,
+-// 	ETHTOOL_PODL_PSE_ADMIN_STATE_DISABLED,
+-// 	ETHTOOL_PODL_PSE_ADMIN_STATE_ENABLED,
+-// };
+-
+-/**
+- * enum ethtool_podl_pse_pw_d_status - power detection status of the PoDL PSE.
+- *	IEEE 802.3-2018 30.15.1.1.3 aPoDLPSEPowerDetectionStatus:
+- * @ETHTOOL_PODL_PSE_PW_D_STATUS_UNKNOWN: PoDL PSE
+- * @ETHTOOL_PODL_PSE_PW_D_STATUS_DISABLED: "The enumeration “disabled” is
+- *	asserted true when the PoDL PSE state diagram variable mr_pse_enable is
+- *	false"
+- * @ETHTOOL_PODL_PSE_PW_D_STATUS_SEARCHING: "The enumeration “searching” is
+- *	asserted true when either of the PSE state diagram variables
+- *	pi_detecting or pi_classifying is true."
+- * @ETHTOOL_PODL_PSE_PW_D_STATUS_DELIVERING: "The enumeration “deliveringPower”
+- *	is asserted true when the PoDL PSE state diagram variable pi_powered is
+- *	true."
+- * @ETHTOOL_PODL_PSE_PW_D_STATUS_SLEEP: "The enumeration “sleep” is asserted
+- *	true when the PoDL PSE state diagram variable pi_sleeping is true."
+- * @ETHTOOL_PODL_PSE_PW_D_STATUS_IDLE: "The enumeration “idle” is asserted true
+- *	when the logical combination of the PoDL PSE state diagram variables
+- *	pi_prebiased*!pi_sleeping is true."
+- * @ETHTOOL_PODL_PSE_PW_D_STATUS_ERROR: "The enumeration “error” is asserted
+- *	true when the PoDL PSE state diagram variable overload_held is true."
+- */
+-// enum ethtool_podl_pse_pw_d_status {
+-// 	ETHTOOL_PODL_PSE_PW_D_STATUS_UNKNOWN = 1,
+-// 	ETHTOOL_PODL_PSE_PW_D_STATUS_DISABLED,
+-// 	ETHTOOL_PODL_PSE_PW_D_STATUS_SEARCHING,
+-// 	ETHTOOL_PODL_PSE_PW_D_STATUS_DELIVERING,
+-// 	ETHTOOL_PODL_PSE_PW_D_STATUS_SLEEP,
+-// 	ETHTOOL_PODL_PSE_PW_D_STATUS_IDLE,
+-// 	ETHTOOL_PODL_PSE_PW_D_STATUS_ERROR,
+-// };
+-
+-/**
+- * enum ethtool_c33_pse_admin_state - operational state of the PoDL PSE
+- *	functions. IEEE 802.3-2022 30.9.1.1.2 aPSEAdminState
+- * @ETHTOOL_C33_PSE_ADMIN_STATE_UNKNOWN: state of PSE functions is unknown
+- * @ETHTOOL_C33_PSE_ADMIN_STATE_DISABLED: PSE functions are disabled
+- * @ETHTOOL_C33_PSE_ADMIN_STATE_ENABLED: PSE functions are enabled
+- */
+-enum ethtool_c33_pse_admin_state {
+-	ETHTOOL_C33_PSE_ADMIN_STATE_UNKNOWN = 1,
+-	ETHTOOL_C33_PSE_ADMIN_STATE_DISABLED,
+-	ETHTOOL_C33_PSE_ADMIN_STATE_ENABLED,
+-};
+-
+-/**
+- * enum ethtool_c33_pse_pw_d_status - power detection status of the PSE.
+- *	IEEE 802.3-2022 30.9.1.1.3 aPoDLPSEPowerDetectionStatus:
+- * @ETHTOOL_C33_PSE_PW_D_STATUS_UNKNOWN: PSE status is unknown
+- * @ETHTOOL_C33_PSE_PW_D_STATUS_DISABLED: The enumeration "disabled"
+- *	indicates that the PSE State diagram is in the state DISABLED.
+- * @ETHTOOL_C33_PSE_PW_D_STATUS_SEARCHING: The enumeration "searching"
+- *	indicates the PSE State diagram is in a state other than those
+- *	listed.
+- * @ETHTOOL_C33_PSE_PW_D_STATUS_DELIVERING: The enumeration
+- *	"deliveringPower" indicates that the PSE State diagram is in the
+- *	state POWER_ON.
+- * @ETHTOOL_C33_PSE_PW_D_STATUS_TEST: The enumeration "test" indicates that
+- *	the PSE State diagram is in the state TEST_MODE.
+- * @ETHTOOL_C33_PSE_PW_D_STATUS_FAULT: The enumeration "fault" indicates that
+- *	the PSE State diagram is in the state TEST_ERROR.
+- * @ETHTOOL_C33_PSE_PW_D_STATUS_OTHERFAULT: The enumeration "otherFault"
+- *	indicates that the PSE State diagram is in the state IDLE due to
+- *	the variable error_condition = true.
+- */
+-enum ethtool_c33_pse_pw_d_status {
+-	ETHTOOL_C33_PSE_PW_D_STATUS_UNKNOWN = 1,
+-	ETHTOOL_C33_PSE_PW_D_STATUS_DISABLED,
+-	ETHTOOL_C33_PSE_PW_D_STATUS_SEARCHING,
+-	ETHTOOL_C33_PSE_PW_D_STATUS_DELIVERING,
+-	ETHTOOL_C33_PSE_PW_D_STATUS_TEST,
+-	ETHTOOL_C33_PSE_PW_D_STATUS_FAULT,
+-	ETHTOOL_C33_PSE_PW_D_STATUS_OTHERFAULT,
+-};
+ 
+-/**
+- * enum ethtool_c33_pse_ext_state - groups of PSE extended states
+- *      functions. IEEE 802.3-2022 33.2.4.4 Variables
+- *
+- * @ETHTOOL_C33_PSE_EXT_STATE_ERROR_CONDITION: Group of error_condition states
+- * @ETHTOOL_C33_PSE_EXT_STATE_MR_MPS_VALID: Group of mr_mps_valid states
+- * @ETHTOOL_C33_PSE_EXT_STATE_MR_PSE_ENABLE: Group of mr_pse_enable states
+- * @ETHTOOL_C33_PSE_EXT_STATE_OPTION_DETECT_TED: Group of option_detect_ted
+- *	states
+- * @ETHTOOL_C33_PSE_EXT_STATE_OPTION_VPORT_LIM: Group of option_vport_lim states
+- * @ETHTOOL_C33_PSE_EXT_STATE_OVLD_DETECTED: Group of ovld_detected states
+- * @ETHTOOL_C33_PSE_EXT_STATE_PD_DLL_POWER_TYPE: Group of pd_dll_power_type
+- *	states
+- * @ETHTOOL_C33_PSE_EXT_STATE_POWER_NOT_AVAILABLE: Group of power_not_available
+- *	states
+- * @ETHTOOL_C33_PSE_EXT_STATE_SHORT_DETECTED: Group of short_detected states
+- */
+-enum ethtool_c33_pse_ext_state {
+-	ETHTOOL_C33_PSE_EXT_STATE_ERROR_CONDITION = 1,
+-	ETHTOOL_C33_PSE_EXT_STATE_MR_MPS_VALID,
+-	ETHTOOL_C33_PSE_EXT_STATE_MR_PSE_ENABLE,
+-	ETHTOOL_C33_PSE_EXT_STATE_OPTION_DETECT_TED,
+-	ETHTOOL_C33_PSE_EXT_STATE_OPTION_VPORT_LIM,
+-	ETHTOOL_C33_PSE_EXT_STATE_OVLD_DETECTED,
+-	ETHTOOL_C33_PSE_EXT_STATE_PD_DLL_POWER_TYPE,
+-	ETHTOOL_C33_PSE_EXT_STATE_POWER_NOT_AVAILABLE,
+-	ETHTOOL_C33_PSE_EXT_STATE_SHORT_DETECTED,
+-};
+ 
+-/**
+- * enum ethtool_c33_pse_ext_substate_error_condition - error_condition states
+- *      functions. IEEE 802.3-2022 33.2.4.4 Variables
+- *
+- * @ETHTOOL_C33_PSE_EXT_SUBSTATE_ERROR_CONDITION_NON_EXISTING_PORT: Non-existing
+- *	port number
+- * @ETHTOOL_C33_PSE_EXT_SUBSTATE_ERROR_CONDITION_UNDEFINED_PORT: Undefined port
+- * @ETHTOOL_C33_PSE_EXT_SUBSTATE_ERROR_CONDITION_INTERNAL_HW_FAULT: Internal
+- *	hardware fault
+- * @ETHTOOL_C33_PSE_EXT_SUBSTATE_ERROR_CONDITION_COMM_ERROR_AFTER_FORCE_ON:
+- *	Communication error after force on
+- * @ETHTOOL_C33_PSE_EXT_SUBSTATE_ERROR_CONDITION_UNKNOWN_PORT_STATUS: Unknown
+- *	port status
+- * @ETHTOOL_C33_PSE_EXT_SUBSTATE_ERROR_CONDITION_HOST_CRASH_TURN_OFF: Host
+- *	crash turn off
+- * @ETHTOOL_C33_PSE_EXT_SUBSTATE_ERROR_CONDITION_HOST_CRASH_FORCE_SHUTDOWN:
+- *	Host crash force shutdown
+- * @ETHTOOL_C33_PSE_EXT_SUBSTATE_ERROR_CONDITION_CONFIG_CHANGE: Configuration
+- *	change
+- * @ETHTOOL_C33_PSE_EXT_SUBSTATE_ERROR_CONDITION_DETECTED_OVER_TEMP: Over
+- *	temperature detected
+- *
+- * error_condition is a variable indicating the status of
+- * implementation-specific fault conditions or optionally other system faults
+- * that prevent the PSE from meeting the specifications in Table 33–11 and that
+- * require the PSE not to source power. These error conditions are different
+- * from those monitored by the state diagrams in Figure 33–10.
+- */
+-enum ethtool_c33_pse_ext_substate_error_condition {
+-	ETHTOOL_C33_PSE_EXT_SUBSTATE_ERROR_CONDITION_NON_EXISTING_PORT = 1,
+-	ETHTOOL_C33_PSE_EXT_SUBSTATE_ERROR_CONDITION_UNDEFINED_PORT,
+-	ETHTOOL_C33_PSE_EXT_SUBSTATE_ERROR_CONDITION_INTERNAL_HW_FAULT,
+-	ETHTOOL_C33_PSE_EXT_SUBSTATE_ERROR_CONDITION_COMM_ERROR_AFTER_FORCE_ON,
+-	ETHTOOL_C33_PSE_EXT_SUBSTATE_ERROR_CONDITION_UNKNOWN_PORT_STATUS,
+-	ETHTOOL_C33_PSE_EXT_SUBSTATE_ERROR_CONDITION_HOST_CRASH_TURN_OFF,
+-	ETHTOOL_C33_PSE_EXT_SUBSTATE_ERROR_CONDITION_HOST_CRASH_FORCE_SHUTDOWN,
+-	ETHTOOL_C33_PSE_EXT_SUBSTATE_ERROR_CONDITION_CONFIG_CHANGE,
+-	ETHTOOL_C33_PSE_EXT_SUBSTATE_ERROR_CONDITION_DETECTED_OVER_TEMP,
+-};
+ 
+-/**
+- * enum ethtool_c33_pse_ext_substate_mr_pse_enable - mr_pse_enable states
+- *      functions. IEEE 802.3-2022 33.2.4.4 Variables
+- *
+- * @ETHTOOL_C33_PSE_EXT_SUBSTATE_MR_PSE_ENABLE_DISABLE_PIN_ACTIVE: Disable
+- *	pin active
+- *
+- * mr_pse_enable is control variable that selects PSE operation and test
+- * functions.
+- */
+-enum ethtool_c33_pse_ext_substate_mr_pse_enable {
+-	ETHTOOL_C33_PSE_EXT_SUBSTATE_MR_PSE_ENABLE_DISABLE_PIN_ACTIVE = 1,
+-};
+ 
+-/**
+- * enum ethtool_c33_pse_ext_substate_option_detect_ted - option_detect_ted
+- *	states functions. IEEE 802.3-2022 33.2.4.4 Variables
+- *
+- * @ETHTOOL_C33_PSE_EXT_SUBSTATE_OPTION_DETECT_TED_DET_IN_PROCESS: Detection
+- *	in process
+- * @ETHTOOL_C33_PSE_EXT_SUBSTATE_OPTION_DETECT_TED_CONNECTION_CHECK_ERROR:
+- *	Connection check error
+- *
+- * option_detect_ted is a variable indicating if detection can be performed
+- * by the PSE during the ted_timer interval.
+- */
+-enum ethtool_c33_pse_ext_substate_option_detect_ted {
+-	ETHTOOL_C33_PSE_EXT_SUBSTATE_OPTION_DETECT_TED_DET_IN_PROCESS = 1,
+-	ETHTOOL_C33_PSE_EXT_SUBSTATE_OPTION_DETECT_TED_CONNECTION_CHECK_ERROR,
+-};
+-
+-/**
+- * enum ethtool_c33_pse_ext_substate_option_vport_lim - option_vport_lim states
+- *      functions. IEEE 802.3-2022 33.2.4.4 Variables
+- *
+- * @ETHTOOL_C33_PSE_EXT_SUBSTATE_OPTION_VPORT_LIM_HIGH_VOLTAGE: Main supply
+- *	voltage is high
+- * @ETHTOOL_C33_PSE_EXT_SUBSTATE_OPTION_VPORT_LIM_LOW_VOLTAGE: Main supply
+- *	voltage is low
+- * @ETHTOOL_C33_PSE_EXT_SUBSTATE_OPTION_VPORT_LIM_VOLTAGE_INJECTION: Voltage
+- *	injection into the port
+- *
+- * option_vport_lim is an optional variable indicates if VPSE is out of the
+- * operating range during normal operating state.
+- */
+-enum ethtool_c33_pse_ext_substate_option_vport_lim {
+-	ETHTOOL_C33_PSE_EXT_SUBSTATE_OPTION_VPORT_LIM_HIGH_VOLTAGE = 1,
+-	ETHTOOL_C33_PSE_EXT_SUBSTATE_OPTION_VPORT_LIM_LOW_VOLTAGE,
+-	ETHTOOL_C33_PSE_EXT_SUBSTATE_OPTION_VPORT_LIM_VOLTAGE_INJECTION,
+-};
+-
+-/**
+- * enum ethtool_c33_pse_ext_substate_ovld_detected - ovld_detected states
+- *      functions. IEEE 802.3-2022 33.2.4.4 Variables
+- *
+- * @ETHTOOL_C33_PSE_EXT_SUBSTATE_OVLD_DETECTED_OVERLOAD: Overload state
+- *
+- * ovld_detected is a variable indicating if the PSE output current has been
+- * in an overload condition (see 33.2.7.6) for at least TCUT of a one-second
+- * sliding time.
+- */
+-enum ethtool_c33_pse_ext_substate_ovld_detected {
+-	ETHTOOL_C33_PSE_EXT_SUBSTATE_OVLD_DETECTED_OVERLOAD = 1,
+-};
+-
+-/**
+- * enum ethtool_c33_pse_ext_substate_power_not_available - power_not_available
+- *	states functions. IEEE 802.3-2022 33.2.4.4 Variables
+- *
+- * @ETHTOOL_C33_PSE_EXT_SUBSTATE_POWER_NOT_AVAILABLE_BUDGET_EXCEEDED: Power
+- *	budget exceeded for the controller
+- * @ETHTOOL_C33_PSE_EXT_SUBSTATE_POWER_NOT_AVAILABLE_PORT_PW_LIMIT_EXCEEDS_CONTROLLER_BUDGET:
+- *	Configured port power limit exceeded controller power budget
+- * @ETHTOOL_C33_PSE_EXT_SUBSTATE_POWER_NOT_AVAILABLE_PD_REQUEST_EXCEEDS_PORT_LIMIT:
+- *	Power request from PD exceeds port limit
+- * @ETHTOOL_C33_PSE_EXT_SUBSTATE_POWER_NOT_AVAILABLE_HW_PW_LIMIT: Power
+- *	denied due to Hardware power limit
+- *
+- * power_not_available is a variable that is asserted in an
+- * implementation-dependent manner when the PSE is no longer capable of
+- * sourcing sufficient power to support the attached PD. Sufficient power
+- * is defined by classification; see 33.2.6.
+- */
+-enum ethtool_c33_pse_ext_substate_power_not_available {
+-	ETHTOOL_C33_PSE_EXT_SUBSTATE_POWER_NOT_AVAILABLE_BUDGET_EXCEEDED =  1,
+-	ETHTOOL_C33_PSE_EXT_SUBSTATE_POWER_NOT_AVAILABLE_PORT_PW_LIMIT_EXCEEDS_CONTROLLER_BUDGET,
+-	ETHTOOL_C33_PSE_EXT_SUBSTATE_POWER_NOT_AVAILABLE_PD_REQUEST_EXCEEDS_PORT_LIMIT,
+-	ETHTOOL_C33_PSE_EXT_SUBSTATE_POWER_NOT_AVAILABLE_HW_PW_LIMIT,
+-};
+-
+-/**
+- * enum ethtool_c33_pse_ext_substate_short_detected - short_detected states
+- *      functions. IEEE 802.3-2022 33.2.4.4 Variables
+- *
+- * @ETHTOOL_C33_PSE_EXT_SUBSTATE_SHORT_DETECTED_SHORT_CONDITION: Short
+- *	condition was detected
+- *
+- * short_detected is a variable indicating if the PSE output current has been
+- * in a short circuit condition for TLIM within a sliding window (see 33.2.7.7).
+- */
+-enum ethtool_c33_pse_ext_substate_short_detected {
+-	ETHTOOL_C33_PSE_EXT_SUBSTATE_SHORT_DETECTED_SHORT_CONDITION = 1,
+-};
+-
+-/**
+- * enum ethtool_pse_types - Types of PSE controller.
+- * @ETHTOOL_PSE_UNKNOWN: Type of PSE controller is unknown
+- * @ETHTOOL_PSE_PODL: PSE controller which support PoDL
+- * @ETHTOOL_PSE_C33: PSE controller which support Clause 33 (PoE)
+- */
+-enum ethtool_pse_types {
+-	ETHTOOL_PSE_UNKNOWN =	1 << 0,
+-	ETHTOOL_PSE_PODL =	1 << 1,
+-	ETHTOOL_PSE_C33 =	1 << 2,
+-};
+-
+-/* C33 PSE extended state and substate. */
+-struct ethtool_c33_pse_ext_state_info {
+-	enum ethtool_c33_pse_ext_state c33_pse_ext_state;
+-	union {
+-		enum ethtool_c33_pse_ext_substate_error_condition error_condition;
+-		enum ethtool_c33_pse_ext_substate_mr_pse_enable mr_pse_enable;
+-		enum ethtool_c33_pse_ext_substate_option_detect_ted option_detect_ted;
+-		enum ethtool_c33_pse_ext_substate_option_vport_lim option_vport_lim;
+-		enum ethtool_c33_pse_ext_substate_ovld_detected ovld_detected;
+-		enum ethtool_c33_pse_ext_substate_power_not_available power_not_available;
+-		enum ethtool_c33_pse_ext_substate_short_detected short_detected;
+-		u32 __c33_pse_ext_substate;
+-	};
+-};
+ 
+ /******************************************************************************/
+ 
+diff --git a/platform/marvell-prestera/sonic-platform-larch/canisminor/modules/tps23881.c b/platform/marvell-prestera/sonic-platform-larch/canisminor/modules/tps23881.c
+index 028d0a07e..c2db62c19 100644
+--- a/platform/marvell-prestera/sonic-platform-larch/canisminor/modules/tps23881.c
++++ b/platform/marvell-prestera/sonic-platform-larch/canisminor/modules/tps23881.c
+@@ -970,7 +970,7 @@ static const struct attribute_group tps23881_sysfs_attr_group = {
+     .attrs = tps23881_sysfs_attrs,
+ };
+ 
+-static int tps23881_i2c_probe(struct i2c_client *client, const struct i2c_device_id *id)
++static int tps23881_i2c_probe(struct i2c_client *client)
+ {
+ 	struct device *dev = &client->dev;
+ 	struct tps23881_priv *priv;
+diff --git a/platform/marvell-prestera/sonic-platform-larch/common/modules/hwmon_cpld.c b/platform/marvell-prestera/sonic-platform-larch/common/modules/hwmon_cpld.c
+index 2b63be7bd..30a9634f2 100644
+--- a/platform/marvell-prestera/sonic-platform-larch/common/modules/hwmon_cpld.c
++++ b/platform/marvell-prestera/sonic-platform-larch/common/modules/hwmon_cpld.c
+@@ -1047,8 +1047,7 @@ static void hwmon_cpld_remove_client(struct i2c_client *client)
+     mutex_unlock(&list_lock);
+ }
+ 
+-static int hwmon_cpld_probe(struct i2c_client *client,
+-            const struct i2c_device_id *dev_id)
++static int hwmon_cpld_probe(struct i2c_client *client)
+ {
+     int status;
+ 
+diff --git a/platform/marvell-prestera/sonic-platform-larch/common/modules/hwmon_mcu.c b/platform/marvell-prestera/sonic-platform-larch/common/modules/hwmon_mcu.c
+index c48f77f9a..ed5265360 100644
+--- a/platform/marvell-prestera/sonic-platform-larch/common/modules/hwmon_mcu.c
++++ b/platform/marvell-prestera/sonic-platform-larch/common/modules/hwmon_mcu.c
+@@ -1347,8 +1347,7 @@ static struct attribute *hwmon_mcu_attributes[] = {
+ 
+ static const struct attribute_group hwmon_mcu_group = { .attrs = hwmon_mcu_attributes};
+ 
+-static int hwmon_mcu_probe(struct i2c_client *client,
+-            const struct i2c_device_id *dev_id)
++static int hwmon_mcu_probe(struct i2c_client *client)
+ {
+     int status;
+ 
+diff --git a/platform/marvell-prestera/sonic-platform-larch/common/modules/hwmon_psu.c b/platform/marvell-prestera/sonic-platform-larch/common/modules/hwmon_psu.c
+index ae04494d8..49ead0164 100644
+--- a/platform/marvell-prestera/sonic-platform-larch/common/modules/hwmon_psu.c
++++ b/platform/marvell-prestera/sonic-platform-larch/common/modules/hwmon_psu.c
+@@ -237,8 +237,7 @@ static void hwmon_psu_remove_client(struct i2c_client *client)
+     mutex_unlock(&list_lock);
+ }
+ 
+-static int hwmon_psu_probe(struct i2c_client *client,
+-            const struct i2c_device_id *dev_id)
++static int hwmon_psu_probe(struct i2c_client *client)
+ {
+     int status;
+ 
+diff --git a/platform/marvell-prestera/sonic-platform-larch/common/modules/hwmon_sfp.c b/platform/marvell-prestera/sonic-platform-larch/common/modules/hwmon_sfp.c
+index 0000668b9..56e5dff12 100644
+--- a/platform/marvell-prestera/sonic-platform-larch/common/modules/hwmon_sfp.c
++++ b/platform/marvell-prestera/sonic-platform-larch/common/modules/hwmon_sfp.c
+@@ -792,7 +792,7 @@ static const struct attribute_group hwmon_sfpA_group = { .bin_attrs = hwmon_cpld
+ static const struct attribute_group hwmon_sfpB_group = { .bin_attrs = hwmon_cpldB_sfp_epprom_attributes};
+ static const struct attribute_group hwmon_sfpC_group = { .bin_attrs = hwmon_cpldC_sfp_epprom_attributes};
+ 
+-static int hwmon_sfp_device_probe(struct i2c_client *client, const struct i2c_device_id *dev_id)
++static int hwmon_sfp_device_probe(struct i2c_client *client)
+ {
+     int i, err;
+     struct hwmon_sfp_platform_data chip[MAX_PORT_NUM];
+@@ -813,6 +813,12 @@ static int hwmon_sfp_device_probe(struct i2c_client *client, const struct i2c_de
+         goto exit;
+     }
+ 
++    const struct i2c_device_id *dev_id;
++
++    dev_id = i2c_get_match_data (client);
++    if (!dev_id)
++      return -ENODEV;
++
+     mutex_init(&sfp->lock);
+ 
+     switch(dev_id->driver_data)
+diff --git a/platform/marvell-prestera/sonic-platform-larch/debian/rules b/platform/marvell-prestera/sonic-platform-larch/debian/rules
+index 73cbc7a47..15403b779 100755
+--- a/platform/marvell-prestera/sonic-platform-larch/debian/rules
++++ b/platform/marvell-prestera/sonic-platform-larch/debian/rules
+@@ -1,33 +1,61 @@
+ #!/usr/bin/make -f
++# See debhelper(7) (uncomment to enable)
++# output every command that modifies files on the build system.
++#export DH_VERBOSE = 1
+ 
+ include /usr/share/dpkg/pkg-info.mk
++#--------------------------------------------------------
+ 
+ ifneq ($(CROSS_BUILD_ENVIRON), y)
+ KVERSION   ?= $(shell uname -r)
+ endif
+-
+-SHELL = /bin/bash ### for pushd/popd
+-
+ KERNEL_SRC :=  /lib/modules/$(KVERSION)
+-MOD_SRC_DIR:= $(shell pwd)
+ INSTALL_MOD_DIR := kernel/extra/
++MOD_SRC_DIR:= $(shell pwd)
++MODULE_DIRS_ARM64 := ln3848g ln3824g cn9131-ext-98cx cn9130-eps6800 ln3612y2zt ln3604g canisminor cn9130-dm8218f ln3804gf-4xgf ln3804gf-8xgf ln3516xgf-4z qn-sr-50 qn-sr-100 qn-sr-200 qn-sr-400 ln1524g4mg-6xgf
++MODULE_DIRS_AMD64 := gemini dqs-5000 pegatron-fm6256-f wnc-rsem-w1-32
++ifeq ($(DEB_HOST_ARCH),arm64)
++MODULE_DIRS := $(MODULE_DIRS_ARM64)
++else ifeq ($(DEB_HOST_ARCH),amd64)
++MODULE_DIRS := $(MODULE_DIRS_AMD64)
++else
++MODULE_DIRS :=
++endif
+ UTILS_DIR := utils
++SERVICE_DIR := service
+ MRVL_MODULE_DIR:= mrvl-modules
+-MODULE_DIRS:= ln3848g ln3824g cn9131-ext-98cx cn9130-eps6800 ln3612y2zt ln3604g canisminor cn9130-dm8218f ln3804gf-4xgf ln3804gf-8xgf ln3516xgf-4z qn-sr-50 qn-sr-100 qn-sr-200 qn-sr-400 gemini dqs-5000 pegatron-fm6256-f wnc-rsem-w1-32 ln1524g4mg-6xgf
++PRESTERA_MODULE_PREFIX := mrvl-prestera/drivers/generic/
++PRESTERA_MODULE_SRC := cpssEnabler/linuxNoKernelModule/drivers/
+ 
+ %:
+-	dh $@ --with systemd,python2,python3 --buildsystem=pybuild
++	dh $@ --with python3 --buildsystem=pybuild
+ 
+-clean:
+-	dh_testdir
+-	dh_testroot
++override_dh_auto_clean:
++	(for mod in $(MODULE_DIRS); do \
++		$(MAKE) clean -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules; \
++		if [ -f $(MOD_SRC_DIR)/$${mod}/setup.py ]; then \
++			PYBUILD_NAME=$${mod} pybuild --clean -d $${mod}; \
++		fi; \
++		cd $(MOD_SRC_DIR)/$${mod}; \
++		rm -rf $(MRVL_MODULE_DIR)/; \
++		rm -rf *.egg-info/; \
++		rm -f *.whl; \
++		cd $(MOD_SRC_DIR)/; \
++	done)
+ 	dh_clean
+ 
+-# TODO: is this driver applicable for ALL marvel packet processors and the only
+-#       difference between boards(for this aspect) is the link between cpu and pp?
+-build:
+-	( for mod in $(MODULE_DIRS); do \
+-		cd drivers/generic/cpssEnabler/linuxNoKernelModule/drivers/; \
++override_dh_auto_configure:
++	(for mod in $(MODULE_DIRS); do \
++		if [ -f $(MOD_SRC_DIR)/$${mod}/setup.py ]; then \
++			PYBUILD_NAME=$${mod} pybuild --configure -d $${mod}; \
++		fi; \
++	done)
++
++override_dh_auto_build:
++	(set -e; for mod in $(MODULE_DIRS); do \
++		mkdir -p $(MOD_SRC_DIR)/$${mod}/$(MRVL_MODULE_DIR); \
++		cp -r $(MOD_SRC_DIR)/../$(PRESTERA_MODULE_PREFIX)/* $(MOD_SRC_DIR)/$${mod}/$(MRVL_MODULE_DIR)/; \
++		cd $(MOD_SRC_DIR)/$${mod}/$(MRVL_MODULE_DIR)/$(PRESTERA_MODULE_SRC); \
+ 		make clean; \
+ 		if [ $$mod = "ln3848g" ]; then \
+ 			make modules -C $(KERNEL_SRC)/build M=`pwd` CONFIG_KM_MVMBUS=y CONFIG_KM_MVINT=y || exit 1; \
+@@ -64,55 +92,67 @@ build:
+ 			make modules -C $(KERNEL_SRC)/build M=`pwd` CONFIG_KM_MVPCI=y CONFIG_KM_MVINT=y || exit 1; \
+ 		elif [ $$mod = "gemini" ]; then \
+ 			make modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules || exit 1; \
++			make modules -C $(KERNEL_SRC)/build M=`pwd` CONFIG_KM_MVPCI=y CONFIG_KM_MVINT=y || exit 1; \
+ 			make -C $(MOD_SRC_DIR)/$${mod}/tools || exit 1;\
+-			pushd $(MOD_SRC_DIR)/$${mod}; \
++			cd $(MOD_SRC_DIR)/$${mod}; \
+ 			python3 setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}; \
+-			popd; \
++			cd $(MOD_SRC_DIR); \
+ 			continue; \
+ 		elif [ $$mod = "dqs-5000" ]; then \
+ 			make modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules || exit 1; \
++			make modules -C $(KERNEL_SRC)/build M=`pwd` CONFIG_KM_MVPCI=y CONFIG_KM_MVINT=y || exit 1; \
+ 			make -C $(MOD_SRC_DIR)/$${mod}/tools || exit 1;\
+-			pushd $(MOD_SRC_DIR)/$${mod}; \
++			cd $(MOD_SRC_DIR)/$${mod}; \
+ 			python3 setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}; \
+-			popd; \
++			cd $(MOD_SRC_DIR) \
+ 			continue; \
+ 		elif [ $$mod = "pegatron-fm6256-f" ]; then \
+ 			make modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules || exit 1; \
++			make modules -C $(KERNEL_SRC)/build M=`pwd` CONFIG_KM_MVPCI=y CONFIG_KM_MVINT=y || exit 1; \
+ 			make -C $(MOD_SRC_DIR)/$${mod}/tools || exit 1;\
+-			pushd $(MOD_SRC_DIR)/$${mod}; \
++			cd $(MOD_SRC_DIR)/$${mod}; \
+ 			python3 setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}; \
+-			popd; \
++			cd $(MOD_SRC_DIR); \
+ 			continue; \
+ 		elif [ $$mod = "wnc-rsem-w1-32" ]; then \
+ 			make modules -C $(KERNEL_SRC)/build M=$(MOD_SRC_DIR)/$${mod}/modules || exit 1; \
+-			pushd $(MOD_SRC_DIR)/$${mod}; \
++			make modules -C $(KERNEL_SRC)/build M=`pwd` CONFIG_KM_MVPCI=y CONFIG_KM_MVINT=y || exit 1; \
++			cd $(MOD_SRC_DIR)/$${mod}; \
+ 			python3 setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}; \
+-			popd; \
++			cd $(MOD_SRC_DIR); \
+ 			continue; \
+ 		fi; \
+-		mkdir $(MOD_SRC_DIR)/$${mod}/$(MRVL_MODULE_DIR); \
+-		cp *.ko $(MOD_SRC_DIR)/$${mod}/$(MRVL_MODULE_DIR)/; \
+ 		cd $(MOD_SRC_DIR)/$${mod}; \
++		python3 setup.py build; \
+ 		python3 setup.py bdist_wheel -d $(MOD_SRC_DIR)/$${mod}; \
+ 		cd $(MOD_SRC_DIR); \
+ 	done)
+ 
+-binary: binary-arch binary-indep
+-	# Nothing to do
++override_dh_auto_test:
++	# No tests to run
+ 
+-binary-arch:
+-	# Nothing to do
++override_dh_usrlocal:
++	# debian/sonic-platform-<>-<>/usr/local/bin/* are already done
+ 
+-binary-indep:
++override_dh_auto_install:
+ 	dh_testdir
+ 	dh_installdirs
+-	( for mod in $(MODULE_DIRS); do\
+-		dh_installdirs -psonic-platform-$${mod} /$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
+-		dh_installdirs -psonic-platform-$${mod} /usr/local/bin; \
++	(set -e; for mod in $(MODULE_DIRS); do\
++		pkg=$$mod; \
++		dh_installdirs -psonic-platform-$${pkg} /$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
++		dh_installdirs -psonic-platform-$${pkg} /usr/local/bin; \
++		dh_installdirs -psonic-platform-$${pkg} /lib/systemd/system; \
++		if [ ! -d debian/sonic-platform-$${pkg} ]; then \
++			echo "Skipping $$pkg (package excluded)"; \
++			continue; \
++		fi; \
++		cp $(MOD_SRC_DIR)/$${mod}/$(SERVICE_DIR)/*.service debian/sonic-platform-$${pkg}/lib/systemd/system/; \
++		cp $(MOD_SRC_DIR)/$${mod}/$(UTILS_DIR)/* debian/sonic-platform-$${pkg}/usr/local/bin/; \
++		cp $(MOD_SRC_DIR)/$${mod}/$(MRVL_MODULE_DIR)/$(PRESTERA_MODULE_SRC)/mvcpss.ko debian/sonic-platform-$${pkg}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
+ 		if [ $$mod = "canisminor" ]; then \
+-			cp $(MOD_SRC_DIR)/$${mod}/modules/*.ko debian/sonic-platform-$${mod}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR)/; \
++			cp $(MOD_SRC_DIR)/$${mod}/$(MRVL_MODULE_DIR)/$(PRESTERA_MODULE_SRC)/*.ko debian/sonic-platform-$${mod}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR)/; \
+ 			dh_installdirs -psonic-platform-$${mod} /lib/firmware/ti/tps23881/; \
+-			cp -r $(MOD_SRC_DIR)/$${mod}/modules/firmware debian/sonic-platform-$${mod}/lib/; \
++			#cp -r $(MOD_SRC_DIR)/$${mod}/modules/firmware debian/sonic-platform-$${mod}/lib/; \
+ 		fi; \
+ 		if [ $$mod = "gemini" ]; then \
+ 			dh_installdirs -psonic-platform-$${mod} /usr/local/bin/process; \
+@@ -173,26 +213,7 @@ binary-indep:
+ 			cd $(MOD_SRC_DIR); \
+ 			continue; \
+ 		fi; \
+-		cp $(MOD_SRC_DIR)/$${mod}/$(UTILS_DIR)/* debian/sonic-platform-$${mod}/usr/local/bin/; \
+-		cp $(MOD_SRC_DIR)/$${mod}/$(MRVL_MODULE_DIR)/mvcpss.ko debian/sonic-platform-$${mod}/$(KERNEL_SRC)/$(INSTALL_MOD_DIR); \
+ 		cd $(MOD_SRC_DIR)/$${mod}; \
+ 		python3 setup.py install --root=$(MOD_SRC_DIR)/debian/sonic-platform-$${mod} --install-layout=deb; \
+ 		cd $(MOD_SRC_DIR); \
+ 	done)
+-	# Resuming debhelper scripts
+-	dh_testroot
+-	dh_install
+-	dh_installchangelogs
+-	dh_installdocs
+-	dh_systemd_enable
+-	dh_installinit
+-	dh_systemd_start
+-	dh_link
+-	dh_fixperms
+-	dh_compress
+-	dh_strip
+-	dh_installdeb
+-	dh_gencontrol
+-	dh_md5sums
+-	dh_builddeb
+-.PHONY: build binary binary-arch binary-indep clean
+diff --git a/platform/marvell-prestera/sonic-platform-larch/ln3804gf-4xgf/utils/get-base-mac.py b/platform/marvell-prestera/sonic-platform-larch/ln3804gf-4xgf/utils/get-base-mac.py
+new file mode 100644
+index 000000000..fe271d04a
+--- /dev/null
++++ b/platform/marvell-prestera/sonic-platform-larch/ln3804gf-4xgf/utils/get-base-mac.py
+@@ -0,0 +1,20 @@
++#!/usr/bin/env python
++
++def main():
++    try:
++        import sonic_platform.platform
++        import sonic_platform.chassis
++    except ImportError, e:
++        raise ImportError (str(e) + "- required module not found")
++
++    chassis = sonic_platform.platform.Platform().get_chassis()
++    if chassis is None:
++        print "DEBUG chassis was None  "
++             
++    base_mac = chassis.get_base_mac()
++    print base_mac
++
++    return
++
++if __name__ == '__main__':
++    main()
+diff --git a/platform/marvell-prestera/sonic-platform-larch/ln3804gf-8xgf/utils/get-base-mac.py b/platform/marvell-prestera/sonic-platform-larch/ln3804gf-8xgf/utils/get-base-mac.py
+new file mode 100644
+index 000000000..fe271d04a
+--- /dev/null
++++ b/platform/marvell-prestera/sonic-platform-larch/ln3804gf-8xgf/utils/get-base-mac.py
+@@ -0,0 +1,20 @@
++#!/usr/bin/env python
++
++def main():
++    try:
++        import sonic_platform.platform
++        import sonic_platform.chassis
++    except ImportError, e:
++        raise ImportError (str(e) + "- required module not found")
++
++    chassis = sonic_platform.platform.Platform().get_chassis()
++    if chassis is None:
++        print "DEBUG chassis was None  "
++             
++    base_mac = chassis.get_base_mac()
++    print base_mac
++
++    return
++
++if __name__ == '__main__':
++    main()
+diff --git a/platform/marvell-prestera/sonic-platform-larch/qn-sr-100/utils/get-base-mac.py b/platform/marvell-prestera/sonic-platform-larch/qn-sr-100/utils/get-base-mac.py
+new file mode 100644
+index 000000000..fe271d04a
+--- /dev/null
++++ b/platform/marvell-prestera/sonic-platform-larch/qn-sr-100/utils/get-base-mac.py
+@@ -0,0 +1,20 @@
++#!/usr/bin/env python
++
++def main():
++    try:
++        import sonic_platform.platform
++        import sonic_platform.chassis
++    except ImportError, e:
++        raise ImportError (str(e) + "- required module not found")
++
++    chassis = sonic_platform.platform.Platform().get_chassis()
++    if chassis is None:
++        print "DEBUG chassis was None  "
++             
++    base_mac = chassis.get_base_mac()
++    print base_mac
++
++    return
++
++if __name__ == '__main__':
++    main()
+diff --git a/platform/marvell-prestera/sonic-platform-larch/qn-sr-50/utils/get-base-mac.py b/platform/marvell-prestera/sonic-platform-larch/qn-sr-50/utils/get-base-mac.py
+new file mode 100644
+index 000000000..fe271d04a
+--- /dev/null
++++ b/platform/marvell-prestera/sonic-platform-larch/qn-sr-50/utils/get-base-mac.py
+@@ -0,0 +1,20 @@
++#!/usr/bin/env python
++
++def main():
++    try:
++        import sonic_platform.platform
++        import sonic_platform.chassis
++    except ImportError, e:
++        raise ImportError (str(e) + "- required module not found")
++
++    chassis = sonic_platform.platform.Platform().get_chassis()
++    if chassis is None:
++        print "DEBUG chassis was None  "
++             
++    base_mac = chassis.get_base_mac()
++    print base_mac
++
++    return
++
++if __name__ == '__main__':
++    main()
+diff --git a/platform/marvell-prestera/sonic-platform-larch/wnc-rsem-w1-32/modules/dps1600.c b/platform/marvell-prestera/sonic-platform-larch/wnc-rsem-w1-32/modules/dps1600.c
+index f44811c38..7f4778936 100644
+--- a/platform/marvell-prestera/sonic-platform-larch/wnc-rsem-w1-32/modules/dps1600.c
++++ b/platform/marvell-prestera/sonic-platform-larch/wnc-rsem-w1-32/modules/dps1600.c
+@@ -570,8 +570,7 @@ static struct attribute *dps1600_attrs[] = {
+ 
+ ATTRIBUTE_GROUPS(dps1600);
+ 
+-static int dps1600_probe(struct i2c_client *client,
+-                const struct i2c_device_id *id)
++static int dps1600_probe(struct i2c_client *client)
+ {
+     struct dps1600_data *data;
+     int status;
+diff --git a/platform/marvell-prestera/sonic-platform-larch/wnc-rsem-w1-32/modules/wnc_hwmon.c b/platform/marvell-prestera/sonic-platform-larch/wnc-rsem-w1-32/modules/wnc_hwmon.c
+index 4f51b5bd9..c5f18888e 100644
+--- a/platform/marvell-prestera/sonic-platform-larch/wnc-rsem-w1-32/modules/wnc_hwmon.c
++++ b/platform/marvell-prestera/sonic-platform-larch/wnc-rsem-w1-32/modules/wnc_hwmon.c
+@@ -410,8 +410,7 @@ static struct attribute *wnc_hwmon_attributes[] = {
+ 
+ static const struct attribute_group wnc_hwmon_group = { .attrs = wnc_hwmon_attributes};
+ 
+-static int wnc_hwmon_probe(struct i2c_client *client,
+-            const struct i2c_device_id *dev_id)
++static int wnc_hwmon_probe(struct i2c_client *client)
+ {
+     int status;
+ 
+diff --git a/platform/marvell-prestera/sonic-platform-larch/wnc-rsem-w1-32/modules/wnc_sfp.c b/platform/marvell-prestera/sonic-platform-larch/wnc-rsem-w1-32/modules/wnc_sfp.c
+index 25f64fe70..aa1b25def 100644
+--- a/platform/marvell-prestera/sonic-platform-larch/wnc-rsem-w1-32/modules/wnc_sfp.c
++++ b/platform/marvell-prestera/sonic-platform-larch/wnc-rsem-w1-32/modules/wnc_sfp.c
+@@ -510,27 +510,27 @@ static int __init sfp_init(void)
+             gpio_request(arr_gpio_Q[k].Int, "sysfs");
+             gpio_direction_input(arr_gpio_Q[k].Int);
+             //gpio_set_debounce(arr_gpio_Q[k].Int,200);
+-            gpio_export(arr_gpio_Q[k].Int, false);
++            
+             /*printk(KERN_DEBUG "export gpio%d qsfp%d_int",arr_gpio_Q[k].Int,k);*/
+ 
+             arr_gpio_Q[k].Present = j+1;
+             gpio_request(arr_gpio_Q[k].Present, "sysfs");
+             //gpio_set_debounce(arr_gpio_Q[k].Present,200);
+             gpio_direction_input(arr_gpio_Q[k].Present);
+-            gpio_export(arr_gpio_Q[k].Present, false);
++            
+             /*printk(KERN_DEBUG "export gpio%d qsfp%d_present",arr_gpio_Q[k].Present,k);*/
+ 
+             arr_gpio_Q[k].Lowpower = j+2;
+             gpio_request(arr_gpio_Q[k].Lowpower, "sysfs");
+             //gpio_direction_output(arr_gpio_Q[k].Lowpower,false); Temporary Stub
+-            gpio_export(arr_gpio_Q[k].Lowpower, false);
++            
+             /*printk(KERN_DEBUG "export gpio%d qsfp%d_lowpower",arr_gpio_Q[k].Lowpower,k);*/
+             arr_gpio_Q[k].LowpowerValue = 0 ;
+ 
+             arr_gpio_Q[k].Reset = j+3;
+             gpio_request(arr_gpio_Q[k].Reset, "sysfs");
+             //gpio_direction_output(arr_gpio_Q[k].Reset, false); Temporary Stub
+-            gpio_export(arr_gpio_Q[k].Reset, false);
++            
+             /*printk(KERN_DEBUG "export gpio%d qsfp%d_reset",arr_gpio_Q[k].Reset,k);*/
+             arr_gpio_Q[k].ResetValue = 1 ;
+ 
+@@ -549,26 +549,22 @@ static int __init sfp_init(void)
+         gpio_request(arr_gpio_S[k].RXLos, "sysfs");
+         gpio_direction_input(arr_gpio_S[k].RXLos);
+         //gpio_set_debounce(arr_gpio_S[k].RXLos,200);
+-        gpio_export(arr_gpio_S[k].RXLos, false);
+         /*printk(KERN_DEBUG "export gpio%d sfp%d_rxlos",j,k);*/
+ 
+         arr_gpio_S[k].Present = j+1;
+         gpio_request(arr_gpio_S[k].Present, "sysfs");
+         //gpio_set_debounce(arr_gpio_S[k].Present,200);
+         gpio_direction_input(arr_gpio_S[k].Present);
+-        gpio_export(arr_gpio_S[k].Present, false);
+         /*printk(KERN_DEBUG "export gpio%d sfp%d_present",arr_gpio_S[k].Present,k);*/
+ 
+         arr_gpio_S[k].TXEnable = j+2;
+         gpio_request(arr_gpio_S[k].TXEnable, "sysfs");
+         //gpio_direction_output(arr_gpio_S[k].TXEnable, false); Temporary Stub
+-        gpio_export(arr_gpio_S[k].TXEnable, false);
+         /*printk(KERN_DEBUG "export gpio%d sfp%d_txenable",arr_gpio_S[k].TXEnable,k);*/
+ 
+         arr_gpio_S[k].TXFault = j+3;
+         gpio_request(arr_gpio_S[k].TXFault, "sysfs");
+         gpio_direction_input(arr_gpio_S[k].TXFault);
+-        gpio_export(arr_gpio_S[k].TXFault, false);
+         /*printk(KERN_DEBUG "export gpio%d sfp%d_txfault",j+3,k);*/
+         k++;
+         if (k >= SFP_CNT) break;
+@@ -587,17 +583,7 @@ static void __exit sfp_exit(void)
+     /*printk(KERN_DEBUG "De init SFP module");*/
+ 
+     for (i=0; i<QSFP_CNT; i++) {
+-        gpio_unexport(arr_gpio_Q[i].Int);
+-        /*printk(KERN_DEBUG "unexport gpio%d arr_gpio_Q[%d].Int",arr_gpio_Q[i].Int,i);*/
+ 
+-        gpio_unexport(arr_gpio_Q[i].Present);
+-        /*printk(KERN_DEBUG "unexport gpio%d arr_gpio_Q[%d].Present",arr_gpio_Q[i].Present,i);*/
+-
+-        gpio_unexport(arr_gpio_Q[i].Reset);
+-        /*printk(KERN_DEBUG "unexport gpio%d arr_gpio_Q[%d].Reset", arr_gpio_Q[i].Reset, i);*/
+-
+-        gpio_unexport(arr_gpio_Q[i].Lowpower);
+-        /*printk(KERN_DEBUG "unexport gpio%d arr_gpio_Q[%d].Lowpower",arr_gpio_Q[i].Lowpower,i);*/
+ 
+         gpio_free(arr_gpio_Q[i].Int);
+         /*printk(KERN_DEBUG "free gpio%d arr_gpio_Q[%d].Int",arr_gpio_Q[i].Int,i);*/
+@@ -613,17 +599,6 @@ static void __exit sfp_exit(void)
+     }
+ 
+     for (i=0; i<SFP_CNT; i++) {
+-        gpio_unexport(arr_gpio_S[i].RXLos);
+-        /*printk(KERN_DEBUG "unexport gpio%d arr_gpio_S[%d].RXLos",arr_gpio_S[i].RXLos,i);*/
+-
+-        gpio_unexport(arr_gpio_S[i].Present);
+-        /*printk(KERN_DEBUG "unexport gpio%d arr_gpio_S[%d].Present",arr_gpio_S[i].Present,i);*/
+-
+-        gpio_unexport(arr_gpio_S[i].TXEnable);
+-        /*printk(KERN_DEBUG "unexport gpio%d arr_gpio_S[%d].TXEnable", arr_gpio_S[i].TXEnable, i);*/
+-
+-        gpio_unexport(arr_gpio_S[i].TXFault);
+-        /*printk(KERN_DEBUG "unexport gpio%d arr_gpio_S[%d].TXFault",arr_gpio_S[i].TXFault,i);*/
+ 
+         gpio_free(arr_gpio_S[i].RXLos);
+         /*printk(KERN_DEBUG "free gpio%d arr_gpio_S[%d].Int",arr_gpio_S[i].RXLos,i);*/
+diff --git a/platform/marvell-prestera/sonic-platform-larch/wnc-rsem-w1-32/modules/wnc_sfp_e.c b/platform/marvell-prestera/sonic-platform-larch/wnc-rsem-w1-32/modules/wnc_sfp_e.c
+index 5d0019357..0fc04d3f9 100644
+--- a/platform/marvell-prestera/sonic-platform-larch/wnc-rsem-w1-32/modules/wnc_sfp_e.c
++++ b/platform/marvell-prestera/sonic-platform-larch/wnc-rsem-w1-32/modules/wnc_sfp_e.c
+@@ -745,7 +745,7 @@ static struct bin_attribute *wnc_sfp_e_epprom_attributes[] = {
+ 
+ static const struct attribute_group wnc_sfp_e_group = { .bin_attrs = wnc_sfp_e_epprom_attributes};
+ 
+-static int wnc_sfp_e_device_probe(struct i2c_client *client, const struct i2c_device_id *dev_id)
++static int wnc_sfp_e_device_probe(struct i2c_client *client)
+ {
+     int err;
+     struct wnc_sfp_e_platform_data chip;
+@@ -766,6 +766,12 @@ static int wnc_sfp_e_device_probe(struct i2c_client *client, const struct i2c_de
+         goto exit;
+     }
+ 
++    const struct i2c_device_id *dev_id;
++
++    dev_id = i2c_get_match_data(client);
++    if (!dev_id)
++        return -ENODEV;
++
+     mutex_init(&sfp->lock);
+ 
+     chip.dev_class = TWO_ADDR;
+diff --git a/platform/marvell-prestera/sonic_fit.its b/platform/marvell-prestera/sonic_fit.its
+index 76238365b..6df7ac639 100644
+--- a/platform/marvell-prestera/sonic_fit.its
++++ b/platform/marvell-prestera/sonic_fit.its
+@@ -122,7 +122,7 @@
+         };
+         kernel_internal_A55 {
+             description = "Linux Kernel for AC5x";
+-            data = /incbin/("/boot/vmlinuz-6.1.0-29-2-arm64");
++            data = /incbin/("/boot/vmlinuz-6.12.41+deb13-sonic-arm64");
+             type = "kernel";
+             arch = "arm64";
+             os = "linux";
+@@ -135,7 +135,7 @@
+         };
+         kernel_octeon {
+             description = "Linux Kernel for Octeon proccesors";
+-            data = /incbin/("/boot/vmlinuz-6.1.0-29-2-arm64");
++            data = /incbin/("/boot/vmlinuz-6.12.41+deb13-sonic-arm64");
+             type = "kernel";
+             arch = "arm64";
+             os = "linux";
+@@ -148,7 +148,7 @@
+         };
+         ramdisk_common {
+             description = "ramdisk for all devices";
+-            data = /incbin/("/boot/initrd.img-6.1.0-29-2-arm64");
++            data = /incbin/("/boot/initrd.img-6.12.41+deb13-sonic-arm64");
+             type = "ramdisk";
+             arch = "arm64";
+             os = "linux";
+diff --git a/sonic-slave-trixie/Dockerfile.j2 b/sonic-slave-trixie/Dockerfile.j2
+index 99b0f6dd7..24ac24ffe 100644
+--- a/sonic-slave-trixie/Dockerfile.j2
++++ b/sonic-slave-trixie/Dockerfile.j2
+@@ -122,6 +122,7 @@ RUN apt-get update && apt-get install -y eatmydata && eatmydata apt-get install
+         cron \
+         debootstrap \
+         e2fsprogs \
++        libi2c-dev \
+ # For sonic-swss-common
+         nlohmann-json3-dev \
+         libhiredis-dev \
+-- 
+2.25.1
+
