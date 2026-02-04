@@ -2,5 +2,6 @@
 0002-Update-packages-version-for-trixie.patch|sonic-buildimage
 0003-Fix-arm-build.patch|sonic-buildimage
 0004-Fix-sim-build.patch|sonic-buildimage
+0005-Fix-amd4-hw-build.patch|sonic-buildimage
 0001-Add-larch-platfrom-support-sairedis.patch|src/sonic-sairedis
 0001-Add-Larch-sim-platform-support-swss.patch|src/sonic-swss
