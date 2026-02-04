@@ -3,5 +3,6 @@
 0003-Fix-arm-build.patch|sonic-buildimage
 0004-Fix-sim-build.patch|sonic-buildimage
 0005-Fix-amd4-hw-build.patch|sonic-buildimage
+0008-Enable-ospf-and-isis-traps-by-default.patch|sonic-buildimage
 0001-Add-larch-platfrom-support-sairedis.patch|src/sonic-sairedis
 0001-Add-Larch-sim-platform-support-swss.patch|src/sonic-swss
