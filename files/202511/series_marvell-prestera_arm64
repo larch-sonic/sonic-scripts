@@ -1,3 +1,4 @@
 0001-Add-Larch-platforms.patch|sonic-buildimage
 0002-Update-packages-version-for-trixie.patch|sonic-buildimage
 0003-Fix-arm-build.patch|sonic-buildimage
+0005-Fix-amd4-hw-build.patch|sonic-buildimage
