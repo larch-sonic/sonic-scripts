@@ -1,0 +1,70 @@
+From be44b98a31e7df4fe4c2cf64a6bfc88bf4fe774a Mon Sep 17 00:00:00 2001
+From: Kostiantyn Buravchenko <kburavchenko@larch-networks.com>
+Date: Mon, 23 Mar 2026 12:13:28 +0200
+Subject: [PATCH] Fix syncd build
+
+---
+ syncd/SwitchNotifications.h | 47 ++++++++++++++++++++-----------------
+ 1 file changed, 26 insertions(+), 21 deletions(-)
+
+diff --git a/syncd/SwitchNotifications.h b/syncd/SwitchNotifications.h
+index e46f99b8..cdd5640b 100644
+--- a/syncd/SwitchNotifications.h
++++ b/syncd/SwitchNotifications.h
+@@ -104,27 +104,32 @@ namespace syncd
+             public:
+ 
+                 Slot():
+-                    SlotBase({
+-                            .on_switch_state_change = &Slot<context>::onSwitchStateChange,
+-                            .on_switch_shutdown_request = &Slot<context>::onSwitchShutdownRequest,
+-                            .on_fdb_event = &Slot<context>::onFdbEvent,
+-                            .on_port_state_change = &Slot<context>::onPortStateChange,
+-                            .on_packet_event = nullptr,
+-                            .on_queue_pfc_deadlock = &Slot<context>::onQueuePfcDeadlock,
+-                            .on_bfd_session_state_change = &Slot<context>::onBfdSessionStateChange,
+-                            .on_tam_event = nullptr,
+-                            .on_ipsec_sa_status_change = nullptr,
+-                            .on_nat_event = &Slot<context>::onNatEvent,
+-                            .on_switch_asic_sdk_health_event = &Slot<context>::onSwitchAsicSdkHealthEvent,
+-                            .on_port_host_tx_ready = &Slot<context>::onPortHostTxReady,
+-                            .on_twamp_session_event = &Slot<context>::onTwampSessionEvent,
+-                            .on_icmp_echo_session_state_change = nullptr,
+-                            .on_extended_port_state_change = nullptr,
+-                            .on_tam_tel_type_config_change = nullptr,
+-                            .on_ha_set_event = nullptr,
+-                            .on_ha_scope_event = nullptr,
+-
+-                            }) { }
++                    SlotBase([]() {
++                            // Zero-initialize all callbacks first so newly added SAI fields
++                            // default to null without triggering -Wmissing-field-initializers.
++                            sai_switch_notifications_t sn{};
++
++                            sn.on_switch_state_change = &Slot<context>::onSwitchStateChange;
++                            sn.on_switch_shutdown_request = &Slot<context>::onSwitchShutdownRequest;
++                            sn.on_fdb_event = &Slot<context>::onFdbEvent;
++                            sn.on_port_state_change = &Slot<context>::onPortStateChange;
++                            sn.on_packet_event = nullptr;
++                            sn.on_queue_pfc_deadlock = &Slot<context>::onQueuePfcDeadlock;
++                            sn.on_bfd_session_state_change = &Slot<context>::onBfdSessionStateChange;
++                            sn.on_tam_event = nullptr;
++                            sn.on_ipsec_sa_status_change = nullptr;
++                            sn.on_nat_event = &Slot<context>::onNatEvent;
++                            sn.on_switch_asic_sdk_health_event = &Slot<context>::onSwitchAsicSdkHealthEvent;
++                            sn.on_port_host_tx_ready = &Slot<context>::onPortHostTxReady;
++                            sn.on_twamp_session_event = &Slot<context>::onTwampSessionEvent;
++                            sn.on_icmp_echo_session_state_change = nullptr;
++                            sn.on_extended_port_state_change = nullptr;
++                            sn.on_tam_tel_type_config_change = nullptr;
++                            sn.on_ha_set_event = nullptr;
++                            sn.on_ha_scope_event = nullptr;
++
++                            return sn;
++                            }()) { }
+ 
+                 virtual ~Slot() {}
+ 
+-- 
+2.34.1
+
