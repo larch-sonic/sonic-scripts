@@ -1,0 +1,39 @@
+From df13c48b746754aef067049c9d80f847a11fa895 Mon Sep 17 00:00:00 2001
+From: nate-nexthop <nate@nexthop.ai>
+Date: Wed, 28 Jan 2026 03:07:56 +0000
+Subject: [PATCH 3/3] Remove nodesource nodejs sources for Bookworm arm
+ container (#24517)
+
+Debian Bookworm already has a nodejs that is newer than the
+nodesource.com version 14 that the Dockerfile is currently installing.
+Bookworm has nodejs 18.
+
+Because of this, we run the script (curl | bash) from nodesource.com for
+nodejs 14 which makes the process wait for 80 seconds because the script
+is deprecated. Then when we actually install nodejs, we get the version
+from Bookworm's repositories instead of nodesource.com anyway. This
+makes the process of using nodesource.com wasteful and pointless.
+
+The easy fix is to just remove this line where we add the nodesource
+repo.
+
+Signed-off-by: Nate White <nate@nexthop.ai>
+---
+ sonic-slave-bookworm/Dockerfile.j2 | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/sonic-slave-bookworm/Dockerfile.j2 b/sonic-slave-bookworm/Dockerfile.j2
+index c571f1984..5cbf1c123 100644
+--- a/sonic-slave-bookworm/Dockerfile.j2
++++ b/sonic-slave-bookworm/Dockerfile.j2
+@@ -657,7 +657,6 @@ RUN pip3 install git+https://github.com/aristanetworks/swi-tools.git@bead66bf261
+ 
+ {% if CONFIGURED_ARCH != "amd64" -%}
+ # Install node.js for azure pipeline
+-RUN curl -sL https://deb.nodesource.com/setup_14.x | bash -
+ RUN eatmydata apt-get install -y nodejs
+ 
+ {%- if CROSS_BUILD_ENVIRON == "y" %}
+-- 
+2.34.1
+

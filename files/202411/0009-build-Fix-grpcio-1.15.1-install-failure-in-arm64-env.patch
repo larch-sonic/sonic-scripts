@@ -1,0 +1,40 @@
+From c20c0c4c1136974575e2eaa64fe430b87366c03d Mon Sep 17 00:00:00 2001
+From: Aleksandr Sakun <asakun@larch-networks.com>
+Date: Tue, 10 Feb 2026 12:50:42 +0000
+Subject: [PATCH 2/3] [build] Fix grpcio 1.15.1 install failure in arm64 env.
+ (#25393)
+
+---
+ dockers/docker-platform-monitor/Dockerfile.j2 | 2 +-
+ sonic-slave-bookworm/Dockerfile.j2            | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/dockers/docker-platform-monitor/Dockerfile.j2 b/dockers/docker-platform-monitor/Dockerfile.j2
+index b357133f5..22138d19f 100755
+--- a/dockers/docker-platform-monitor/Dockerfile.j2
++++ b/dockers/docker-platform-monitor/Dockerfile.j2
+@@ -40,7 +40,7 @@ RUN apt-get install -y -t bookworm-backports \
+ # install any dependencies required by the Arista sonic_platform package.
+ # TODO: eliminate the need to install these explicitly.
+ RUN pip3 install grpcio==1.51.1 \
+-        grpcio-tools==1.51.1
++        grpcio-tools==1.51.1 --no-build-isolation
+ 
+ # Barefoot platform vendors' sonic_platform packages import these Python libraries
+ RUN pip3 install thrift==0.13.0 netifaces
+diff --git a/sonic-slave-bookworm/Dockerfile.j2 b/sonic-slave-bookworm/Dockerfile.j2
+index 2c7a745bb..c571f1984 100644
+--- a/sonic-slave-bookworm/Dockerfile.j2
++++ b/sonic-slave-bookworm/Dockerfile.j2
+@@ -560,7 +560,7 @@ RUN pip3 install jsonpath_ng
+ 
+ # For building sonic_ycabled
+ # Note: Match version in bookworm
+-RUN pip3 install grpcio==1.51.1 grpcio-tools==1.51.1
++RUN pip3 install grpcio==1.51.1 grpcio-tools==1.51.1 --no-build-isolation
+ 
+ # For running Python unit tests
+ RUN pip3 install pytest-runner==5.2
+-- 
+2.34.1
+
