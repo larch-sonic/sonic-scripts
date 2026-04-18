@@ -28,17 +28,17 @@ Usage:
     --clean_dockers: clean up build dockers
 
 Example command:
-./sonic_build_script.sh -b 202411 -p marvell -a arm64   --patch_script https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/main/larch_sonic_patch_script.sh -r -c b6a493b43d73831a7a40180ef428ef50185bc8ed --other_build_options "SONIC_BUILD_JOBS=8 ,
+./sonic_build_script.sh -b 202411 -p marvell -a arm64   --patch_script https://github.com/larch-sonic/sonic-scripts/raw/202411/larch_sonic_patch_script.sh -r -c b6a493b43d73831a7a40180ef428ef50185bc8ed --other_build_options "SONIC_BUILD_JOBS=8"
 
 where: -b 202411 - original branch in the sonic-buildimage repository,
        -p marvell - switch ASIC type(marvell - as Marvell Prestera family), marvell-larch-sim - simulation qemu image
        -a arm64 - device/board CPU architecture (arm64 or amd64)
-       --patch_script https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/main/larch_sonic_patch_script.sh - patch script that make changes to original repos,
+       --patch_script https://github.com/larch-sonic/sonic-scripts/raw/202411/larch_sonic_patch_script.sh - patch script that make changes to original repos,
        -r - ENABLE_SYNCD_RPC=y,
        -c b6a493b43d73831a7a40180ef428ef50185bc8ed - checkout to static stable commit.
 
 
-./sonic_build_script.sh -b 202511 -p marvell-larch-sim -a amd64   --patch_script https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/202511/larch_sonic_patch_script.sh --other_build_options "SONIC_BUILD_JOBS=8"
+./sonic_build_script.sh -b 202511 -p marvell-larch-sim -a amd64   --patch_script https://github.com/larch-sonic/sonic-scripts/raw/202511/larch_sonic_patch_script.sh --other_build_options "SONIC_BUILD_JOBS=8"
 
 # Build manually
 1. Clone sonic-buildimage repository
@@ -48,7 +48,7 @@ cd sonic-buildimage
 3. Checkout to the stable commit
 git checkout b6a493b43d73831a7a40180ef428ef50185bc8ed
 4. Get patch script
-wget --timeout=2 -c https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/main/larch_sonic_patch_script.sh
+wget --timeout=2 -c https://github.com/larch-sonic/sonic-scripts/raw/202411/larch_sonic_patch_script.sh
 5. Make the script executable
 chmod +x larch_sonic_patch_script.sh
 
@@ -57,7 +57,7 @@ chmod +x larch_sonic_patch_script.sh
 6. Building
 for arm64:
     - Execute patch script
-    bash larch_sonic_patch_script.sh --branch 202411 --platform marvell --arch arm64 --url https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/main/
+    bash larch_sonic_patch_script.sh --branch 202411 --platform marvell --arch arm64 --url https://github.com/larch-sonic/sonic-scripts/raw/202411/
     -  Configure the build system for target
     make configure NOBUSTER=1 NOBULLSEYE=1 PLATFORM=marvell PLATFORM_ARCH=arm64
     - Start building
@@ -65,7 +65,7 @@ for arm64:
 
 for amd64:
     - Execute patch script
-    bash larch_sonic_patch_script.sh --branch 202411 --platform marvell --arch amd64 --url https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/main/
+    bash larch_sonic_patch_script.sh --branch 202411 --platform marvell --arch amd64 --url https://github.com/larch-sonic/sonic-scripts/raw/202411/
     -  Configure the build system for target
     make configure NOBUSTER=1 NOBULLSEYE=1 PLATFORM=marvell PLATFORM_ARCH=amd64
     - Start building
@@ -73,7 +73,7 @@ for amd64:
 
 for amd64 simulation:
     - Execute patch script
-    bash larch_sonic_patch_script.sh --branch 202411 --platform marvell-larch-sim --arch amd64 --url https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/main/
+    bash larch_sonic_patch_script.sh --branch 202411 --platform marvell-larch-sim --arch amd64 --url https://github.com/larch-sonic/sonic-scripts/raw/202411/
     -  Configure the build system for target
     make configure NOBUSTER=1 NOBULLSEYE=1 PLATFORM=marvell-larch-sim PLATFORM_ARCH=amd64
     - Start building
