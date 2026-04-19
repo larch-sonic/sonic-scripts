@@ -1,0 +1,2549 @@
+From 68cd329e9a4b8c1d3e84561a6baafabe3f85e2ed Mon Sep 17 00:00:00 2001
+From: Sergey Syzonov <ssyzonov@larch-networks.com>
+Date: Sun, 19 Apr 2026 23:18:47 +0300
+Subject: [PATCH] sync eps6800 platform
+
+---
+ .../ASK-L1-ALD2_48x10G-6x100G.md5             |   2 +-
+ .../ASK-L1-ALD2_48x10G-6x100G.xml             | 891 +++++++++++++++++-
+ .../ASK-PP-ALD2_48x10G-6x100G.md5             |   2 +-
+ .../ASK-PP-ALD2_48x10G-6x100G.xml             |   2 +-
+ .../pmon_daemon_control.json                  |   8 +-
+ .../system_health_monitoring_config.json      |   2 +-
+ .../scripts/cn9130-eps6800-init.sh            |  38 +
+ .../cn9130-eps6800/sonic_platform/chassis.py  | 296 ++++--
+ .../cn9130-eps6800/sonic_platform/eeprom.py   | 163 ++--
+ .../cn9130-eps6800/sonic_platform/sfp.py      | 470 ++++++---
+ .../sonic_platform/sfp_event.py               | 112 ---
+ 11 files changed, 1481 insertions(+), 505 deletions(-)
+ delete mode 100644 platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/sfp_event.py
+
+diff --git a/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-L1-ALD2_48x10G-6x100G.md5 b/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-L1-ALD2_48x10G-6x100G.md5
+index 9fb6fb77d8..a830f6a298 100644
+--- a/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-L1-ALD2_48x10G-6x100G.md5
++++ b/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-L1-ALD2_48x10G-6x100G.md5
+@@ -1 +1 @@
+-883a0c6abf933c9f44f9f5eedd50d661
+\ No newline at end of file
++7f268d70492551e318dd25b788529beb
+\ No newline at end of file
+diff --git a/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-L1-ALD2_48x10G-6x100G.xml b/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-L1-ALD2_48x10G-6x100G.xml
+index 2e510daab4..4ad410e619 100644
+--- a/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-L1-ALD2_48x10G-6x100G.xml
++++ b/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-L1-ALD2_48x10G-6x100G.xml
+@@ -851,6 +851,31 @@
+           <ASKL1plt:fec ASKL1plt:type="fec-type">disabled</ASKL1plt:fec>
+         </ASKL1plt:IfModeSpeedList-list>
+       </ASKL1plt:ifModeNameList>
++      <ASKL1plt:ifModeNameList>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:IfModeSpeedList-list>
++          <ASKL1plt:ifMode ASKL1plt:type="interface-mode-type">KR</ASKL1plt:ifMode>
++          <ASKL1plt:speed ASKL1plt:type="port-speed-type">10G</ASKL1plt:speed>
++          <ASKL1plt:fec ASKL1plt:type="fec-type">disabled</ASKL1plt:fec>
++        </ASKL1plt:IfModeSpeedList-list>
++        <ASKL1plt:IfModeSpeedList-list>
++          <ASKL1plt:ifMode ASKL1plt:type="interface-mode-type">1000BASE_X</ASKL1plt:ifMode>
++          <ASKL1plt:speed ASKL1plt:type="port-speed-type">1G</ASKL1plt:speed>
++          <ASKL1plt:fec ASKL1plt:type="fec-type">disabled</ASKL1plt:fec>
++        </ASKL1plt:IfModeSpeedList-list>
++        <ASKL1plt:APIfModeSpeedList-list>
++          <ASKL1plt:APifMode ASKL1plt:type="interface-mode-type">KR</ASKL1plt:APifMode>
++          <ASKL1plt:APspeed ASKL1plt:type="port-speed-type">10G</ASKL1plt:APspeed>
++          <ASKL1plt:APfecSupport ASKL1plt:type="fec-type">disabled</ASKL1plt:APfecSupport>
++          <ASKL1plt:APfecRequest ASKL1plt:type="fec-type">disabled</ASKL1plt:APfecRequest>
++        </ASKL1plt:APIfModeSpeedList-list>
++        <ASKL1plt:APIfModeSpeedList-list>
++          <ASKL1plt:APifMode ASKL1plt:type="interface-mode-type">1000BASE_X</ASKL1plt:APifMode>
++          <ASKL1plt:APspeed ASKL1plt:type="port-speed-type">1G</ASKL1plt:APspeed>
++          <ASKL1plt:APfecSupport ASKL1plt:type="fec-type">disabled</ASKL1plt:APfecSupport>
++          <ASKL1plt:APfecRequest ASKL1plt:type="fec-type">disabled</ASKL1plt:APfecRequest>
++        </ASKL1plt:APIfModeSpeedList-list>
++      </ASKL1plt:ifModeNameList>
+       <ASKL1plt:ifModeNameList>
+         <ASKL1plt:ifModeName ASKL1plt:type="string">25GR1</ASKL1plt:ifModeName>
+         <ASKL1plt:IfModeSpeedList-list>
+@@ -904,324 +929,1094 @@
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+         <ASKL1plt:ifModeName ASKL1plt:type="string">100GR4</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">6</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">10</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">3</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">1</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">6</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">10</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">3</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">2</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">6</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">10</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">3</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">3</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">6</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">10</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">3</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">4</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+         <ASKL1plt:ifModeName ASKL1plt:type="string">100GR4</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">6</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">10</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">3</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">1</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">6</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">10</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">3</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">2</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">6</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">10</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">3</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">3</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">5</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">12</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">3</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">8</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+         <ASKL1plt:ifModeName ASKL1plt:type="string">100GR4</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">6</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">10</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">3</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">1</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">6</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">10</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">3</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">2</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">6</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">10</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">3</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">3</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">6</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">10</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">3</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">12</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+         <ASKL1plt:ifModeName ASKL1plt:type="string">100GR4</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">6</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">10</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">3</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">1</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">6</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">10</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">3</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">2</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">6</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">10</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">3</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">3</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">6</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">10</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">3</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">16</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+         <ASKL1plt:ifModeName ASKL1plt:type="string">100GR4</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">6</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">10</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">3</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">1</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">6</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">10</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">3</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">2</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">6</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">10</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">3</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">3</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">6</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">10</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">3</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">20</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+         <ASKL1plt:ifModeName ASKL1plt:type="string">100GR4</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">11</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">7</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">0</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">1</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">11</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">7</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">0</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">2</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">11</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">7</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">0</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">3</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">11</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">7</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">0</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">24</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">8</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">9</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">2</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">25</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">8</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">9</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">2</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">26</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">8</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">9</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">3</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">27</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">8</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">9</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">3</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">28</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">9</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">8</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">3</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">29</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">10</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">8</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">2</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">30</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">10</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">8</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">2</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">31</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">9</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">9</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">2</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">32</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">10</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">8</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">2</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">33</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">10</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">8</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">2</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">34</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">10</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">8</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">2</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">35</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">10</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">7</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">3</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">36</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">10</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">8</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">2</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">37</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">11</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">8</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">2</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">38</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">10</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">8</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">2</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">39</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">12</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">6</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">2</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">40</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">12</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">6</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">2</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">41</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">12</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">7</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">2</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">42</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">12</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">7</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">2</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">43</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">12</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">7</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">2</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">44</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">12</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">7</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">2</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">45</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">12</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">5</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">2</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">46</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">12</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">6</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">2</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">47</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">12</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">6</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">2</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">48</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">12</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">5</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">2</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">49</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">12</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">6</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">2</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">50</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">12</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">6</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">2</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">51</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">15</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">4</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">1</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">52</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">15</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">4</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">2</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">53</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">15</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">5</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">1</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">54</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">15</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">4</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">1</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">55</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">15</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">4</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">1</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">56</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">20</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">3</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">1</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">57</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">18</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">3</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">1</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">58</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">18</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">3</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">1</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">59</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">60</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">64</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">18</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">3</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">1</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">65</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">18</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">3</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">1</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">66</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">18</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">3</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">1</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">67</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">18</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">3</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">1</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">68</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">18</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">3</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">1</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">69</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">20</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">3</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">1</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">70</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">20</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">3</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">1</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">71</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">18</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">3</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">1</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">72</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">20</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">3</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">1</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">73</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">20</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">3</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">1</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+       <ASKL1plt:port-list>
+         <ASKL1plt:portNumber ASKL1plt:type="physical-port-num-type">74</ASKL1plt:portNumber>
+         <ASKL1plt:Serdes ASKL1plt:type="serdes-type">AVAGO</ASKL1plt:Serdes>
+         <ASKL1plt:interconnectProfile ASKL1plt:type="port-interconnect-profile-type">profile_default</ASKL1plt:interconnectProfile>
+-        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
++        <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1</ASKL1plt:ifModeName>
++        <ASKL1plt:laneList-list>
++          <ASKL1plt:laneNumber ASKL1plt:type="uint32">0</ASKL1plt:laneNumber>
++          <ASKL1plt:txParams-AVAGO>
++            <ASKL1plt:enableTxParams ASKL1plt:type="boolean-type">true</ASKL1plt:enableTxParams>
++            <ASKL1plt:atten ASKL1plt:type="uint32">20</ASKL1plt:atten>
++            <ASKL1plt:post ASKL1plt:type="int32">3</ASKL1plt:post>
++            <ASKL1plt:pre ASKL1plt:type="int32">1</ASKL1plt:pre>
++            <ASKL1plt:pre2 ASKL1plt:type="int32">0</ASKL1plt:pre2>
++            <ASKL1plt:pre3 ASKL1plt:type="int32">0</ASKL1plt:pre3>
++          </ASKL1plt:txParams-AVAGO>
++        </ASKL1plt:laneList-list>
+       </ASKL1plt:port-list>
+     </ASKL1plt:Port>
+   </ASKL1plt:ASK-L1>
+diff --git a/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-PP-ALD2_48x10G-6x100G.md5 b/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-PP-ALD2_48x10G-6x100G.md5
+index 6bf975e412..ef77f71346 100644
+--- a/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-PP-ALD2_48x10G-6x100G.md5
++++ b/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-PP-ALD2_48x10G-6x100G.md5
+@@ -1 +1 @@
+-c88da8bc02753fde14fd1b541badd6d5
+\ No newline at end of file
++5220d698a203a3fa637e4e48532e0133
+\ No newline at end of file
+diff --git a/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-PP-ALD2_48x10G-6x100G.xml b/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-PP-ALD2_48x10G-6x100G.xml
+index 1f169afbcd..e6352f10a1 100644
+--- a/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-PP-ALD2_48x10G-6x100G.xml
++++ b/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-PP-ALD2_48x10G-6x100G.xml
+@@ -550,7 +550,7 @@
+         <askppplt:appAddrCompletionRegionsBmp askppplt:type="uint32">60</askppplt:appAddrCompletionRegionsBmp>
+         <askppplt:maxNumOfPhyPortsToUse askppplt:type="number-physical-port-type">128-ports</askppplt:maxNumOfPhyPortsToUse>
+         <askppplt:tcamParityCalcEnable askppplt:type="boolean-type">false</askppplt:tcamParityCalcEnable>
+-        <askppplt:apEnable askppplt:type="boolean-type">false</askppplt:apEnable>
++        <askppplt:apEnable askppplt:type="boolean-type">true</askppplt:apEnable>
+         <askppplt:numOfDataIntegrityElements askppplt:type="uint32">0</askppplt:numOfDataIntegrityElements>
+       </askppplt:Phase1>
+       <askppplt:Phase2>
+diff --git a/device/larch/arm64-larch_cn9130-eps6800-r0/pmon_daemon_control.json b/device/larch/arm64-larch_cn9130-eps6800-r0/pmon_daemon_control.json
+index 39deb88be0..038b1ca893 100644
+--- a/device/larch/arm64-larch_cn9130-eps6800-r0/pmon_daemon_control.json
++++ b/device/larch/arm64-larch_cn9130-eps6800-r0/pmon_daemon_control.json
+@@ -1,8 +1,8 @@
+ {
+     "skip_ledd": true,
+     "skip_pcied": true,
+-    "skip_thermalctld": true,
+-    "skip_psud": true,
+-    "skip_xcvrd": true,
+-    "skip_syseepromd": true
++    "skip_thermalctld": false,
++    "skip_psud": false,
++    "skip_xcvrd": false,
++    "skip_syseepromd": false
+ }
+diff --git a/device/larch/arm64-larch_cn9130-eps6800-r0/system_health_monitoring_config.json b/device/larch/arm64-larch_cn9130-eps6800-r0/system_health_monitoring_config.json
+index 80c66ef32b..8b2f75138f 100644
+--- a/device/larch/arm64-larch_cn9130-eps6800-r0/system_health_monitoring_config.json
++++ b/device/larch/arm64-larch_cn9130-eps6800-r0/system_health_monitoring_config.json
+@@ -1,6 +1,6 @@
+ {
+     "services_to_ignore": [
+-        "ucentral_client"
++        "cn9130-eps6800-r0-init.service"
+     ],
+     "devices_to_ignore": [
+         "asic",
+diff --git a/platform/marvell/sonic-platform-larch/cn9130-eps6800/scripts/cn9130-eps6800-init.sh b/platform/marvell/sonic-platform-larch/cn9130-eps6800/scripts/cn9130-eps6800-init.sh
+index c5cd29fdf9..2d5c9211b3 100644
+--- a/platform/marvell/sonic-platform-larch/cn9130-eps6800/scripts/cn9130-eps6800-init.sh
++++ b/platform/marvell/sonic-platform-larch/cn9130-eps6800/scripts/cn9130-eps6800-init.sh
+@@ -2,6 +2,35 @@
+ 
+ # Platform init script for cn9130-eps6800
+ 
++init_sfp()
++{
++    BUSES=(
++        50 51 52
++        55 56 57
++        60 61 62
++        65 66 67
++        70 71 72
++        75 76 77
++        80 81 82
++        85 86 87
++        100 101 102
++        105 106 107
++        110 111 112
++        115 116 117
++        120 121 122
++        125 126 127
++        130 131 132
++        135 136 137
++        53 58 63 68 73 78
++    )
++
++    for bus in "${BUSES[@]}"; do
++        new_dev="/sys/bus/i2c/devices/i2c-${bus}/new_device"
++
++        echo "optoe2 0x50" > "$new_dev"
++    done
++}
++
+ cn9130-eps6800_profile()
+ {
+     # Read original_platform from machine.conf
+@@ -27,6 +56,15 @@ cn9130-eps6800_profile()
+     MAC_ADDR=$(fw_printenv -n ethaddr)
+     find /usr/share/sonic/device/*cn9130-eps6800* -name profile.ini | xargs sed -i "s/switchMacAddress=.*/switchMacAddress=$MAC_ADDR/g"
+     echo "cn9130-eps6800: Updating switch mac address ${MAC_ADDR}"
++
++    modprobe lm75
++    echo pmbus 0x5b > /sys/bus/i2c/devices/i2c-59/new_device
++    echo 24c02 0x53 > /sys/bus/i2c/devices/i2c-59/new_device
++
++    echo pmbus 0x5a > /sys/bus/i2c/devices/i2c-54/new_device
++    echo 24c02 0x52 > /sys/bus/i2c/devices/i2c-54/new_device
++
++    init_sfp
+ }
+ 
+ # - Main entry
+diff --git a/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/chassis.py b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/chassis.py
+index d908d420e1..f3bfac7de5 100644
+--- a/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/chassis.py
++++ b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/chassis.py
+@@ -1,4 +1,5 @@
+ #!/usr/bin/env python
++
+ ##################################################################
+ # Module contains an implementation of SONiC Platform Base API and
+ # provides the platform information
+@@ -6,83 +7,139 @@
+ 
+ try:
+     import os
+-    import sys
++    import time
++
+     from sonic_platform_base.chassis_base import ChassisBase
+-    from sonic_platform.sfp import Sfp
++    from sonic_platform.sfp import Sfp, SfpBoardConfig
++    from sonic_platform.psu import Psu    
+     from sonic_platform.eeprom import Eeprom
+     from sonic_py_common import logger
+     from sonic_platform.component import Component
++    from sonic_platform.thermal import Thermal
++    from sonic_platform.thermal_manager import ThermalManager
++    from sonic_platform.led import LedController
++    import sonic_platform.cpld as cpld
+ 
+ except ImportError as e:
+     raise ImportError(str(e) + "- required module not found")
+ 
+-MAX_SELECT_DELAY = 3600
+-COPPER_PORT_START = 1
+-COPPER_PORT_END = 48
+-SFP_PORT_START =49 
+-SFP_PORT_END = 54 
+-PORT_END = 54
+ MAX_COMPONENT=2
+-
++NUM_OF_BOARD_THERMALS = 3
++NUM_FAN_TRAY = 4
++NUM_PSU = 2
+ 
+ SYSLOG_IDENTIFIER = "chassis"
+ sonic_logger=logger.Logger(SYSLOG_IDENTIFIER)
++
+ class Chassis(ChassisBase):
+-    """
+-    Platform-specific Chassis class
+-    derived from Dell S6000 platform.
+-    customized for the platform.
+-    """
+-    reset_reason_dict = {}
+-    reset_reason_dict[0x02] = ChassisBase.REBOOT_CAUSE_POWER_LOSS
+-    reset_reason_dict[0x20] = ChassisBase.REBOOT_CAUSE_THERMAL_OVERLOAD_ASIC
+-
+-    reset_reason_dict[0x08] = ChassisBase.REBOOT_CAUSE_THERMAL_OVERLOAD_CPU
+-    reset_reason_dict[0x10] = ChassisBase.REBOOT_CAUSE_WATCHDOG
+-    PLATFORM_ROOT_PATH = "/usr/share/sonic/device"
+-    PMON_HWSKU_PATH = "/usr/share/sonic/hwsku"
+-    HOST_CHK_CMD = "docker > /dev/null 2>&1"
+-    PLATFORM = "arm64-larch_cn9130-eps6800"
++    PLATFORM = "arm64-larch_cn9130-eps6800-r0"
+     HWSKU = "cn9130-eps6800"
+ 
+-
+     def __init__(self):
+         ChassisBase.__init__(self)
+-        # Port numbers for Initialize SFP list
+-        self.COPPER_PORT_START = COPPER_PORT_START
+-        self.COPPER_PORT_END = COPPER_PORT_END
+-        self.SFP_PORT_START = SFP_PORT_START
+-        self.SFP_PORT_END = SFP_PORT_END
+-        self.PORT_END = PORT_END
+-
+-        eeprom_path = '/sys/bus/i2c/devices/0-0050/eeprom'
+-
+-        # for non-sfp ports create dummy objects for copper / non-sfp ports
+-        for index in range(self.COPPER_PORT_START, self.COPPER_PORT_END+1):
+-            port=index-1
+-            sfp_node = Sfp(index, 'COPPER', 'N/A', 'N/A')
+-            self._sfp_list.append(sfp_node)
+-
+-        for index in range(self.SFP_PORT_START, self.SFP_PORT_END+1):
+-            i2cdev = 0
+-            port=index-1
+-            port_eeprom_path = eeprom_path
+-            if not os.path.exists(port_eeprom_path):
+-                sonic_logger.log_info(" DEBUG - path %s -- did not exist " % port_eeprom_path )
+-            sfp_node = Sfp(index, 'SFP', port_eeprom_path, i2cdev )
+-            self._sfp_list.append(sfp_node)
+-        self.sfp_event_initialized = False
+ 
++        self.main_cpld = cpld.CPLD('1-0062')
++        self.aux_cpld  = cpld.CPLD('1-0064')
++
++        self._sysled_color = self.STATUS_LED_COLOR_OFF
++
++        self.__init_eeprom()
++        self.__init_leds()
++        self.__init_fans()
++        self.__init_component()
++        self.__init_thermals()
++        self.__init_psu()
++        self.__init_sfp()
++
++    def __init_eeprom(self):
+         # Instantiate ONIE system eeprom object
+         self._eeprom = Eeprom()
+ 
++    def __init_fans(self):
++        from sonic_platform.fan_drawer import FanDrawer
++
++        for i in range(NUM_FAN_TRAY):
++           fan_drawer = FanDrawer(i, self.main_cpld)
++           self._fan_drawer_list.append(fan_drawer)
++           self._fan_list.extend(fan_drawer._fan_list)
++
++    def __init_component(self):
+         for i in range(MAX_COMPONENT):
+-             component = Component(i)
+-             self._component_list.append(component)
++            component = Component(i)
++            self._component_list.append(component)
++
++    def __init_thermals(self):
++        for i in range(NUM_OF_BOARD_THERMALS):
++            thermal = Thermal(i)
++            self._thermal_list.append(thermal)
++
++    def __init_psu(self):
++        for index in range(0, NUM_PSU):
++            psu = Psu(index, self.main_cpld)
++            self._psu_list.append(psu)
++
++    def __init_sfp(self):
++        for i in range(SfpBoardConfig.SFP_PLUS_PORT_START, SfpBoardConfig.QSFP28_PORT_START):
++            self._sfp_list.append(Sfp(i, SfpBoardConfig.SFP_PLUS_TYPE, self.main_cpld, self.aux_cpld))
++
++        for i in range(SfpBoardConfig.QSFP28_PORT_START, SfpBoardConfig.QSFP28_PORT_END + 1):
++            self._sfp_list.append(Sfp(i, SfpBoardConfig.QSFP28_TYPE, self.main_cpld, self.aux_cpld))
++
++        self.presence_list = ['0']*SfpBoardConfig.QSFP28_PORT_END               
++
++    def __init_leds(self):
++        self._led = LedController(self.main_cpld)
++        self._led.set_led("system", LedController.STATUS_LED_COLOR_GREEN)
++        self._led.set_led("stack", LedController.STATUS_LED_COLOR_OFF)
++        self._led.set_led("mst", LedController.STATUS_LED_COLOR_OFF)
++        self._led.set_led("psu", LedController.STATUS_LED_COLOR_GREEN)
++        #self._led.set_led("fan", LedController.STATUS_LED_COLOR_OFF)
++
++    
++    def is_modular_chassis(self):
++        """
++        Retrieves whether the sonic instance is part of modular chassis
+ 
++        Returns:
++            A bool value, should return False by default or for fixed-platforms.
++            Should return True for supervisor-cards, line-cards etc running as part
++            of modular-chassis.
++        """
++        return False
+ 
+-    def __is_host(self):
+-        return os.system(self.HOST_CHK_CMD) == 0
++    def get_thermal_manager(self):
++        """
++        Retrieves thermal manager class on this chassis
++        :return: A class derived from ThermalManagerBase representing the
++        specified thermal manager.
++        """
++        return ThermalManager
++
++    def get_my_slot(self):
++        """
++        Retrieves the physical-slot of this module in the modular chassis.
++        On the supervisor, it will return the physical-slot of the supervisor
++        module. On the linecard, it will return the physical-slot of the
++        linecard module where this instance of SONiC is running.
++
++        On the fixed-platforms, the API can be ignored.
++
++        Users of the API can catch the exception and return a default
++        ModuleBase.MODULE_INVALID_SLOT and bypass code for fixed-platforms.
++
++        Returns:
++            An integer, the vendor specific physical slot identifier of this
++            module in the modular-chassis.
++        """
++        return 0
++
++    def get_all_thermals(self):
++        """
++        Retrieves all thermals available on this chassis
++        Returns:
++            A list of objects representing all thermals available on this chassis
++        """
++        return self._thermal_list
+ 
+     def get_sfp(self, index):
+         """
+@@ -100,10 +157,41 @@ class Chassis(ChassisBase):
+             # The index will start from 1
+             sfp = self._sfp_list[index-1]
+         except IndexError:
+-            sys.stderr.write("SFP index {} out of range (1-{})\n".format(
++            sonic_logger.log_error("SFP index {} out of range (1-{})\n".format(
+                              index, len(self._sfp_list)))
+         return sfp
+ 
++    def get_fan(self, index):
++        """
++        Retrieves fan module represented by (0-based) index <index>
++
++        Args:
++            index: An integer, the index (0-based) of the fan module to
++            retrieve
++
++        Returns:
++            An object dervied from FanBase representing the specified fan
++            module
++        """
++        fan = None
++        try:
++            # The index will start from 1
++            fan = self._fan_list[index-1]
++        except IndexError:
++            sonic_logger.log_error("Fan index {} out of range (1-{})\n".format(
++                             index, len(self._fan_list)))
++        return fan
++
++    def get_all_fans(self):
++        """
++        Retrieves all fan modules available on this chassis
++
++        Returns:
++            A list of objects derived from FanBase representing all fan
++            modules available on this chassis
++        """
++        return self._fan_list
++
+     def get_name(self):
+         """
+         Retrieves the name of the chassis
+@@ -134,7 +222,15 @@ class Chassis(ChassisBase):
+         Returns:
+             string: Serial number of chassis
+         """
+-        return self._eeprom.serial_str()
++        return self._eeprom.serial_number_str()
++
++    def get_revision(self):
++        """
++        Retrieves the revision number of the chassis (Service tag)
++        Returns:
++            string: Revision number of chassis
++        """
++        return self._eeprom.revision_str()
+ 
+     def get_status(self):
+         """
+@@ -234,32 +330,66 @@ class Chassis(ChassisBase):
+                       indicates that fan 0 has been removed, fan 2
+                       has been inserted and sfp 11 has been removed.
+         """
+-        # Initialize SFP event first
+-        if not self.sfp_event_initialized:
+-            from sonic_platform.sfp_event import sfp_event
+-            self.sfp_event = sfp_event()
+-            self.sfp_event.initialize()
+-            self.MAX_SELECT_EVENT_RETURNED = self.PORT_END
+-            self.sfp_event_initialized = True
+-
+-        wait_for_ever = (timeout == 0)
+-        port_dict = {}
+-        if wait_for_ever:
+-            # xrcvd will call this monitor loop in the "SYSTEM_READY" state
+-            # logger.log_info(" wait_for_ever get_change_event %d" % timeout)
+-            timeout = MAX_SELECT_DELAY
+-            while True:
+-                status = self.sfp_event.check_sfp_status( port_dict, timeout)
+-                if not port_dict == {}:
+-                    break
+-        else:
+-            # At boot up and in "INIT" state call from xrcvd will have a timeout value
+-            # return true without change after timeout and will transition to "SYSTEM_READY"
+-            # logger.log_info(" initial get_change_event %d" % timeout )
+-            status = self.sfp_event.check_sfp_status( port_dict, timeout)
+-
+-        if status:
+-            return True, {'sfp':port_dict}
+-        else:
+-            return True, {'sfp':{}}
++        start_time = time.time() * 1000
++        sfp_dict = {}
++        events_dict = { 'sfp': sfp_dict }
++
++        while True:
++            for x in range(1, SfpBoardConfig.QSFP28_PORT_END + 1):
++                if True == self.get_sfp(x).get_presence():
++                    presence = '1'
++                else:
++                    presence = '0'
++                if presence != self.presence_list[x - 1]:
++                    self.presence_list[x - 1] = presence
++                    sfp_dict[int(x)] = presence
++
++                    # unconditionally turn on lasers on fiber SFP/QSFP modules
++                    # TODO: need to investigate whether SONiC provides some API for this
++                    self.get_sfp(x).tx_disable(True if presence == '0' else False)
++
++            if len(sfp_dict) > 0:
++                return True, events_dict
++
++            if timeout:
++                time.sleep(1)
++                now_time = time.time() * 1000
++                if (now_time - start_time >= timeout):
++                    return True, events_dict
++    
++    def initizalize_system_led(self):
++        """
++        This function is not defined in chassis base class,
++        system-health command would invoke chassis.initizalize_system_led(),
++        add this stub function just to let the command sucessfully execute
++        """
++        pass
++
++    def set_status_led(self, color):
++        """
++        Sets the state of the system LED
+ 
++        Args:
++            color: A string representing the color with which to set the
++                   system LED.
++
++        Returns:
++            bool: True if system LED state is set successfully, False if not
++        """
++        """
++        The device supports the next states of the SYS led:
++        • Green - Blinking: During Start up
++        • Green - On: System up.
++        All states must be described in system_health_monitoring_config.json
++        """
++        return self._led.set_led("system", color)
++
++    def get_status_led(self):
++        """
++        Gets the state of the system LED
++
++        Returns:
++            A string, one of the valid LED color strings which could be vendor
++            specified.
++        """
++        return self._led.get_led("system")
+diff --git a/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/eeprom.py b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/eeprom.py
+index 1096720804..610a5f751a 100644
+--- a/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/eeprom.py
++++ b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/eeprom.py
+@@ -1,68 +1,34 @@
+ #!/usr/bin/env python
+ 
+-########################################################################
++#############################################################################
+ #
+-# Module contains platform specific implementation of SONiC Platform
+-# Base API and provides the EEPROMs' information.
+-#
+-# The different EEPROMs available are as follows:
+-# - System EEPROM : Contains Serial number, Service tag, Base MA
+-#                   address, etc. in ONIE TlvInfo EEPROM format.
+-########################################################################
+-
++# Platform and model specific eeprom subclass, inherits from the base class,
++# and provides the followings:
++# - the eeprom format definition
++# - specific encoder/decoder if there is special need
++#############################################################################
+ 
+ try:
+-    from sonic_platform_base.sonic_eeprom.eeprom_base import EepromDecoder
+-    from sonic_platform_base.sonic_eeprom.eeprom_tlvinfo import TlvInfoDecoder
++    from sonic_eeprom import eeprom_tlvinfo
+ except ImportError as e:
+     raise ImportError(str(e) + "- required module not found")
+ 
+ 
+-class Eeprom(TlvInfoDecoder):
++class Eeprom(eeprom_tlvinfo.TlvInfoDecoder):
+ 
+-    I2C_DIR = "/sys/class/i2c-adapter/"
++    def __init__(self):
++        self.eeprom_path = "/sys/class/i2c-adapter/i2c-0/0-0054/eeprom"
++        super(Eeprom, self).__init__(self.eeprom_path, 0, '', True)
++        self.eeprom_tlv_dict = dict()
+ 
+-    def __init__(self, is_psu=False, psu_index=0, is_fan=False, fan_index=0):
+-        self.is_psu_eeprom = is_psu
+-        self.is_fan_eeprom = is_fan
+-        self.is_sys_eeprom = not (is_psu | is_fan)
+-
+-        if self.is_sys_eeprom:
+-            self.start_offset = 0
+-            self.eeprom_path = self.I2C_DIR + "i2c-0/0-0050/eeprom"
+-            # System EEPROM is in ONIE TlvInfo EEPROM format
+-            super(Eeprom, self).__init__(self.eeprom_path,
+-                                         self.start_offset, '', True)
+-            self._load_system_eeprom()
+-        else:
+-            print ("No other eeprom")
+-
+-    def _load_system_eeprom(self):
+-        """
+-        Reads the system EEPROM and retrieves the values corresponding
+-        to the codes defined as per ONIE TlvInfo EEPROM format and fills
+-        them in a dictionary.
+-        """
+         try:
+-            # Read System EEPROM as per ONIE TlvInfo EEPROM format.
+             self.eeprom_data = self.read_eeprom()
+-        except Exception as e:
+-            self.base_mac = 'NA'
+-            self.serial_number = 'NA'
+-            self.part_number = 'NA'
+-            self.model_str = 'NA'
+-            self.serial = 'NA'
+-            self.eeprom_tlv_dict = dict()
++        except:
++            self.eeprom_data = "N/A"
+         else:
+             eeprom = self.eeprom_data
+-            self.eeprom_tlv_dict = dict()
+ 
+             if not self.is_valid_tlvinfo_header(eeprom):
+-                self.base_mac = 'NA'
+-                self.serial_number = 'NA'
+-                self.part_number = 'NA'
+-                self.model_str = 'NA'
+-                self.serial = 'NA'
+                 return
+ 
+             total_length = (eeprom[9] << 8) | eeprom[10]
+@@ -75,12 +41,15 @@ class Eeprom(TlvInfoDecoder):
+ 
+                 tlv = eeprom[tlv_index:tlv_index + 2
+                              + eeprom[tlv_index + 1]]
+-                code = "0x%02X" % (tlv[0])
++                code = "0x%02X" % tlv[0]
+ 
+                 if tlv[0] == self._TLV_CODE_VENDOR_EXT:
+-                    value = str((tlv[2] << 24) | (tlv[3] << 16) |
+-                                (tlv[4]<< 8) | tlv[5])
+-                    value += str(tlv[6:6 + tlv[1]])
++                    if len(tlv) > 6:
++                        value = str((tlv[2] << 24) | (tlv[3] << 16) |
++                                    (tlv[4] << 8) | tlv[5])
++                        value += tlv[6:6 + tlv[1]].decode('ascii')
++                    else:
++                        value = ""
+                 else:
+                     name, value = self.decoder(None, tlv)
+ 
+@@ -90,70 +59,46 @@ class Eeprom(TlvInfoDecoder):
+ 
+                 tlv_index += eeprom[tlv_index+1] + 2
+ 
+-            self.base_mac = self.eeprom_tlv_dict.get(
+-                                "0x%X" % (self._TLV_CODE_MAC_BASE), 'NA')
+-            self.serial_number = self.eeprom_tlv_dict.get(
+-                                "0x%X" % (self._TLV_CODE_SERIAL_NUMBER), 'NA')
+-            self.part_number = self.eeprom_tlv_dict.get(
+-                                "0x%X" % (self._TLV_CODE_PART_NUMBER), 'NA')
+-            self.model_str = self.eeprom_tlv_dict.get(
+-                                "0x%X" % (self._TLV_CODE_PRODUCT_NAME), 'NA')
+-            self.serial = self.eeprom_tlv_dict.get(
+-                                "0x%X" % (self._TLV_CODE_SERVICE_TAG), 'NA')
+-
+-    def _get_eeprom_field(self, field_name):
+-        """
+-        For a field name specified in the EEPROM format, returns the
+-        presence of the field and the value for the same.
+-        """
+-        field_start = 0
+-        for field in self.format:
+-            field_end = field_start + field[2]
+-            if field[0] == field_name:
+-                return (True, self.eeprom_data[field_start:field_end])
+-            field_start = field_end
+-
+-        return (False, None)
+-
+     def serial_number_str(self):
+-        """
+-        Returns the serial number.
+-        """
+-        return self.serial_number
++        (is_valid, results) = self.get_tlv_field(
++                    self.eeprom_data, self._TLV_CODE_SERIAL_NUMBER)
++        if not is_valid:
++            return "N/A"
+ 
+-    def part_number_str(self):
+-        """
+-        Returns the part number.
+-        """
+-        return self.part_number
++        return results[2].decode('ascii')
+ 
+-    def airflow_fan_type(self):
+-        """
+-        Returns the airflow fan type.
+-        """
+-        if self.is_psu_eeprom:
+-            return int(self.psu_type.encode('hex'), 16)
+-        if self.is_fan_eeprom:
+-            return int(self.fan_type.encode('hex'), 16)
+-
+-    # System EEPROM specific methods
+     def base_mac_addr(self):
+-        """
+-        Returns the base MAC address found in the system EEPROM.
+-        """
+-        return self.base_mac
++        (is_valid, results) = self.get_tlv_field(
++                    self.eeprom_data, self._TLV_CODE_MAC_BASE)
++        if not is_valid or results[1] != 6:
++            return super(TlvInfoDecoder, self).switchaddrstr(e)
++
++        return ":".join(["{:02x}".format(T) for T in results[2]]).upper()
+ 
+     def modelstr(self):
+-        """
+-        Returns the Model name.
+-        """
+-        return self.model_str
++        (is_valid, results) = self.get_tlv_field(
++                    self.eeprom_data, self._TLV_CODE_PRODUCT_NAME)
++        if not is_valid:
++            return "N/A"
++
++        return results[2].decode('ascii')
++
++    def revision_str(self):
++        (is_valid, results) = self.get_tlv_field(
++                    self.eeprom_data, self._TLV_CODE_DEVICE_VERSION)
++        if not is_valid:
++            return "N/A"
++
++        #return results[2].decode('ascii')
++        return str(int.from_bytes(results[2], "little"))
++    
++    def part_number_str(self):
++        (is_valid, results) = self.get_tlv_field(
++                    self.eeprom_data, self._TLV_CODE_PART_NUMBER)
++        if not is_valid:
++            return "N/A"
+ 
+-    def serial_str(self):
+-        """
+-        Returns the servicetag number.
+-        """
+-        return self.serial
++        return results[2].decode('ascii')
+ 
+     def system_eeprom_info(self):
+         """
+diff --git a/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/sfp.py b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/sfp.py
+index 12cd4f732e..79196b24f4 100644
+--- a/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/sfp.py
++++ b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/sfp.py
+@@ -1,214 +1,394 @@
+-# Name: sfp.py, version: 1.0
+-#
+-# Description: Module contains the definitions of SFP related APIs
+-#
+-#
+-
+ try:
+     from sonic_platform_base.sonic_xcvr.sfp_optoe_base import SfpOptoeBase
+     from sonic_py_common.logger import Logger
+-    from sonic_py_common import device_info
+-    from sonic_py_common.general import getstatusoutput_noshell
+-
++    import time
+ except ImportError as e:
+     raise ImportError(str(e) + "- required module not found")
+ 
+-import subprocess as cmd
+ 
+-smbus_present = 1
++logger = Logger()
+ 
+-try:
+-    import smbus
+-except ImportError as e:
+-    smbus_present = 0
+ 
+-COPPER_TYPE = "COPPER"
+-SFP_TYPE = "SFP"
++class SfpBoardConfig:
++    SFP_PLUS_TYPE = "SFP+"
++    QSFP28_TYPE = "QSFP28"
++
++    SFP_PLUS_PORT_START = 1
++    QSFP28_PORT_START = 49
++    QSFP28_PORT_END = 54
++
++
++class SFPManagement():
++    def __init__(self, port_num, ctrl_cpld, port_cpld):
++        self.port_num = port_num
++        self.ctrl_cpld = ctrl_cpld
++        self.port_cpld = port_cpld
++
++    def is_module_present(self) -> bool:
++        if self.port_num >=1 and self.port_num <= 8:
++            value = self.port_cpld.read_register(0x10)
++        elif self.port_num >= 9 and self.port_num <= 16:
++            value = self.port_cpld.read_register(0x11)
++        elif self.port_num >= 17 and self.port_num <= 24:
++            value = self.port_cpld.read_register(0x12)
++        elif self.port_num >= 25 and self.port_num <= 32:
++            value = self.ctrl_cpld.read_register(0x25)
++        elif self.port_num >= 33 and self.port_num <= 40:
++            value = self.ctrl_cpld.read_register(0x26)
++        else:
++            value = self.ctrl_cpld.read_register(0x27)
++
++        return not (value & (1 << ((self.port_num - 1) % 8)))
++
++    def get_rx_los(self):
++        if self.port_num >=1 and self.port_num <= 8:
++            value = self.port_cpld.read_register(0x13)
++        elif self.port_num >= 9 and self.port_num <= 16:
++            value = self.port_cpld.read_register(0x14)
++        elif self.port_num >= 17 and self.port_num <= 24:
++            value = self.port_cpld.read_register(0x15)
++        elif self.port_num >= 25 and self.port_num <= 32:
++            value = self.ctrl_cpld.read_register(0x28)
++        elif self.port_num >= 33 and self.port_num <= 40:
++            value = self.ctrl_cpld.read_register(0x29)
++        else:
++            value = self.ctrl_cpld.read_register(0x30)
++
++        return [value & (1 << ((self.port_num - 1) % 8))]
++
++    def get_tx_fault(self):
++        if self.port_num >=1 and self.port_num <= 8:
++            value = self.port_cpld.read_register(0x23)
++        elif self.port_num >= 9 and self.port_num <= 16:
++            value = self.port_cpld.read_register(0x24)
++        elif self.port_num >= 17 and self.port_num <= 24:
++            value = self.port_cpld.read_register(0x25)
++        elif self.port_num >= 25 and self.port_num <= 32:
++            value = self.ctrl_cpld.read_register(0x34)
++        elif self.port_num >= 33 and self.port_num <= 40:
++            value = self.ctrl_cpld.read_register(0x35)
++        else:
++            value = self.ctrl_cpld.read_register(0x36)
++
++        return [value & (1 << ((self.port_num - 1) % 8))]
++
++    def get_tx_disable(self) -> bool:
++        if self.port_num >=1 and self.port_num <= 8:
++            value = self.port_cpld.read_register(0x20)
++        elif self.port_num >= 9 and self.port_num <= 16:
++            value = self.port_cpld.read_register(0x21)
++        elif self.port_num >= 17 and self.port_num <= 24:
++            value = self.port_cpld.read_register(0x22)
++        elif self.port_num >= 25 and self.port_num <= 32:
++            value = self.ctrl_cpld.read_register(0x31)
++        elif self.port_num >= 33 and self.port_num <= 40:
++            value = self.ctrl_cpld.read_register(0x32)
++        else:
++            value = self.ctrl_cpld.read_register(0x33)
++
++        return [value & (1 << ((self.port_num - 1) % 8))]
++
++    def set_tx_disable(self, disable: bool) -> None:
++        reg = 0
++        mask = 0
++        cpld = None
++    
++        if self.port_num >=1 and self.port_num <= 8:
++            reg = 0x20
++            cpld = self.port_cpld
++            mask = 1 << (self.port_num - 1)
++        elif self.port_num >= 9 and self.port_num <= 16:
++            reg = 0x21
++            cpld = self.port_cpld
++            mask = 1 << (self.port_num - 9)
++        elif self.port_num >= 17 and self.port_num <= 24:
++            reg = 0x22
++            cpld = self.port_cpld
++            mask = 1 << (self.port_num - 17)
++        elif self.port_num >= 25 and self.port_num <= 32:
++            reg = 0x31
++            cpld = self.ctrl_cpld
++            mask = 1 << (self.port_num - 25)
++        elif self.port_num >= 33 and self.port_num <= 40:
++            reg = 0x32
++            cpld = self.ctrl_cpld
++            mask = 1 << (self.port_num - 33)
++        else:
++            reg = 0x33
++            cpld = self.ctrl_cpld
++            mask = 1 << (self.port_num - 41)
+ 
+-# SFP PORT numbers
+-SFP_PORT_START = 49
+-SFP_PORT_END = 54
++        val = cpld.read_register(reg)
+ 
+-logger = Logger()
++        if disable:
++            val |= mask
++        else:
++            val &= ~mask
+ 
+-class Sfp(SfpOptoeBase):
+-    """
+-    Platform-specific Sfp refactor class
+-    """
+-    instances = []
++        cpld.write_register(reg, val)
+ 
+-    # Paths
+-    PLATFORM_ROOT_PATH = "/usr/share/sonic/device"
+-    PMON_HWSKU_PATH = "/usr/share/sonic/hwsku"
+-    HOST_CHK_CMD = "docker > /dev/null 2>&1"
++class QSFPManagement():
++    def __init__(self, port_num, ctrl_cpld):
++        self.port_num = port_num
++        self.ctrl_cpld = ctrl_cpld
+ 
+-    PLATFORM = "arm64-larch_cn9130-eps6800"
+-    HWSKU = "cn9130-eps6800"
++    def is_module_present(self) -> bool:
++        value = self.ctrl_cpld.read_register(0x22)
+ 
+-    port_to_i2c_mapping = 0
++        return not (value & (1 << (self.port_num - SfpBoardConfig.QSFP28_PORT_START)))
+ 
+-    # def __init__(self, index, sfp_type, stub):
+-    def __init__(self, index, sfp_type, eeprom_path, port_i2c_map):
+-        SfpOptoeBase.__init__(self)
++    def reset(self) -> None:
++        value = self.ctrl_cpld.read_register(0x24)
++        value &= ~(1 << (self.port_num - SfpBoardConfig.QSFP28_PORT_START))
++        self.ctrl_cpld.write_register(0x24, value)
+ 
+-        self.index = index
+-        self.port_num = index
+-        self.sfp_type = sfp_type
+-        self.eeprom_path = eeprom_path
+-        self.port_to_i2c_mapping = port_i2c_map
+-        self.name = sfp_type + str(index-1)
+-        self.port_name = sfp_type + str(index)
+-        self.port_to_eeprom_mapping = {}
++        time.sleep(0.1)
+ 
+-        self.port_to_eeprom_mapping[index] = eeprom_path
++        value = self.ctrl_cpld.read_register(0x24)
++        value |= (1 << (self.port_num - SfpBoardConfig.QSFP28_PORT_START))
++        self.ctrl_cpld.write_register(0x24, value)
+ 
+-        self._version_info = device_info.get_sonic_version_info()
+-        self.lastPresence = False
++        time.sleep(0.5) 
+ 
+-        logger.log_debug("Sfp __init__ index {} setting name to {} and eeprom_path to {}".format(index, self.name, self.eeprom_path))
++    def get_low_power_mode(self) -> bool:
++        value = self.ctrl_cpld.read_register(0x21)
+ 
+-        Sfp.instances.append(self)
+-        
+-    def get_eeprom_path(self):
+-        return self.eeprom_path
++        return value & (1 << (self.port_num - SfpBoardConfig.QSFP28_PORT_START))
+ 
+-    def get_presence(self):
+-        """
+-        Retrieves the presence
+-        Returns:
+-            bool: True if is present, False if not
+-        """
+-        if self.sfp_type == COPPER_TYPE:
+-            return False
++    def set_low_power_mode(self, enable: bool) -> None:
++        value = self.ctrl_cpld.read_register(0x21)
++        if enable:
++            value |= (1 << (self.port_num - SfpBoardConfig.QSFP28_PORT_START))
++        else:
++            value &= ~(1 << (self.port_num - SfpBoardConfig.QSFP28_PORT_START))
++
++        self.ctrl_cpld.write_register(0x21, value)
++    
++    def get_tx_disable(self) -> bool:
++        value = self.ctrl_cpld.read_register(0x23)
++
++        return [value & (1 << (self.port_num - SfpBoardConfig.QSFP28_PORT_START))]
+ 
+-        if smbus_present == 0:  # if called from sfputil outside of pmon
+-            cmdstatus, sfpstatus = getstatusoutput_noshell(['sudo', 'i2cget', '-y', '0', '0x41', '0x3'])            
+-            sfpstatus = int(sfpstatus, 16)
++    def set_tx_disable(self, disable: bool) -> None:
++        value = self.ctrl_cpld.read_register(0x23)
++
++        if disable:
++            value |= (1 << (self.port_num - SfpBoardConfig.QSFP28_PORT_START))
+         else:
+-            bus = smbus.SMBus(0)
+-            DEVICE_ADDRESS = 0x41
+-            DEVICE_REG = 0x3
+-            sfpstatus = bus.read_byte_data(DEVICE_ADDRESS, DEVICE_REG)
++            value &= ~(1 << (self.port_num - SfpBoardConfig.QSFP28_PORT_START))
+ 
+-        pos = [1, 2, 4, 8]
+-        bit_pos = pos[self.index-SFP_PORT_START]
+-        sfpstatus = sfpstatus & (bit_pos)
++        self.ctrl_cpld.write_register(0x23, value)
+ 
+-        if sfpstatus == 0:
+-            return True
+ 
+-        return False
++class Sfp(SfpOptoeBase):
++    """
++    Platform-specific Sfp class implementation
++    """
+ 
+-    def get_name(self):
+-        """
+-        Retrieves the name of the device
+-            Returns:
+-            string: The name of the device
+-        """
+-        return self.name
++    def __init__(self, index, type, main_cpld, aux_cpld):
++        assert index >= SfpBoardConfig.SFP_PLUS_PORT_START
++        assert index <= SfpBoardConfig.QSFP28_PORT_END
++        assert type == SfpBoardConfig.SFP_PLUS_TYPE or type == SfpBoardConfig.QSFP28_TYPE
+ 
+-    def get_position_in_parent(self):
++        SfpOptoeBase.__init__(self)
++
++        self.port_num = index # 1-based physical port number
++        self.type = type
++        self.eeprom_path = self.__get_eeprom_path()
++
++        if self.type == SfpBoardConfig.SFP_PLUS_TYPE:
++            self.management = SFPManagement(self.port_num, main_cpld, aux_cpld)
++        else:
++            self.management = QSFPManagement(self.port_num, main_cpld)
++        
++    def get_presence(self):
+         """
+-        Retrieves 1-based relative physical position in parent device.
++        Retrieves the presence
+         Returns:
+-            integer: The 1-based relative physical position in parent device or
+-                     -1 if cannot determine the position
++            bool: True if is present, False if not
+         """
+-        return -1
++        return self.management.is_module_present()
+ 
+-    def is_replaceable(self):
++    def get_rx_los(self):
+         """
+-        Indicate whether this device is replaceable.
++        Retrieves the RX LOS (loss-of-signal) status of SFP
++
+         Returns:
+-            bool: True if it is replaceable.
++            A list of boolean values, representing the RX LOS status
++            of each available channel, value is True if SFP channel
++            has RX LOS, False if not.
++            E.g., for a tranceiver with four channels: [False, False, True, False]
++            Note : RX LOS status is latched until a call to get_rx_los or a reset.
+         """
+-
+-        if self.sfp_type == "SFP":
+-            return True
++        if self.type == SfpBoardConfig.SFP_PLUS_TYPE:
++            return [self.management.get_rx_los()]
+         else:
+-            return False
++            return [False]
+ 
+-    def _get_error_code(self):
++    def get_tx_disable(self):
+         """
+-        Get error code of the SFP module
++        Retrieves the tx_disable status of this SFP
+ 
+         Returns:
+-            The error code
++            A list of boolean values, representing the TX disable status
++            of each available channel, value is True if SFP channel
++            is TX disabled, False if not.
++            E.g., for a tranceiver with four channels: [False, False, True, False]
++        """  
++        return [self.management.get_tx_disable()] 
++
++    def tx_disable(self, tx_disable):
+         """
+-        return NotImplementedError
+-
+-    def get_error_description(self):
+-        """
+-        Get error description
++        Disable SFP TX for all channels
+ 
+         Args:
+-            error_code: The error code returned by _get_error_code
++            tx_disable : A Boolean, True to enable tx_disable mode, False to disable
++                         tx_disable mode.
+ 
+         Returns:
+-            The error description
++            A boolean, True if tx_disable is set successfully, False if not
+         """
+-        if not self.get_presence():
+-            error_description = self.SFP_STATUS_UNPLUGGED
+-        else:
+-            error_description = self.SFP_STATUS_OK
++        self.management.set_tx_disable(tx_disable)
+ 
+-        return error_description
+-        # return NotImplementedError
+-
+-    def get_reset_status(self):
++        return True
++    
++    def get_tx_fault(self):
++        if self.type == SfpBoardConfig.SFP_PLUS_TYPE:
++            return [self.management.get_tx_fault()]
++        else:
++            return [False]
++        
++    def reset(self):
+         """
+-        Retrieves the reset status of SFP
++        Reset SFP and return all user module settings to their default state.
++
+         Returns:
+-            A Boolean, True if reset enabled, False if disabled
++            A boolean, True if successful, False if not
+         """
+-        if self.sfp_type == COPPER_TYPE:
++        if self.type == SfpBoardConfig.SFP_PLUS_TYPE:
+             return False
+-        if self.sfp_type == SFP_TYPE:
++        else:
++            return self.management.reset()
++
++    def get_lpmode(self):
++        if self.type == SfpBoardConfig.SFP_PLUS_TYPE:
+             return False
++        else:
++            return self.management.get_low_power_mode()  
+ 
+-    def get_status(self):
++    def set_lpmode(self, lpmode):
++        if self.type == SfpBoardConfig.QSFP28_PORT_START:
++            self.management.set_low_power_mode(lpmode)
++
++        return True
++
++    def get_error_description(self):
+         """
+-        Retrieves the operational status of the device
++        Retrives the error descriptions of the SFP module
++
++        Returns:
++            String that represents the current error descriptions of vendor specific errors
++            In case there are multiple errors, they should be joined by '|',
++            like: "Bad EEPROM|Unsupported cable"
+         """
+-        reset = self.get_reset_status()
++        if not self.get_presence():
++            return self.SFP_STATUS_UNPLUGGED
++        return self.SFP_STATUS_OK
+ 
+-        if reset is True:
+-            status = False
+-        else:
+-            status = True
++    def get_transceiver_status(self):
++        """
++        Below part is added to avoid failing xcvrd
++        """
++        raise NotImplementedError
+ 
+-        return status
++    def get_name(self):
++        """
++        Retrieves the name of the device
++            Returns:
++            string: The name of the device
++        """
++        return "Ethernet{}".format(self.port_num - 1)
+ 
+-    def reset(self):
++    def get_position_in_parent(self):
+         """
+-        Reset SFP.
++        Retrieves 1-based relative physical position in parent device.
+         Returns:
+-            A boolean, True if successful, False if not
++            integer: The 1-based relative physical position in parent device or
++                     -1 if cannot determine the position
+         """
+-        # RJ45 and SFP ports not resettable
+-        return False
++        return self.port_num
+ 
+-    def set_lpmode(self, lpmode):
++    def is_replaceable(self):
+         """
+-        Sets the lpmode (low power mode) of SFP
+-        Args:
+-            lpmode: A Boolean, True to enable lpmode, False to disable it
+-            Note  : lpmode can be overridden by set_power_override
++        Indicate whether this device is replaceable.
+         Returns:
+-            A boolean, True if lpmode is set successfully, False if not
++            bool: True if it is replaceable.
+         """
+-        if self.sfp_type == COPPER_TYPE:
+-            return False
+-        if self.sfp_type == SFP_TYPE:
+-            return False
++        return True
+ 
+-    def get_lpmode(self):
++    def get_eeprom_path(self):
++        return self.eeprom_path
++
++    def get_transceiver_info(self):
++        port_info = None
++        try:
++            port_info = SfpOptoeBase.get_transceiver_info(self)
++        except NotImplementedError:
++            pass
++        if port_info is not None:
++            port_info['hardware_rev'] = 'N/A'
++        # Temporarily use eeprom stub info
++        if port_info is None and self.get_presence():
++            port_info = {
++                "type": self.get_name(),
++                "type_abbrv_name": 'N/A',
++                "vendor_rev": 'N/A',
++                "serial": 'N/A',
++                "manufacturer": 'N/A',
++                "model": 'N/A',
++                "connector": 'N/A',
++                "encoding": 'N/A',
++                "ext_identifier": 'N/A',
++                "ext_rateselect_compliance": 'N/A',
++                "cable_type": 'N/A',
++                "cable_length": 0,
++                "nominal_bit_rate": 'N/A',
++                "specification_compliance": 'N/A',
++                "vendor_date": 'N/A',
++                "vendor_oui": 'N/A',
++                "application_advertisement": "N/A",
++                "hardware_rev": 'N/A'
++            }
++
++        return port_info
++
++    def get_transceiver_threshold_info(self):
++        return None
++
++    def get_status(self):
+         """
+-        Retrieves the lpmode (low power mode) status of this SFP
+-        Returns:
+-            A Boolean, True if lpmode is enabled, False if disabled
++        Retrieves the operational status of the device
+         """
+-        if self.sfp_type == COPPER_TYPE:
+-            return False
+-        if self.sfp_type == SFP_TYPE:
+-            return False
++        return self.get_presence()
++  
++
++    def __get_eeprom_path(self):
++        if self.type ==  SfpBoardConfig.SFP_PLUS_TYPE:
++            if self.port_num >= 1 and self.port_num <= 8:
++                channel = 100 + (self.port_num - 1) * 5
++            elif self.port_num >= 9 and self.port_num <= 16:
++                channel = 101 + (self.port_num - 8 - 1) * 5
++            elif self.port_num >= 17 and self.port_num <= 24:
++                channel = 102 + (self.port_num - 16 - 1) * 5
++            elif self.port_num >= 25 and self.port_num <= 32:
++                channel = 50 + (self.port_num - 24 - 1) * 5
++            elif self.port_num >= 33 and self.port_num <= 40:
++                channel = 51 + (self.port_num - 32 - 1) * 5
++            else:
++                channel = 52 + (self.port_num - 40 - 1) * 5
++
++            return  '/sys/bus/i2c/devices/' + str(channel) + '-0050/eeprom'
++        else:
++            channel = 53 + (self.port_num - SfpBoardConfig.QSFP28_PORT_START) * 5
++
++            return  '/sys/bus/i2c/devices/' + str(channel) + '-0050/eeprom'
+diff --git a/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/sfp_event.py b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/sfp_event.py
+deleted file mode 100644
+index 7f3d6c97bd..0000000000
+--- a/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/sfp_event.py
++++ /dev/null
+@@ -1,112 +0,0 @@
+-'''
+-listen for the SFP change event and return to chassis.
+-'''
+-import time
+-from sonic_py_common import logger
+-from sonic_py_common.general import getstatusoutput_noshell
+-
+-smbus_present = 1
+-
+-try:
+-    import smbus
+-except ImportError as e:
+-    smbus_present = 0
+-
+-# system level event/error
+-EVENT_ON_ALL_SFP = '-1'
+-SYSTEM_NOT_READY = 'system_not_ready'
+-SYSTEM_READY = 'system_become_ready'
+-SYSTEM_FAIL = 'system_fail'
+-
+-# SFP PORT numbers
+-SFP_PORT_START = 49
+-SFP_PORT_END = 54
+-
+-SYSLOG_IDENTIFIER = "sfp_event"
+-sonic_logger = logger.Logger(SYSLOG_IDENTIFIER)
+-
+-
+-class sfp_event:
+-    ''' Listen to plugin/plugout cable events '''
+-
+-    def __init__(self):
+-        self.handle = None
+-
+-    def initialize(self):
+-        self.modprs_register = 0
+-        # Get Transceiver status
+-        time.sleep(5)
+-        self.modprs_register = self._get_transceiver_status()
+-        sonic_logger.log_info("Initial SFP presence=%d" % self.modprs_register)
+-
+-    def deinitialize(self):
+-        if self.handle is None:
+-            return
+-
+-    def _get_transceiver_status(self):
+-        if smbus_present == 0:
+-            sonic_logger.log_info("  PMON - smbus ERROR - DEBUG sfp_event   ")
+-            cmdstatus, sfpstatus = getstatusoutput_noshell('sudo i2cget -y 0 0x76 0xa')
+-            sfpstatus = int(sfpstatus, 16)
+-        else:
+-            bus = smbus.SMBus(0)
+-            DEVICE_ADDRESS = 0x76
+-            DEVICE_REG = 0xa
+-            sfpstatus = bus.read_byte_data(DEVICE_ADDRESS, DEVICE_REG)
+-
+-            sfpstatus = ~sfpstatus
+-            sfpstatus = sfpstatus & 0xF
+-
+-        return sfpstatus
+-
+-    def check_sfp_status(self, port_change, timeout):
+-        """
+-        check_sfp_status called from get_change_event, this will return correct
+-            status of all 4 SFP ports if there is a change in any of them
+-        """
+-        start_time = time.time()
+-        port = SFP_PORT_START
+-        forever = False
+-
+-        if timeout == 0:
+-            forever = True
+-        elif timeout > 0:
+-            timeout = timeout / float(1000)  # Convert to secs
+-        else:
+-            return False, {}
+-        end_time = start_time + timeout
+-
+-        if (start_time > end_time):
+-            return False, {}  # Time wrap or possibly incorrect timeout
+-
+-        while (timeout >= 0):
+-            # Check for OIR events and return updated port_change
+-            reg_value = self._get_transceiver_status()
+-            if (reg_value != self.modprs_register):
+-                changed_ports = (self.modprs_register ^ reg_value)
+-                while (port >= SFP_PORT_START and port <= SFP_PORT_END):
+-                    # Mask off the bit corresponding to our port
+-                    mask = (1 << port-SFP_PORT_START)
+-                    if (changed_ports & mask):
+-                        # ModPrsL is active high
+-                        if reg_value & mask == 0:
+-                            port_change[port] = '0'
+-                        else:
+-                            port_change[port] = '1'
+-                    port += 1
+-
+-                # Update reg value
+-                self.modprs_register = reg_value
+-                return True, port_change
+-
+-            if forever:
+-                time.sleep(1)
+-            else:
+-                timeout = end_time - time.time()
+-                if timeout >= 1:
+-                    time.sleep(1)  # We poll at 1 second granularity
+-                else:
+-                    if timeout > 0:
+-                        time.sleep(timeout)
+-                    return True, {}
+-        return False, {}
+-- 
+2.25.1
+
