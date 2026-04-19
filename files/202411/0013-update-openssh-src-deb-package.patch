@@ -1,0 +1,25 @@
+From 181e958c77f1978ba92a25cdde42614a106ce54b Mon Sep 17 00:00:00 2001
+From: Sergey Syzonov <ssyzonov@larch-networks.com>
+Date: Sun, 19 Apr 2026 23:41:33 +0300
+Subject: [PATCH] update openssh src deb package
+
+---
+ rules/openssh.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/rules/openssh.mk b/rules/openssh.mk
+index a96cea8d3..d8ef88f31 100644
+--- a/rules/openssh.mk
++++ b/rules/openssh.mk
+@@ -1,7 +1,7 @@
+ # openssh package
+ 
+ OPENSSH_VERSION := 9.2p1
+-OPENSSH_VERSION_FULL := $(OPENSSH_VERSION)-2+deb12u5
++OPENSSH_VERSION_FULL := $(OPENSSH_VERSION)-2+deb12u9
+ 
+ export OPENSSH_VERSION OPENSSH_VERSION_FULL
+ 
+-- 
+2.25.1
+
