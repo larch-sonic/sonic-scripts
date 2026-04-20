@@ -1,0 +1,2101 @@
+From 1c1cb80cc9c500c64c9796c3fc7cc1b31ba99bed Mon Sep 17 00:00:00 2001
+From: Sergey Syzonov <ssyzonov@larch-networks.com>
+Date: Mon, 20 Apr 2026 21:18:37 +0300
+Subject: [PATCH] sync eps6800 platform
+
+---
+ patch/0009-added-accton-cpld-support.patch | 2056 ++++++++++++++++++++
+ patch/kconfig-inclusions                   |    3 +
+ patch/series                               |    1 +
+ 3 files changed, 2060 insertions(+)
+ create mode 100644 patch/0009-added-accton-cpld-support.patch
+
+diff --git a/patch/0009-added-accton-cpld-support.patch b/patch/0009-added-accton-cpld-support.patch
+new file mode 100644
+index 0000000..b9f4422
+--- /dev/null
++++ b/patch/0009-added-accton-cpld-support.patch
+@@ -0,0 +1,2056 @@
++From df758ccfd0ad97d5121d5d739775a1beeccd44e0 Mon Sep 17 00:00:00 2001
++From: oshulandt <oshulandt@contoso.com>
++Date: Thu, 19 Mar 2026 14:28:56 +0000
++Subject: [PATCH] added acton cpld support
++
++---
++ drivers/i2c/muxes/Kconfig               |  10 +
++ drivers/i2c/muxes/Makefile              |   4 +
++ drivers/i2c/muxes/accton-cpld-i2c.c     | 555 +++++++++++++++++++++
++ drivers/i2c/muxes/accton-cpld-spi.c     | 608 ++++++++++++++++++++++++
++ drivers/i2c/muxes/accton-cpld.h         |  25 +
++ drivers/i2c/muxes/i2c-mux-accton-cpld.c | 233 +++++++++
++ drivers/i2c/muxes/i2c-mux-accton-cpld.h |  25 +
++ drivers/i2c/muxes/i2c-wishbone-cpld.c   | 498 +++++++++++++++++++
++ drivers/i2c/muxes/i2c-wishbone-cpld.h   |   9 +
++ 9 files changed, 1967 insertions(+)
++ create mode 100644 drivers/i2c/muxes/accton-cpld-i2c.c
++ create mode 100644 drivers/i2c/muxes/accton-cpld-spi.c
++ create mode 100644 drivers/i2c/muxes/accton-cpld.h
++ create mode 100644 drivers/i2c/muxes/i2c-mux-accton-cpld.c
++ create mode 100644 drivers/i2c/muxes/i2c-mux-accton-cpld.h
++ create mode 100644 drivers/i2c/muxes/i2c-wishbone-cpld.c
++ create mode 100644 drivers/i2c/muxes/i2c-wishbone-cpld.h
++
++diff --git a/drivers/i2c/muxes/Kconfig b/drivers/i2c/muxes/Kconfig
++index a509b75bd..6c9dcc873 100644
++--- a/drivers/i2c/muxes/Kconfig
+++++ b/drivers/i2c/muxes/Kconfig
++@@ -131,4 +131,14 @@ config I2C_MUX_MLXCPLD
++ 	  This driver can also be built as a module.  If so, the module
++ 	  will be called i2c-mux-mlxcpld.
++ 
+++config I2C_ACCTON_CPLD
+++	tristate "Accton CPLD based I2C multiplexer"
+++	help
+++	  If you say yes to this option, support will be included for a
+++	  CPLD based I2C multiplexer. This driver provides access to
+++	  I2C busses connected through a MUX, which is controlled
+++	  by a CPLD register.
+++
+++	  This driver can also be built as several modules.
+++
++ endmenu
++diff --git a/drivers/i2c/muxes/Makefile b/drivers/i2c/muxes/Makefile
++index 092dca428..357e7c08f 100644
++--- a/drivers/i2c/muxes/Makefile
+++++ b/drivers/i2c/muxes/Makefile
++@@ -10,6 +10,10 @@ obj-$(CONFIG_I2C_MUX_GPIO)	+= i2c-mux-gpio.o
++ obj-$(CONFIG_I2C_MUX_GPMUX)	+= i2c-mux-gpmux.o
++ obj-$(CONFIG_I2C_MUX_LTC4306)	+= i2c-mux-ltc4306.o
++ obj-$(CONFIG_I2C_MUX_MLXCPLD)	+= i2c-mux-mlxcpld.o
+++obj-$(CONFIG_I2C_ACCTON_CPLD) += accton-cpld-i2c.o
+++obj-$(CONFIG_I2C_ACCTON_CPLD) += accton-cpld-spi.o
+++obj-$(CONFIG_I2C_ACCTON_CPLD) += i2c-wishbone-cpld.o
+++obj-$(CONFIG_I2C_ACCTON_CPLD) += i2c-mux-accton-cpld.o
++ obj-$(CONFIG_I2C_MUX_PCA9541)	+= i2c-mux-pca9541.o
++ obj-$(CONFIG_I2C_MUX_PCA954x)	+= i2c-mux-pca954x.o
++ obj-$(CONFIG_I2C_MUX_PINCTRL)	+= i2c-mux-pinctrl.o
++diff --git a/drivers/i2c/muxes/accton-cpld-i2c.c b/drivers/i2c/muxes/accton-cpld-i2c.c
++new file mode 100644
++index 000000000..338f04685
++--- /dev/null
+++++ b/drivers/i2c/muxes/accton-cpld-i2c.c
++@@ -0,0 +1,555 @@
+++/*
+++ * Copyright (C)  Ang Liu <ang_liu@accton.com.cn>
+++ *
+++ * An I2C device dirver for Accton CPLD
+++ *
+++ * Based on:
+++ *  pca954x.c from Kumar Gala <galak@kernel.crashing.org>
+++ * Copyright (C) 2006
+++ *
+++ * Based on:
+++ *  pca954x.c from Ken Harrenstien
+++ * Copyright (C) 2004 Google, Inc. (Ken Harrenstien)
+++ *
+++ * Based on:
+++ *  i2c-virtual_cb.c from Brian Kuschak <bkuschak@yahoo.com>
+++ * and
+++ *  pca9540.c from Jean Delvare <khali@linux-fr.org>.
+++ *
+++ * This file is licensed under the terms of the GNU General Public
+++ * License version 2. This program is licensed "as is" without any
+++ * warranty of any kind, whether express or implied.
+++ */
+++
+++#include <linux/module.h>
+++#include <linux/init.h>
+++#include <linux/slab.h>
+++#include <linux/device.h>
+++#include <linux/i2c.h>
+++#include <linux/version.h>
+++#include <linux/stat.h>
+++#include <linux/hwmon-sysfs.h>
+++#include <linux/delay.h>
+++#include <linux/of_device.h>
+++#include "accton-cpld.h"
+++
+++#define I2C_RW_RETRY_COUNT              10
+++#define I2C_RW_RETRY_INTERVAL           60 /* ms */
+++
+++static LIST_HEAD(cpld_client_list);
+++static struct mutex     list_lock;
+++
+++struct cpld_client_node {
+++    struct i2c_client *client;
+++    struct list_head   list;
+++};
+++
+++struct cplddev_data {
+++    enum cpld_type   type;
+++    struct mutex     update_lock;
+++    u8               reg_offset;
+++};
+++
+++#ifdef CONFIG_OF
+++static const struct of_device_id accton_cpld_i2c_of_ids[] = {
+++	{
+++		.compatible = "accton,ctrl_cpld",
+++		.data = (void *) CTRL_CPLD,
+++	},
+++	{
+++		.compatible = "accton,port_cpld",
+++		.data = (void *) PORT_CPLD,
+++	},
+++	{
+++		.compatible = "accton,port_cpld2",
+++		.data = (void *) PORT_CPLD2,
+++	},
+++	{},
+++};
+++MODULE_DEVICE_TABLE(of, accton_cpld_i2c_of_ids);
+++#endif
+++
+++static const struct i2c_device_id accton_cpld_i2c_id[] = {
+++	{ "ctrl_cpld",   CTRL_CPLD },
+++	{ "port_cpld",   PORT_CPLD },
+++	{ "port_cpld2",  PORT_CPLD2 },
+++	{},
+++};
+++MODULE_DEVICE_TABLE(i2c, accton_cpld_i2c_id);
+++
+++enum accton_cpld_i2c_sysfs_attributes {
+++    CPLD_VERSION,
+++    ACCESS,
+++    ACCESS_REG_OFFSET,
+++    ACCESS_REG_VALUE,
+++};
+++
+++/* sysfs attributes for cpld access
+++ */
+++static ssize_t access(struct device *dev, struct device_attribute *da,
+++             const char *buf, size_t count);
+++static ssize_t show_version(struct device *dev, struct device_attribute *da,
+++             char *buf);
+++static ssize_t write_reg_value(struct device *dev, struct device_attribute *da,
+++                      const char *buf, size_t count);
+++static ssize_t read_reg_value(struct device *dev, struct device_attribute *da,
+++                            char *buf);
+++static ssize_t store_reg_offset(struct device *dev, struct device_attribute *da,
+++                      const char *buf, size_t count);
+++static ssize_t show_reg_offset(struct device *dev, struct device_attribute *da,
+++                            char *buf);
+++static int accton_cpld_i2c_read_internal(struct i2c_client *client, u8 reg);
+++static int accton_cpld_i2c_write_internal(struct i2c_client *client, u8 reg, u8 value);
+++
+++static SENSOR_DEVICE_ATTR(version, S_IRUGO, show_version, NULL, CPLD_VERSION);
+++static SENSOR_DEVICE_ATTR(access, S_IWUSR, NULL, access, ACCESS);
+++static SENSOR_DEVICE_ATTR(reg_offset, S_IWUSR | S_IRUGO, show_reg_offset, store_reg_offset, ACCESS_REG_OFFSET);
+++static SENSOR_DEVICE_ATTR(reg_value, S_IWUSR | S_IRUGO, read_reg_value, write_reg_value, ACCESS_REG_VALUE);
+++
+++static struct attribute *accton_cpld_attributes[] = {
+++    &sensor_dev_attr_version.dev_attr.attr,
+++    &sensor_dev_attr_access.dev_attr.attr,
+++    &sensor_dev_attr_reg_offset.dev_attr.attr,
+++    &sensor_dev_attr_reg_value.dev_attr.attr,
+++    NULL
+++};
+++
+++static const struct attribute_group accton_cpld_group = {
+++    .attrs = accton_cpld_attributes,
+++};
+++
+++static ssize_t access(struct device *dev, struct device_attribute *da,
+++            const char *buf, size_t count)
+++{
+++    int status = 0;
+++    u32 reg = 0, val = 0, mask = 0xff;
+++    u8 cpld_write_val, cpld_cur_val;
+++    struct i2c_client *client = to_i2c_client(dev);
+++    struct cplddev_data *data = i2c_get_clientdata(client);
+++
+++    status = sscanf(buf, "0x%x 0x%x 0x%x", &reg, &val, &mask);
+++    if (status != 2 && status != 3) {
+++        return -EINVAL;
+++    }
+++
+++    if (reg > 0xFF || val > 0xFF || mask > 0xFF) {
+++        return -EINVAL;
+++    }
+++
+++    mutex_lock(&data->update_lock);
+++    status = accton_cpld_i2c_read_internal(client, reg);
+++	if (unlikely(status < 0)) {
+++		goto exit;
+++	}
+++
+++    cpld_cur_val = (u8)status;
+++    cpld_cur_val = cpld_cur_val & (~mask);
+++
+++    cpld_write_val = cpld_cur_val | (val & mask);
+++
+++    status = accton_cpld_i2c_write_internal(client, reg, cpld_write_val);
+++    if (unlikely(status < 0)) {
+++        goto exit;
+++    }
+++    mutex_unlock(&data->update_lock);
+++    return count;
+++
+++exit:
+++    mutex_unlock(&data->update_lock);
+++    return status;
+++}
+++
+++static ssize_t show_version(struct device *dev, struct device_attribute *attr, char *buf)
+++{
+++    int status = 0;
+++    int major_version = 0;
+++    int minor_version = 0;
+++    struct i2c_client *client = to_i2c_client(dev);
+++    struct cplddev_data *data = i2c_get_clientdata(client);
+++
+++    mutex_lock(&data->update_lock);
+++    status = accton_cpld_i2c_read_internal(client, 0x0);
+++    if (unlikely(status < 0)) {
+++        goto exit;
+++    }
+++    minor_version = status;
+++
+++    status = accton_cpld_i2c_read_internal(client, 0x1);
+++    if (unlikely(status < 0)) {
+++        goto exit;
+++    }
+++    major_version = status;
+++    mutex_unlock(&data->update_lock);
+++
+++    return sprintf(buf, "%02x.%02x\n", major_version, minor_version);
+++
+++exit:
+++    mutex_unlock(&data->update_lock);
+++    return status;
+++}
+++
+++static ssize_t read_reg_value(struct device *dev, struct device_attribute *attr,  char *buf)
+++{
+++    int status = 0;
+++    struct i2c_client *client = to_i2c_client(dev);
+++    struct cplddev_data *data = i2c_get_clientdata(client);
+++    u8 reg = data->reg_offset;
+++
+++    mutex_lock(&data->update_lock);
+++    status = accton_cpld_i2c_read_internal(client, reg);
+++    if (unlikely(status < 0)) {
+++        dev_err(dev, "read reg(0x%x) err %d\n", reg, status);
+++    }
+++    mutex_unlock(&data->update_lock);
+++
+++    if (status < 0)
+++        return status;
+++    else
+++        return sprintf(buf, "reg:0x%02x val:0x%02x\n", reg, status);
+++}
+++
+++static ssize_t write_reg_value(struct device *dev, struct device_attribute *da,
+++            const char *buf, size_t count)
+++{
+++    int status = 0;
+++    u8 cpld_write_val, cpld_cur_val;
+++    u32 val = 0, mask = 0xff;
+++    struct i2c_client *client = to_i2c_client(dev);
+++    struct cplddev_data *data = i2c_get_clientdata(client);
+++    u8 reg = data->reg_offset;
+++
+++    status = sscanf(buf, "0x%x 0x%x", &val, &mask);
+++    if (status != 1 && status != 2) {
+++        return -EINVAL;
+++    }
+++
+++    if (val > 0xFF || mask > 0xFF) {
+++        return -EINVAL;
+++    }
+++
+++    mutex_lock(&data->update_lock);
+++    status = accton_cpld_i2c_read_internal(client, reg);
+++	if (unlikely(status < 0)) {
+++		goto exit;
+++	}
+++
+++    cpld_cur_val = (u8)status;
+++    cpld_cur_val = cpld_cur_val & (~mask);
+++
+++    cpld_write_val = cpld_cur_val | (val & mask);
+++
+++    status = accton_cpld_i2c_write_internal(client, reg, cpld_write_val);
+++    if (unlikely(status < 0)) {
+++        goto exit;
+++    }
+++    mutex_unlock(&data->update_lock);
+++    return count;
+++
+++exit:
+++    mutex_unlock(&data->update_lock);
+++    return status;
+++}
+++
+++static ssize_t show_reg_offset(struct device *dev, struct device_attribute *attr,  char *buf)
+++{
+++    struct i2c_client *client = to_i2c_client(dev);
+++    struct cplddev_data *data = i2c_get_clientdata(client);
+++
+++    return sprintf(buf, "offset:0x%02x\n", data->reg_offset);
+++}
+++
+++static ssize_t store_reg_offset(struct device *dev, struct device_attribute *da,
+++            const char *buf, size_t count)
+++{
+++    struct i2c_client *client = to_i2c_client(dev);
+++    struct cplddev_data *data = i2c_get_clientdata(client);
+++    u32 offset = 0;
+++
+++    if (sscanf(buf, "0x%x", &offset) != 1) {
+++        return -EINVAL;
+++    }
+++
+++    data->reg_offset = (u8)offset;
+++    return count;
+++}
+++
+++static void accton_cpld_i2c_add_client(struct i2c_client *client)
+++{
+++    struct cpld_client_node *node = kzalloc(sizeof(struct cpld_client_node), GFP_KERNEL);
+++
+++    if (!node) {
+++        dev_dbg(&client->dev, "Can't allocate cpld_client_node (0x%x)\n", client->addr);
+++        return;
+++    }
+++
+++    node->client = client;
+++
+++    mutex_lock(&list_lock);
+++    list_add(&node->list, &cpld_client_list);
+++    mutex_unlock(&list_lock);
+++}
+++
+++static void accton_cpld_i2c_remove_client(struct i2c_client *client)
+++{
+++    struct list_head    *list_node = NULL;
+++    struct cpld_client_node *cpld_node = NULL;
+++    int found = 0;
+++
+++    mutex_lock(&list_lock);
+++
+++    list_for_each(list_node, &cpld_client_list)
+++    {
+++        cpld_node = list_entry(list_node, struct cpld_client_node, list);
+++
+++        if (cpld_node->client == client) {
+++            found = 1;
+++            break;
+++        }
+++    }
+++
+++    if (found) {
+++        list_del(list_node);
+++        kfree(cpld_node);
+++    }
+++
+++    mutex_unlock(&list_lock);
+++}
+++
+++/*
+++ * I2C init/probing/exit functions
+++ */
+++static int accton_cpld_i2c_probe(struct i2c_client *client,
+++             const struct i2c_device_id *id)
+++{
+++    struct i2c_adapter *adap = to_i2c_adapter(client->dev.parent);
+++    struct cplddev_data *data;
+++    int ret = -ENODEV;
+++    const struct attribute_group *group = NULL;
+++
+++    if (!i2c_check_functionality(adap, I2C_FUNC_SMBUS_BYTE))
+++        goto exit;
+++
+++    data = kzalloc(sizeof(struct cplddev_data), GFP_KERNEL);
+++    if (!data) {
+++        ret = -ENOMEM;
+++        goto exit;
+++    }
+++
+++    i2c_set_clientdata(client, data);
+++    mutex_init(&data->update_lock);
+++
+++    if (client->dev.of_node)
+++        data->type = (enum cpld_type)of_device_get_match_data(&client->dev);
+++    else
+++        data->type = id->driver_data;
+++
+++    /* Register sysfs hooks */
+++    switch (data->type) {
+++	case CTRL_CPLD:
+++	case PORT_CPLD:
+++	case PORT_CPLD2:
+++        group = &accton_cpld_group;
+++        break;
+++    default:
+++        break;
+++    }
+++
+++    if (group) {
+++        ret = sysfs_create_group(&client->dev.kobj, group);
+++        if (ret) {
+++            goto exit_free;
+++        }
+++    }
+++
+++    accton_cpld_i2c_add_client(client);
+++    return 0;
+++
+++exit_free:
+++    kfree(data);
+++exit:
+++    return ret;
+++}
+++
+++static void accton_cpld_i2c_remove(struct i2c_client *client)
+++{
+++    struct cplddev_data *data = i2c_get_clientdata(client);
+++    const struct attribute_group *group = NULL;
+++
+++    accton_cpld_i2c_remove_client(client);
+++
+++    /* Remove sysfs hooks */
+++    switch (data->type) {
+++	case CTRL_CPLD:
+++	case PORT_CPLD:
+++	case PORT_CPLD2:
+++        group = &accton_cpld_group;
+++        break;
+++    default:
+++        break;
+++    }
+++
+++    if (group) {
+++        sysfs_remove_group(&client->dev.kobj, group);
+++    }
+++
+++    kfree(data);
+++
+++    return;
+++}
+++
+++static int accton_cpld_i2c_read_internal(struct i2c_client *client, u8 reg)
+++{
+++    int status = 0, retry = I2C_RW_RETRY_COUNT;
+++
+++    while (retry) {
+++        status = i2c_smbus_read_byte_data(client, reg);
+++        if (unlikely(status < 0)) {
+++            msleep(I2C_RW_RETRY_INTERVAL);
+++            retry--;
+++            continue;
+++        }
+++
+++        break;
+++    }
+++
+++    return status;
+++}
+++
+++static int accton_cpld_i2c_write_internal(struct i2c_client *client, u8 reg, u8 value)
+++{
+++    int status = 0, retry = I2C_RW_RETRY_COUNT;
+++
+++    while (retry) {
+++        status = i2c_smbus_write_byte_data(client, reg, value);
+++        if (unlikely(status < 0)) {
+++            msleep(I2C_RW_RETRY_INTERVAL);
+++            retry--;
+++            continue;
+++        }
+++
+++        break;
+++    }
+++
+++    return status;
+++}
+++
+++int accton_cpld_i2c_read(unsigned short cpld_type, u8 reg)
+++{
+++    struct list_head   *list_node = NULL;
+++	struct cplddev_data *cplddev = NULL;
+++    struct cpld_client_node *cpld_node = NULL;
+++    int ret = -EPERM;
+++
+++    mutex_lock(&list_lock);
+++
+++    list_for_each(list_node, &cpld_client_list)
+++    {
+++        cpld_node = list_entry(list_node, struct cpld_client_node, list);
+++		cplddev = i2c_get_clientdata(cpld_node->client);
+++
+++        if (cplddev->type == cpld_type) {
+++            ret = accton_cpld_i2c_read_internal(cpld_node->client, reg);
+++            break;
+++        }
+++    }
+++
+++    mutex_unlock(&list_lock);
+++
+++    return ret;
+++}
+++EXPORT_SYMBOL(accton_cpld_i2c_read);
+++
+++int accton_cpld_i2c_write(unsigned short cpld_type, u8 reg, u8 val)
+++{
+++    struct list_head   *list_node = NULL;
+++	struct cplddev_data *cplddev = NULL;
+++    struct cpld_client_node *cpld_node = NULL;
+++    int ret = -EIO;
+++
+++    mutex_lock(&list_lock);
+++
+++    list_for_each(list_node, &cpld_client_list)
+++    {
+++        cpld_node = list_entry(list_node, struct cpld_client_node, list);
+++		cplddev = i2c_get_clientdata(cpld_node->client);
+++
+++        if (cplddev->type == cpld_type) {
+++            ret = accton_cpld_i2c_write_internal(cpld_node->client, reg, val);
+++            break;
+++        }
+++    }
+++
+++    mutex_unlock(&list_lock);
+++
+++    return ret;
+++}
+++EXPORT_SYMBOL(accton_cpld_i2c_write);
+++
+++int accton_cpld_i2c_write_with_mask(unsigned short cpld_type, u8 reg, u8 val, u8 mask)
+++{
+++	struct list_head *list_node = NULL;
+++	struct cpld_client_node *cpld_node = NULL;
+++	struct cplddev_data *cplddev = NULL;
+++	int status = -EIO;
+++	u8 cpld_write_val, cpld_cur_val;
+++
+++	mutex_lock(&list_lock);
+++
+++	list_for_each(list_node, &cpld_client_list) {
+++		cpld_node = list_entry(list_node, struct cpld_client_node, list);
+++		cplddev = i2c_get_clientdata(cpld_node->client);
+++
+++		if (cplddev->type == cpld_type) {
+++			status = accton_cpld_i2c_read_internal(cpld_node->client, reg);
+++			if (unlikely(status < 0)) {
+++				goto exit;
+++			}
+++
+++			cpld_cur_val = (u8)status;
+++			cpld_cur_val = cpld_cur_val & (~mask);
+++
+++			cpld_write_val = cpld_cur_val | (val & mask);
+++
+++			status = accton_cpld_i2c_write_internal(cpld_node->client, reg, cpld_write_val);
+++			if (unlikely(status < 0)) {
+++				goto exit;
+++			}
+++			break;
+++		}
+++	}
+++
+++exit:
+++	mutex_unlock(&list_lock);
+++	return status;
+++}
+++EXPORT_SYMBOL(accton_cpld_i2c_write_with_mask);
+++
+++static struct i2c_driver accton_cpld_i2c_driver = {
+++    .driver     = {
+++        .name   = "accton_cpld_i2c",
+++        .owner  = THIS_MODULE,
+++		.of_match_table = of_match_ptr(accton_cpld_i2c_of_ids),
+++    },
+++    .probe      = accton_cpld_i2c_probe,
+++    .remove     = accton_cpld_i2c_remove,
+++    .id_table   = accton_cpld_i2c_id,
+++};
+++
+++static int __init accton_cpld_i2c_init(void)
+++{
+++    mutex_init(&list_lock);
+++    return i2c_add_driver(&accton_cpld_i2c_driver);
+++}
+++
+++static void __exit accton_cpld_i2c_exit(void)
+++{
+++    i2c_del_driver(&accton_cpld_i2c_driver);
+++}
+++
+++MODULE_AUTHOR("Ang Liu <ang_liu@accton.com.cn>");
+++MODULE_DESCRIPTION("accton cpld i2c driver");
+++MODULE_LICENSE("GPL v2");
+++
+++module_init(accton_cpld_i2c_init);
+++module_exit(accton_cpld_i2c_exit);
+++
++diff --git a/drivers/i2c/muxes/accton-cpld-spi.c b/drivers/i2c/muxes/accton-cpld-spi.c
++new file mode 100644
++index 000000000..68071395e
++--- /dev/null
+++++ b/drivers/i2c/muxes/accton-cpld-spi.c
++@@ -0,0 +1,608 @@
+++/*
+++ * An SPI device dirver for Accton CPLD
+++ *
+++ * Copyright (C) 2023 Accton Technology Corporation.
+++ * Ang Liu <ang_liu@accton.com.cn>
+++ *
+++ * This module supports the accton cpld slave devices, such as SFP.
+++ * This includes the:
+++ *     Accton CTRL_CPLD/PORT_CPLD
+++ *
+++ * This file is licensed under the terms of the GNU General Public
+++ * License version 2. This program is licensed "as is" without any
+++ * warranty of any kind, whether express or implied.
+++ */
+++
+++#include <linux/module.h>
+++#include <linux/init.h>
+++#include <linux/slab.h>
+++#include <linux/device.h>
+++#include <linux/version.h>
+++#include <linux/stat.h>
+++#include <linux/hwmon-sysfs.h>
+++#include <linux/delay.h>
+++#include <linux/printk.h>
+++#include <linux/spi/spi.h>
+++#include <linux/of_device.h>
+++#include "accton-cpld.h"
+++
+++#define SPI_RW_RETRY_COUNT      3
+++#define SPI_RW_RETRY_INTERVAL   5       /* ms */
+++#define CPLD_READ_OPCODE        0x08
+++#define CPLD_WRITE_OPCODE       0x04
+++#define CPLD_REG_ADDR_BIT       16
+++#define CPLD_OPCODE_ADDR_BIT    24
+++#define CPLD_WRITE_DATA_LEN     3
+++#define CPLD_READ_DATA_LEN      1
+++#define CPLD_TEST_REG			0x05
+++
+++struct cplddev_data {
+++	enum    cpld_type type;
+++	struct  spi_device  *spi;
+++	u8      tx_buffer[CPLD_WRITE_DATA_LEN];
+++	u8      rx_buffer[CPLD_READ_DATA_LEN];
+++	u8      reg_offset;
+++
+++	struct mutex    update_lock;
+++};
+++
+++static LIST_HEAD(cpld_device_list);
+++static struct mutex     list_lock;
+++
+++struct cpld_device_node {
+++	struct spi_device *spi;
+++	struct list_head   list;
+++};
+++
+++enum accton_cpld_sysfs_attributes {
+++	CPLD_VERSION,
+++	ACCESS,
+++	ACCESS_REG_OFFSET,
+++	ACCESS_REG_VALUE,
+++};
+++
+++/* sysfs attributes for cpld access */
+++static ssize_t access(struct device *dev, struct device_attribute *da,
+++			 const char *buf, size_t count);
+++static ssize_t show_version(struct device *dev, struct device_attribute *da,
+++			 char *buf);
+++static ssize_t write_reg_value(struct device *dev, struct device_attribute *da,
+++					  const char *buf, size_t count);
+++static ssize_t read_reg_value(struct device *dev, struct device_attribute *da,
+++							char *buf);
+++static ssize_t store_reg_offset(struct device *dev, struct device_attribute *da,
+++					  const char *buf, size_t count);
+++static ssize_t show_reg_offset(struct device *dev, struct device_attribute *da,
+++							char *buf);
+++static int accton_cpld_read_internal(struct spi_device *spi, u8 reg);
+++static int accton_cpld_write_internal(struct spi_device *spi, u8 reg, u8 value);
+++
+++static SENSOR_DEVICE_ATTR(version, S_IRUGO, show_version, NULL, CPLD_VERSION);
+++static SENSOR_DEVICE_ATTR(access, S_IWUSR, NULL, access, ACCESS);
+++static SENSOR_DEVICE_ATTR(reg_offset, S_IWUSR | S_IRUGO, show_reg_offset, store_reg_offset, ACCESS_REG_OFFSET);
+++static SENSOR_DEVICE_ATTR(reg_value, S_IWUSR | S_IRUGO, read_reg_value, write_reg_value, ACCESS_REG_VALUE);
+++
+++static struct attribute *accton_cpld_attributes[] = {
+++	&sensor_dev_attr_version.dev_attr.attr,
+++	&sensor_dev_attr_access.dev_attr.attr,
+++	&sensor_dev_attr_reg_offset.dev_attr.attr,
+++	&sensor_dev_attr_reg_value.dev_attr.attr,
+++	NULL
+++};
+++
+++static const struct attribute_group accton_cpld_group = {
+++	.attrs = accton_cpld_attributes,
+++};
+++
+++static ssize_t access(struct device *dev, struct device_attribute *da,
+++			const char *buf, size_t count)
+++{
+++	int status = 0;
+++	u32 reg = 0, val = 0, mask = 0xff;
+++	u8 cpld_write_val, cpld_cur_val;
+++	struct cplddev_data *cplddev = dev_get_drvdata(dev);
+++
+++	status = sscanf(buf, "0x%x 0x%x 0x%x", &reg, &val, &mask);
+++	if (status != 2 && status != 3) {
+++		return -EINVAL;
+++	}
+++
+++	if (reg > 0xFF || val > 0xFF || mask > 0xFF) {
+++		return -EINVAL;
+++	}
+++
+++	mutex_lock(&cplddev->update_lock);
+++	status = accton_cpld_read_internal(cplddev->spi, reg);
+++	if (unlikely(status < 0)) {
+++		goto exit;
+++	}
+++
+++	cpld_cur_val = (u8)status;
+++	cpld_cur_val = cpld_cur_val & (~mask);
+++
+++	cpld_write_val = cpld_cur_val | (val & mask);
+++
+++	status = accton_cpld_write_internal(cplddev->spi, reg, cpld_write_val);
+++	if (unlikely(status < 0)) {
+++		goto exit;
+++	}
+++	mutex_unlock(&cplddev->update_lock);
+++	return count;
+++
+++exit:
+++	mutex_unlock(&cplddev->update_lock);
+++	return status;
+++}
+++
+++static ssize_t show_version(struct device *dev, struct device_attribute *attr, char *buf)
+++{
+++	int status = 0;
+++	int major_version = 0;
+++	int minor_version = 0;
+++	struct cplddev_data *cplddev = dev_get_drvdata(dev);
+++
+++	mutex_lock(&cplddev->update_lock);
+++	status = accton_cpld_read_internal(cplddev->spi, 0x0);
+++	if (unlikely(status < 0)) {
+++		goto exit;
+++	}
+++	major_version = status;
+++
+++	status = accton_cpld_read_internal(cplddev->spi, 0x1);
+++	if (unlikely(status < 0)) {
+++		goto exit;
+++	}
+++	minor_version = status;
+++
+++	mutex_unlock(&cplddev->update_lock);
+++
+++	major_version &= 0xff;
+++	minor_version &= 0xff;
+++
+++	/* 0xFF mean cpld no repsonse */
+++	if ((major_version == 0xFF) && (minor_version == 0xFF))
+++	{
+++		return sprintf(buf, "Unknown\n");
+++	}
+++
+++	return sprintf(buf, "%02x.%02x\n", major_version, minor_version);
+++
+++exit:
+++	mutex_unlock(&cplddev->update_lock);
+++	return status;
+++}
+++
+++static ssize_t read_reg_value(struct device *dev, struct device_attribute *attr,  char *buf)
+++{
+++	int status = 0;
+++	struct cplddev_data *cplddev = dev_get_drvdata(dev);
+++	u8 reg = cplddev->reg_offset;
+++
+++	mutex_lock(&cplddev->update_lock);
+++	status = accton_cpld_read_internal(cplddev->spi, reg);
+++	if (unlikely(status < 0)) {
+++		dev_err(dev, "read reg(0x%x) err %d\n", reg, status);
+++	}
+++	mutex_unlock(&cplddev->update_lock);
+++
+++	if (status < 0)
+++		return status;
+++	else
+++		return sprintf(buf, "reg:0x%02x val:0x%02x\n", reg, status);
+++}
+++
+++static ssize_t write_reg_value(struct device *dev, struct device_attribute *da,
+++			const char *buf, size_t count)
+++{
+++	int status = 0;
+++	u8 cpld_write_val, cpld_cur_val;
+++	u32 val = 0, mask = 0xff;
+++	struct cplddev_data *cplddev = dev_get_drvdata(dev);
+++	u8 reg = cplddev->reg_offset;
+++
+++	status = sscanf(buf, "0x%x 0x%x", &val, &mask);
+++	if (status != 1 && status != 2) {
+++		return -EINVAL;
+++	}
+++
+++	if (val > 0xFF || mask > 0xFF) {
+++		return -EINVAL;
+++	}
+++
+++	mutex_lock(&cplddev->update_lock);
+++	status = accton_cpld_read_internal(cplddev->spi, reg);
+++	if (unlikely(status < 0)) {
+++		goto exit;
+++	}
+++
+++	cpld_cur_val = (u8)status;
+++	cpld_cur_val = cpld_cur_val & (~mask);
+++
+++	cpld_write_val = cpld_cur_val | (val & mask);
+++
+++	status = accton_cpld_write_internal(cplddev->spi, reg, cpld_write_val);
+++	if (unlikely(status < 0)) {
+++		goto exit;
+++	}
+++	mutex_unlock(&cplddev->update_lock);
+++	return count;
+++
+++exit:
+++	mutex_unlock(&cplddev->update_lock);
+++	return status;
+++}
+++
+++static ssize_t show_reg_offset(struct device *dev, struct device_attribute *attr,  char *buf)
+++{
+++	struct cplddev_data *cplddev = dev_get_drvdata(dev);
+++
+++	return sprintf(buf, "offset:0x%02x\n", cplddev->reg_offset);
+++}
+++
+++static ssize_t store_reg_offset(struct device *dev, struct device_attribute *da,
+++			const char *buf, size_t count)
+++{
+++	struct cplddev_data *cplddev = dev_get_drvdata(dev);
+++	u32 offset = 0;
+++
+++	if (sscanf(buf, "0x%x", &offset) != 1) {
+++		return -EINVAL;
+++	}
+++
+++	cplddev->reg_offset = (u8)offset;
+++	return count;
+++}
+++
+++static int accton_cpld_read_internal(struct spi_device *spi, u8 reg)
+++{
+++	int status = 0;
+++	unsigned int retry = SPI_RW_RETRY_COUNT;
+++	struct cplddev_data *cplddev = spi_get_drvdata(spi);
+++
+++	cplddev->tx_buffer[0] = CPLD_READ_OPCODE;
+++	cplddev->tx_buffer[1] = reg;
+++	cplddev->tx_buffer[2] = 0;
+++
+++	while (retry) {
+++		status = spi_write_then_read(spi, cplddev->tx_buffer,
+++					CPLD_WRITE_DATA_LEN, cplddev->rx_buffer, CPLD_READ_DATA_LEN);
+++
+++		if (unlikely(status < 0)) {
+++			msleep(SPI_RW_RETRY_INTERVAL);
+++			retry--;
+++			continue;
+++		}
+++		break;
+++	}
+++
+++	if (0 == status)
+++	{
+++		status = cplddev->rx_buffer[0];
+++	}
+++
+++	return status;
+++}
+++
+++static int accton_cpld_write_internal(struct spi_device *spi, u8 reg, u8 value)
+++{
+++	int status = 0;
+++	unsigned int retry = SPI_RW_RETRY_COUNT;
+++	struct cplddev_data *cplddev = spi_get_drvdata(spi);
+++
+++	cplddev->tx_buffer[0] = CPLD_WRITE_OPCODE;
+++	cplddev->tx_buffer[1] = reg;
+++	cplddev->tx_buffer[2] = value;
+++
+++	while (retry) {
+++		status = spi_write_then_read(spi, cplddev->tx_buffer,
+++						CPLD_WRITE_DATA_LEN, NULL, 0);
+++
+++		if (unlikely(status < 0)) {
+++			msleep(SPI_RW_RETRY_INTERVAL);
+++			retry--;
+++			continue;
+++		}
+++		break;
+++	}
+++
+++	return status;
+++}
+++
+++int accton_cpld_read(unsigned short cpld_type, u8 reg)
+++{
+++	struct list_head   *list_node = NULL;
+++	struct cpld_device_node *cpld_node = NULL;
+++	struct cplddev_data *cplddev = NULL;
+++	int ret = -EPERM;
+++
+++	mutex_lock(&list_lock);
+++	list_for_each(list_node, &cpld_device_list) {
+++		cpld_node = list_entry(list_node, struct cpld_device_node, list);
+++
+++		cplddev = spi_get_drvdata(cpld_node->spi);
+++		if (cplddev->type == cpld_type) {
+++			ret = accton_cpld_read_internal(cpld_node->spi, reg);
+++			break;
+++		}
+++	}
+++	mutex_unlock(&list_lock);
+++
+++	return ret;
+++}
+++EXPORT_SYMBOL(accton_cpld_read);
+++
+++int accton_cpld_write(unsigned short cpld_type, u8 reg, u8 val)
+++{
+++	struct list_head *list_node = NULL;
+++	struct cpld_device_node *cpld_node = NULL;
+++	struct cplddev_data *cplddev = NULL;
+++	int ret = -EIO;
+++
+++	mutex_lock(&list_lock);
+++
+++	list_for_each(list_node, &cpld_device_list) {
+++		cpld_node = list_entry(list_node, struct cpld_device_node, list);
+++
+++		cplddev = spi_get_drvdata(cpld_node->spi);
+++		if (cplddev->type == cpld_type) {
+++			ret = accton_cpld_write_internal(cpld_node->spi, reg, val);
+++			break;
+++		}
+++	}
+++
+++	mutex_unlock(&list_lock);
+++
+++	return ret;
+++}
+++EXPORT_SYMBOL(accton_cpld_write);
+++
+++int accton_cpld_write_with_mask(unsigned short cpld_type, u8 reg, u8 val, u8 mask)
+++{
+++	struct list_head *list_node = NULL;
+++	struct cpld_device_node *cpld_node = NULL;
+++	struct cplddev_data *cplddev = NULL;
+++	int status = -EIO;
+++	u8 cpld_write_val, cpld_cur_val;
+++
+++	mutex_lock(&list_lock);
+++
+++	list_for_each(list_node, &cpld_device_list) {
+++		cpld_node = list_entry(list_node, struct cpld_device_node, list);
+++
+++		cplddev = spi_get_drvdata(cpld_node->spi);
+++		if (cplddev->type == cpld_type) {
+++			status = accton_cpld_read_internal(cplddev->spi, reg);
+++			if (unlikely(status < 0)) {
+++				goto exit;
+++			}
+++
+++			cpld_cur_val = (u8)status;
+++			cpld_cur_val = cpld_cur_val & (~mask);
+++
+++			cpld_write_val = cpld_cur_val | (val & mask);
+++
+++			status = accton_cpld_write_internal(cpld_node->spi, reg, cpld_write_val);
+++			if (unlikely(status < 0)) {
+++				goto exit;
+++			}
+++			break;
+++		}
+++	}
+++
+++exit:
+++	mutex_unlock(&list_lock);
+++	return status;
+++}
+++EXPORT_SYMBOL(accton_cpld_write_with_mask);
+++
+++static int accton_cpld_add_device(struct spi_device *spi)
+++{
+++	struct cplddev_data *cplddev = dev_get_drvdata(&spi->dev);
+++	struct cpld_device_node *node = kzalloc(sizeof(struct cpld_device_node), GFP_KERNEL);
+++
+++	if (!node) {
+++		dev_err(&spi->dev, "Can't allocate cpld_device_node, type = %d\n", cplddev->type);
+++		return -1;
+++	}
+++
+++	node->spi = spi;
+++
+++	mutex_lock(&list_lock);
+++	list_add(&node->list, &cpld_device_list);
+++	mutex_unlock(&list_lock);
+++
+++	return 0;
+++}
+++
+++
+++#ifdef CONFIG_OF
+++static const struct of_device_id accton_cpld_of_ids[] = {
+++	{
+++		.compatible = "accton,ctrl_cpld",
+++		.data = (void *) CTRL_CPLD,
+++	},
+++	{
+++		.compatible = "accton,port_cpld",
+++		.data = (void *) PORT_CPLD,
+++	},
+++	{
+++		.compatible = "accton,port_cpld2",
+++		.data = (void *) PORT_CPLD2,
+++	},
+++	{},
+++};
+++MODULE_DEVICE_TABLE(of, accton_cpld_of_ids);
+++#endif
+++
+++static const struct spi_device_id accton_cpld_ids[] = {
+++	{ "ctrl_cpld",   CTRL_CPLD },
+++	{ "port_cpld",   PORT_CPLD },
+++	{ "port_cpld2",  PORT_CPLD2 },
+++	{},
+++};
+++MODULE_DEVICE_TABLE(spi, accton_cpld_ids);
+++
+++static void accton_cpld_remove_device(struct spi_device *spi)
+++{
+++	struct list_head *list_node = NULL;
+++	struct cpld_device_node *cpld_node = NULL;
+++	int found = 0;
+++
+++	mutex_lock(&list_lock);
+++
+++	list_for_each(list_node, &cpld_device_list) {
+++		cpld_node = list_entry(list_node, struct cpld_device_node, list);
+++
+++		if (cpld_node->spi == spi) {
+++			found = 1;
+++			break;
+++		}
+++	}
+++
+++	if (found) {
+++		list_del(list_node);
+++		kfree(cpld_node);
+++	}
+++
+++	mutex_unlock(&list_lock);
+++}
+++
+++static int accton_cpld_probe(struct spi_device *spi)
+++{
+++	const struct of_device_id *match;
+++	struct cplddev_data *cplddev;
+++	const struct attribute_group *group = NULL;
+++	int ret = 0;
+++	int type;
+++
+++	match = of_match_device(accton_cpld_of_ids, &spi->dev);
+++	if (match)
+++		type = (int)(uintptr_t)match->data;
+++	else
+++		type = spi_get_device_id(spi)->driver_data;
+++
+++	/* Allocate driver data */
+++	cplddev = kzalloc(sizeof(*cplddev), GFP_KERNEL);
+++	if (!cplddev)
+++		return -ENOMEM;
+++
+++	/* Initialize the driver data */
+++	cplddev->spi = spi;
+++	cplddev->type = type;
+++	spi_set_drvdata(spi, cplddev);
+++
+++	ret = spi_setup(spi);
+++	if (ret) {
+++		dev_err(&spi->dev, "cpld device %d spi_setup fail\n", cplddev->type);
+++		goto spi_setup_failed;
+++	}
+++
+++	mutex_init(&cplddev->update_lock);
+++
+++	/* Register sysfs hooks */
+++	switch (cplddev->type) {
+++	case CTRL_CPLD:
+++	case PORT_CPLD:
+++	case PORT_CPLD2:
+++		group = &accton_cpld_group;
+++		break;
+++	default:
+++		;
+++	}
+++
+++	ret = accton_cpld_read_internal(cplddev->spi, CPLD_TEST_REG);
+++	if (ret == 0xff) {
+++		dev_err(&spi->dev, "cpld device %d test fail\n", cplddev->type);
+++		goto cpld_test_failed;
+++	}
+++
+++	if (group) {
+++		ret = sysfs_create_group(&spi->dev.kobj, group);
+++		if (ret) {
+++			dev_err(&spi->dev, "cpld device %d sysfs create fail\n", cplddev->type);
+++			goto add_sysfs_failed;
+++		}
+++	}
+++
+++	ret = accton_cpld_add_device(spi);
+++	if (ret) {
+++		dev_err(&spi->dev, "cpld device %d add_device fail\n", cplddev->type);
+++		goto add_device_failed;
+++	}
+++
+++	dev_info(&spi->dev, "cpld device %d registered\n", cplddev->type);
+++
+++	return 0;
+++
+++add_device_failed:
+++	if (group) {
+++		sysfs_remove_group(&spi->dev.kobj, group);
+++	}
+++
+++add_sysfs_failed:
+++cpld_test_failed:
+++spi_setup_failed:
+++	kfree(cplddev);
+++	return ret;
+++}
+++
+++static void accton_cpld_remove(struct spi_device *spi)
+++{
+++	const struct attribute_group *group = NULL;
+++	struct cplddev_data *cplddev = dev_get_drvdata(&spi->dev);
+++
+++	/* Remove sysfs hooks */
+++	switch (cplddev->type) {
+++	case CTRL_CPLD:
+++	case PORT_CPLD:
+++	case PORT_CPLD2:
+++		group = &accton_cpld_group;
+++		break;
+++	default:
+++		;
+++	}
+++
+++	if (group) {
+++		sysfs_remove_group(&spi->dev.kobj, group);
+++	}
+++
+++	accton_cpld_remove_device(spi);
+++	kfree(cplddev);
+++
+++	return;
+++}
+++
+++static struct spi_driver accton_cpld_driver = {
+++	.driver = {
+++		.name   = "accton_cpld",
+++		.owner  = THIS_MODULE,
+++		.of_match_table = of_match_ptr(accton_cpld_of_ids),
+++	},
+++	.probe      = accton_cpld_probe,
+++	.remove     = accton_cpld_remove,
+++	.id_table   = accton_cpld_ids,
+++};
+++
+++static int accton_cpld_init(void)
+++{
+++	int status;
+++
+++	mutex_init(&list_lock);
+++	status = spi_register_driver(&accton_cpld_driver);
+++	if (status < 0) {
+++		printk(KERN_ERR "register accton cpld spi driver fail!\n");
+++	}
+++	return status;
+++}
+++
+++static void accton_cpld_exit(void)
+++{
+++	spi_unregister_driver(&accton_cpld_driver);
+++}
+++
+++MODULE_LICENSE("GPL v2");
+++MODULE_AUTHOR("Ang Liu <ang_liu@accton.com.cn>");
+++MODULE_DESCRIPTION("Accton SPI CPLD driver");
+++
+++module_init(accton_cpld_init);
+++module_exit(accton_cpld_exit);
++diff --git a/drivers/i2c/muxes/accton-cpld.h b/drivers/i2c/muxes/accton-cpld.h
++new file mode 100644
++index 000000000..371f1b90d
++--- /dev/null
+++++ b/drivers/i2c/muxes/accton-cpld.h
++@@ -0,0 +1,25 @@
+++/*
+++ * accton_cpld.h
+++ *
+++ *  Created on: 2021年11月16日
+++ *      Author: rei
+++ */
+++
+++#ifndef _LINUX_ACCTON_CPLD_H_
+++#define _LINUX_ACCTON_CPLD_H_
+++
+++enum cpld_type {
+++	CTRL_CPLD,
+++	PORT_CPLD,
+++	PORT_CPLD2,
+++};
+++
+++int accton_cpld_read(unsigned short cpld_type, u8 reg);
+++int accton_cpld_write(unsigned short cpld_type, u8 reg, u8 val);
+++int accton_cpld_write_with_mask(unsigned short cpld_type, u8 reg, u8 val, u8 mask);
+++
+++int accton_cpld_i2c_read(unsigned short cpld_type, u8 reg);
+++int accton_cpld_i2c_write(unsigned short cpld_type, u8 reg, u8 val);
+++int accton_cpld_i2c_write_with_mask(unsigned short cpld_type, u8 reg, u8 val, u8 mask);
+++
+++#endif /* _LINUX_ACCTON_CPLD_H_ */
++diff --git a/drivers/i2c/muxes/i2c-mux-accton-cpld.c b/drivers/i2c/muxes/i2c-mux-accton-cpld.c
++new file mode 100644
++index 000000000..52acedb68
++--- /dev/null
+++++ b/drivers/i2c/muxes/i2c-mux-accton-cpld.c
++@@ -0,0 +1,233 @@
+++/*
+++ * I2C multiplexer driver for accton CPLD
+++ *
+++ * Copyright (C) 2023 Accton Technology Corporation.
+++ * Ang Liu <ang_liu@accton.com.cn>
+++ *
+++ * Based on:
+++ *	i2c-mux-pca954x.c
+++ *  i2c-mux-pinctrl.c
+++ *
+++ * This file is licensed under the terms of the GNU General Public
+++ * License version 2. This program is licensed "as is" without any
+++ * warranty of any kind, whether express or implied.
+++ */
+++
+++#include <linux/device.h>
+++#include <linux/i2c.h>
+++#include <linux/i2c-mux.h>
+++#include <linux/module.h>
+++#include <linux/of.h>
+++#include <linux/of_device.h>
+++#include "i2c-mux-accton-cpld.h"
+++#include "accton-cpld.h"
+++
+++#define ACCTON_CPLD_I2C_MUX_MAX_NCHANS 8
+++
+++enum cpldmux_type {
+++	cpldmux_2,
+++	cpldmux_3,
+++	cpldmux_4,
+++	cpldmux_5,
+++	cpldmux_6,
+++	cpldmux_7,
+++	cpldmux_8,
+++};
+++
+++struct chip_desc {
+++	u8 nchans;
+++};
+++
+++struct accton_cpld_mux {
+++	const struct chip_desc *chip;
+++	u32	mux_reg_base;
+++	u32	cpld_type;
+++	u32 base_nr;
+++	u8	last_chan;		/* last register value */
+++};
+++
+++/* Provide specs for the i2c-mux types we know about */
+++static const struct chip_desc chips[] = {
+++	[cpldmux_2] = {
+++		.nchans = 2,
+++	},
+++	[cpldmux_3] = {
+++		.nchans = 3,
+++	},
+++	[cpldmux_4] = {
+++		.nchans = 4,
+++	},
+++	[cpldmux_5] = {
+++		.nchans = 5,
+++	},
+++	[cpldmux_6] = {
+++		.nchans = 6,
+++	},
+++	[cpldmux_7] = {
+++		.nchans = 7,
+++	},
+++	[cpldmux_8] = {
+++		.nchans = 8,
+++	},
+++};
+++
+++#ifdef CONFIG_OF
+++static const struct of_device_id accton_cpld_mux_of_match[] = {
+++	{ .compatible = "accton,cpldmux2", .data = &chips[cpldmux_2] },
+++	{ .compatible = "accton,cpldmux3", .data = &chips[cpldmux_3] },
+++	{ .compatible = "accton,cpldmux4", .data = &chips[cpldmux_4] },
+++	{ .compatible = "accton,cpldmux5", .data = &chips[cpldmux_5] },
+++	{ .compatible = "accton,cpldmux6", .data = &chips[cpldmux_6] },
+++	{ .compatible = "accton,cpldmux7", .data = &chips[cpldmux_7] },
+++	{ .compatible = "accton,cpldmux8", .data = &chips[cpldmux_8] },
+++	{}
+++};
+++MODULE_DEVICE_TABLE(of, accton_cpld_mux_of_match);
+++#endif
+++
+++static int accton_cpld_mux_select_chan(struct i2c_mux_core *muxc, u32 chan)
+++{
+++	struct accton_cpld_mux *data = i2c_mux_priv(muxc);
+++	struct device *dev = muxc->dev;
+++	u8 regval;
+++	int ret = 0;
+++
+++	regval = chan;
+++
+++	dev_dbg(dev, "cpld_type:0x%x, reg:0x%x, val:0x%x\n",
+++				data->cpld_type, data->mux_reg_base, regval);
+++
+++	/* Only select the channel if its different from the last channel */
+++	if (data->last_chan != regval) {
+++		ret = accton_cpld_write(data->cpld_type, data->mux_reg_base, regval);
+++		if (ret < 0) {
+++			dev_err(dev, "failed to select mux chan, cpld_type:0x%x, reg:0x%x, val:0x%x\n",
+++				data->cpld_type, data->mux_reg_base, regval);
+++		}
+++		data->last_chan = ret < 0 ? 0 : regval;
+++	}
+++
+++	return ret;
+++}
+++
+++/*
+++ * I2C init/probing/exit functions
+++ */
+++static int accton_cpld_mux_probe(struct platform_device *pdev)
+++{
+++	struct device *dev = &pdev->dev;
+++	int num, force, class;
+++	struct accton_cpld_mux *data;
+++	const struct of_device_id *match;
+++	struct accton_cpld_mux_platform_data *pdata = dev_get_platdata(&pdev->dev);
+++	struct device_node *of_node = dev->of_node;
+++	struct i2c_mux_core *muxc;
+++	struct device_node *parent_np;
+++	struct i2c_adapter *parent;
+++	int ret;
+++
+++	parent_np = of_parse_phandle(of_node, "i2c-parent", 0);
+++	if (!parent_np) {
+++		dev_err(dev, "Cannot parse i2c-parent\n");
+++		return -EINVAL;
+++	}
+++
+++	parent = of_get_i2c_adapter_by_node(parent_np);
+++	of_node_put(parent_np);
+++	if (!parent) {
+++		return -EPROBE_DEFER;
+++	}
+++
+++	muxc = i2c_mux_alloc(parent, dev,
+++			     ACCTON_CPLD_I2C_MUX_MAX_NCHANS, sizeof(*data), 0,
+++			     accton_cpld_mux_select_chan, NULL);
+++	if (!muxc) {
+++		ret = -ENOMEM;
+++		goto err_parent;
+++	}
+++
+++	data = i2c_mux_priv(muxc);
+++	platform_set_drvdata(pdev, muxc);
+++
+++	ret = of_property_read_u32(of_node, "reg", &data->mux_reg_base);
+++	if (ret < 0) {
+++		dev_err(dev, "no reg for node '%s'\n", of_node->name);
+++		goto fail_del_adapters;
+++	}
+++
+++	ret = of_property_read_u32(of_node, "base-nr", &data->base_nr);
+++	if (ret < 0) {
+++		dev_dbg(dev, "no base-nr for node '%s'\n", of_node->name);
+++	}
+++
+++	muxc->mux_locked = of_property_read_bool(of_node, "mux-locked");
+++	ret = of_property_read_u32(of_node, "cpld-type", &data->cpld_type);
+++	if (ret < 0) {
+++		dev_err(dev, "no cpld-type for node '%s'\n", of_node->name);
+++		goto fail_del_adapters;
+++	}
+++
+++	match = of_match_device(of_match_ptr(accton_cpld_mux_of_match), dev);
+++	if (match) {
+++		data->chip = of_device_get_match_data(dev);
+++	} else if (pdata) {
+++		data->chip = &chips[pdata->mux_type];
+++	} else {
+++		dev_err(dev, "can not match any device\n");
+++		goto fail_del_adapters;
+++	}
+++
+++	data->last_chan = 0;		   /* force the first selection */
+++
+++	/* Now create an adapter for each channel */
+++	for (num = 0; num < data->chip->nchans; num++) {
+++
+++		force = data->base_nr ? (data->base_nr + num) : 0;
+++		class = 0;			  /* no class by default */
+++		if (pdata) {
+++			if (num >= pdata->num_modes) {
+++				/* discard unconfigured channels */
+++				break;
+++			}
+++		}
+++
+++		ret = i2c_mux_add_adapter(muxc, force, num, class);
+++		if (ret)
+++			goto fail_del_adapters;
+++	}
+++
+++	dev_info(dev, "registered %d busses\n", num);
+++
+++	return 0;
+++
+++fail_del_adapters:
+++	i2c_mux_del_adapters(muxc);
+++err_parent:
+++	i2c_put_adapter(parent);
+++
+++	return ret;
+++}
+++
+++static int accton_cpld_mux_remove(struct platform_device *pdev)
+++{
+++	struct i2c_mux_core *muxc = platform_get_drvdata(pdev);
+++
+++	i2c_mux_del_adapters(muxc);
+++	i2c_put_adapter(muxc->parent);
+++	return 0;
+++}
+++
+++static struct platform_driver accton_cpld_mux_driver = {
+++	.driver		= {
+++		.name	= "accton-cpld-mux",
+++		.of_match_table = of_match_ptr(accton_cpld_mux_of_match),
+++	},
+++	.probe		= accton_cpld_mux_probe,
+++	.remove		= accton_cpld_mux_remove,
+++};
+++
+++module_platform_driver(accton_cpld_mux_driver);
+++
+++MODULE_AUTHOR("Ang Liu <ang_liu@accton.com.cn>");
+++MODULE_DESCRIPTION("Accton CPLD I2C mux driver");
+++MODULE_LICENSE("GPL v2");
++diff --git a/drivers/i2c/muxes/i2c-mux-accton-cpld.h b/drivers/i2c/muxes/i2c-mux-accton-cpld.h
++new file mode 100644
++index 000000000..50a42a331
++--- /dev/null
+++++ b/drivers/i2c/muxes/i2c-mux-accton-cpld.h
++@@ -0,0 +1,25 @@
+++/*
+++ * I2C multiplexer driver for accton CPLD
+++ *
+++ * Copyright (C) 2015 Accton Technology Corporation.
+++ * Ang Liu <ang_liu@accton.com.cn>
+++ *
+++ * Based on:
+++ *	pca954x.h
+++ *
+++ * This file is licensed under the terms of the GNU General Public
+++ * License version 2. This program is licensed "as is" without any
+++ * warranty of any kind, whether express or implied.
+++ */
+++
+++#ifndef _LINUX_I2C_MUX_ACCTON_CPLD_H
+++#define _LINUX_I2C_MUX_ACCTON_CPLD_H
+++
+++/* Platform data for the accton CPLD I2C multiplexers */
+++
+++struct accton_cpld_mux_platform_data {
+++	int num_modes;
+++	unsigned int mux_type;
+++};
+++
+++#endif /* _LINUX_I2C_MUX_ACCTON_CPLD_H */
++diff --git a/drivers/i2c/muxes/i2c-wishbone-cpld.c b/drivers/i2c/muxes/i2c-wishbone-cpld.c
++new file mode 100644
++index 000000000..778a554d1
++--- /dev/null
+++++ b/drivers/i2c/muxes/i2c-wishbone-cpld.c
++@@ -0,0 +1,498 @@
+++/*
+++ * I2C adapter driver for accton CPLD wishbone
+++ *
+++ * Copyright (C) 2023 Accton Technology Corporation.
+++ * Ang Liu <ang_liu@accton.com.cn>
+++ *
+++ * Based on:
+++ *  i2c-pca-platform.c
+++ *  i2c-imx.c
+++ *
+++ * This file is licensed under the terms of the GNU General Public
+++ * License version 2. This program is licensed "as is" without any
+++ * warranty of any kind, whether express or implied.
+++ */
+++
+++#include <linux/kernel.h>
+++#include <linux/module.h>
+++#include <linux/slab.h>
+++#include <linux/delay.h>
+++#include <linux/jiffies.h>
+++#include <linux/errno.h>
+++#include <linux/i2c.h>
+++#include <linux/platform_device.h>
+++#include <linux/of.h>
+++#include <linux/of_device.h>
+++
+++#include "accton-cpld.h"
+++#include "i2c-wishbone-cpld.h"
+++
+++/* ------ Definitions for i2c master's registers ------ */
+++
+++#define OC_CPLD_I2C_PRER_HIGH   0x8
+++#define OC_CPLD_I2C_PRER_LOW    0x9
+++#define OC_CPLD_I2C_CTR         0xA       /*cpld i2c master control register*/
+++#define OC_CPLD_I2C_TXR         0xB       /*cpld i2c master Transmit register*/
+++#define OC_CPLD_I2C_CR          0xC       /*cpld i2c master command register*/
+++#define OC_CPLD_I2C_CR_EN       0xD       /*cpld i2c master CR en register*/
+++#define OC_CPLD_I2C_RXR         0xE       /*cpld i2c master revice register*/
+++#define OC_CPLD_I2C_SR          0xF       /*cpld i2c master status register*/
+++
+++/* Read-write access */
+++#define OC_I2C_PRER_LO 0x00                /* Low byte clock prescaler register  */
+++#define OC_I2C_PRER_HI 0x01                /* High byte clock prescaler register */
+++#define OC_I2C_CTR     OC_CPLD_I2C_CTR     /* Control register                   */
+++
+++/* Write-only registers */
+++#define OC_I2C_TXR     OC_CPLD_I2C_TXR     /* Transmit byte register             */
+++#define OC_I2C_CR      OC_CPLD_I2C_CR      /* Command register                   */
+++
+++/* Read-only registers */
+++#define OC_I2C_RXR     OC_CPLD_I2C_RXR     /* Receive byte register              */
+++#define OC_I2C_SR      OC_CPLD_I2C_SR      /* Status register                    */
+++
+++/* ---Bits definition --- */
+++/* Control register */
+++#define OC_I2C_EN (1<<7)        /* Core enable bit:                    */
+++								/*      1 - core is enabled            */
+++								/*      0 - core is disabled           */
+++#define OC_I2C_IEN (1<<6)       /* Interrupt enable bit                */
+++								/*      1 - Interrupt enabled          */
+++								/*      0 - Interrupt disabled         */
+++								/* Other bits in CR are reserved       */
+++
+++/* Command register bits */
+++#define OC_I2C_STA (1<<7)       /* Generate (repeated) start condition */
+++#define OC_I2C_STO (1<<6)       /* Generate stop condition             */
+++#define OC_I2C_RD  (1<<5)       /* Read from slave                     */
+++#define OC_I2C_WR  (1<<4)       /* Write to slave                      */
+++#define OC_I2C_ACK (1<<3)       /* when a receiver, sent ACK or NACK   */
+++								/*      0 - ACK                        */
+++								/*      1 - NACK                       */
+++#define OC_I2C_IACK (1<<0)      /* Interrupt acknowledge               */
+++
+++/* Status register bits */
+++#define OC_I2C_RXACK (1<<7)     /* Received acknowledge from slave     */
+++								/*      0 - ACK                        */
+++								/*      1 - NACK                       */
+++#define OC_I2C_BUSY  (1<<6)     /* Bus busy                            */
+++#define OC_I2C_AL    (1<<5)     /* Arbitration lost                    */
+++#define OC_I2C_TIP   (1<<1)     /* Transfer in progress                */
+++#define OC_I2C_IF    (1<<0)     /* Interrupt flag                      */
+++
+++/* bit testing and setting macros */
+++#define OC_ISSET(reg,bitmask)       ((reg)&(bitmask))
+++#define OC_ISCLEAR(reg,bitmask)     (!(OC_ISSET(reg,bitmask)))
+++#define OC_BITSET(reg,bitmask)      ((reg)|(bitmask))
+++#define OC_BITCLEAR(reg,bitmask)    ((reg)|(~(bitmask)))
+++#define OC_BITTOGGLE(reg,bitmask)   ((reg)^(bitmask))
+++#define OC_REGMOVE(reg,value)       ((reg)=(value))
+++
+++#define WISHBONE_DELAY	usleep_range(50, 100)
+++#define TRY_COUNT_MAX		1000	/* 50~100 ms */
+++
+++struct wishbone_i2c {
+++	u32					reg_base;
+++	u32					cpld_type;
+++	u32 				base_nr;
+++	int					stopped;
+++	struct i2c_adapter	adap;
+++};
+++
+++static int wishbone_i2c_cpld_read(struct wishbone_i2c *wishbone, u8 reg)
+++{
+++	int ret;
+++	struct i2c_adapter *adap = &wishbone->adap;
+++
+++	reg += wishbone->reg_base;
+++	ret = accton_cpld_read(wishbone->cpld_type,  reg);
+++	dev_dbg(&adap->dev, "cpld_type:0x%x, reg:0x%x, ret:%d\n",
+++		wishbone->cpld_type, reg, ret);
+++
+++	return ret;
+++}
+++
+++static int wishbone_i2c_cpld_write(struct wishbone_i2c *wishbone, u8 reg, u8 val)
+++{
+++	int ret;
+++	struct i2c_adapter *adap = &wishbone->adap;
+++
+++	reg += wishbone->reg_base;
+++	ret = accton_cpld_write(wishbone->cpld_type, reg, val);
+++	dev_dbg(&adap->dev, "cpld_type:0x%x, reg:0x%x, val:0x%x, ret:%d\n",
+++		wishbone->cpld_type, reg, val, ret);
+++
+++	return ret;
+++}
+++
+++static int wishbone_i2c_init(struct wishbone_i2c *wishbone)
+++{
+++	uint32_t val = 0;
+++
+++	val = OC_I2C_EN;
+++	return wishbone_i2c_cpld_write(wishbone, OC_I2C_CTR, val);
+++}
+++
+++static void wishbone_i2c_deinit(struct wishbone_i2c *wishbone)
+++{
+++	uint32_t val = 0;
+++
+++	val = OC_I2C_STO;
+++	wishbone_i2c_cpld_write(wishbone, OC_I2C_CR, val);
+++	val = 0x0;
+++	wishbone_i2c_cpld_write(wishbone, OC_I2C_CTR, val);
+++}
+++
+++static int wishbone_i2c_trx_complete(struct wishbone_i2c *wishbone)
+++{
+++	int val = 0;
+++	uint32_t try_count = 0;
+++
+++	do
+++	{
+++		WISHBONE_DELAY;
+++		val = wishbone_i2c_cpld_read(wishbone, OC_CPLD_I2C_SR);
+++		try_count++;
+++	} while (((val < 0) || ((val & OC_I2C_TIP) != 0x0)) && (try_count < TRY_COUNT_MAX));
+++
+++	if (try_count >= TRY_COUNT_MAX) {
+++		dev_dbg(&wishbone->adap.dev, "Timeout\n");
+++		return -ETIMEDOUT;
+++	}
+++
+++	if (val & OC_I2C_AL) {
+++		dev_dbg(&wishbone->adap.dev, "Arbitration lost\n");
+++		return -EAGAIN;
+++	}
+++
+++	dev_dbg(&wishbone->adap.dev, "TRX complete\n");
+++
+++	return 0;
+++}
+++
+++static int wishbone_i2c_acked(struct wishbone_i2c *wishbone)
+++{
+++	int val = 0;
+++
+++	val = wishbone_i2c_cpld_read(wishbone, OC_CPLD_I2C_SR);
+++	if ((val & OC_I2C_RXACK) != 0x0) {
+++		dev_dbg(&wishbone->adap.dev, "No ACK\n");
+++		return -ENXIO;  /* No ACK */
+++	}
+++
+++	dev_dbg(&wishbone->adap.dev, "ACK received\n");
+++	return 0;
+++}
+++
+++static int wishbone_i2c_start(struct wishbone_i2c *wishbone)
+++{
+++	int result = 0;
+++
+++	dev_dbg(&wishbone->adap.dev, "start\n");
+++	wishbone->stopped = 0;
+++
+++	return result;
+++}
+++
+++static void wishbone_i2c_stop(struct wishbone_i2c *wishbone)
+++{
+++	int val = 0;
+++
+++	if (!wishbone->stopped) {
+++		/* Stop I2C transaction */
+++		dev_dbg(&wishbone->adap.dev, "stop\n");
+++		val = OC_I2C_STO;
+++		wishbone_i2c_cpld_write(wishbone, OC_CPLD_I2C_CR, val);
+++		wishbone->stopped = 1;
+++	}
+++}
+++
+++static int wishbone_i2c_write(struct wishbone_i2c *wishbone, struct i2c_msg *msgs)
+++{
+++	int i, result, val;
+++
+++	dev_dbg(&wishbone->adap.dev, 
+++		"write slave address: addr=0x%x\n", msgs->addr);
+++
+++	//1.Write slave address
+++	val = msgs->addr << 1;
+++	wishbone_i2c_cpld_write(wishbone, OC_CPLD_I2C_TXR, val);
+++
+++	//2.Generate write start
+++	val = OC_I2C_WR | OC_I2C_STA;
+++	wishbone_i2c_cpld_write(wishbone, OC_CPLD_I2C_CR, val);
+++
+++	//3.Wait for transaction to complete
+++	result = wishbone_i2c_trx_complete(wishbone);
+++	if (result)
+++		return result;
+++	result = wishbone_i2c_acked(wishbone);
+++	if (result)
+++		return result;
+++
+++	//4.Read clear ACK RXR
+++	val = wishbone_i2c_cpld_read(wishbone, OC_CPLD_I2C_RXR);
+++
+++	//5.Write data
+++	dev_dbg(&wishbone->adap.dev, "write data\n");
+++	for (i = 0; i < msgs->len; i++) {
+++		dev_dbg(&wishbone->adap.dev,
+++			"write byte: B%d=0x%X\n", i, msgs->buf[i]);
+++		wishbone_i2c_cpld_write(wishbone, OC_CPLD_I2C_TXR, msgs->buf[i]);
+++
+++		val = OC_I2C_WR;
+++		wishbone_i2c_cpld_write(wishbone, OC_CPLD_I2C_CR, val);
+++		result = wishbone_i2c_trx_complete(wishbone);
+++		if (result)
+++			return result;
+++		result = wishbone_i2c_acked(wishbone);
+++		if (result)
+++			return result;
+++		//Read clean
+++		val = wishbone_i2c_cpld_read(wishbone, OC_CPLD_I2C_RXR);
+++	}
+++	return 0;
+++}
+++
+++static int wishbone_i2c_read(struct wishbone_i2c *wishbone, struct i2c_msg *msgs, bool is_lastmsg)
+++{
+++	int i, result;
+++	int val;
+++	int block_data = msgs->flags & I2C_M_RECV_LEN;
+++
+++	dev_dbg(&wishbone->adap.dev,
+++		"write slave address: addr=0x%x\n", msgs->addr);
+++
+++	//1.Write slave address
+++	val = (msgs->addr << 1) | 0x1;
+++	wishbone_i2c_cpld_write(wishbone, OC_CPLD_I2C_TXR, val);
+++
+++	//2.Generate write start
+++	val = OC_I2C_WR | OC_I2C_STA;
+++	wishbone_i2c_cpld_write(wishbone, OC_CPLD_I2C_CR, val);
+++
+++	//3.Wait for transaction to complete
+++	result = wishbone_i2c_trx_complete(wishbone);
+++	if (result)
+++		return result;
+++	result = wishbone_i2c_acked(wishbone);
+++	if (result)
+++		return result;
+++
+++	//4.Read clean
+++	val = wishbone_i2c_cpld_read(wishbone, OC_CPLD_I2C_RXR);
+++
+++	//5.Read data
+++	dev_dbg(&wishbone->adap.dev, "read data, msgs len=%d\n", msgs->len);
+++	for (i = 0; i < msgs->len; i++) {
+++		int len = 0;
+++
+++		/*
+++		 * First byte is the length of remaining packet
+++		 * in the SMBus block data read. Add it to
+++		 * msgs->len.
+++		 */
+++		if ((!i) && block_data) {
+++			val = OC_I2C_RD;
+++			wishbone_i2c_cpld_write(wishbone, OC_CPLD_I2C_CR, val);
+++			result = wishbone_i2c_trx_complete(wishbone);
+++			if (result)
+++				return result;
+++			len = wishbone_i2c_cpld_read(wishbone, OC_CPLD_I2C_RXR);
+++			if ((len == 0) || (len > I2C_SMBUS_BLOCK_MAX))
+++				return -EPROTO;
+++
+++			dev_dbg(&wishbone->adap.dev, "read length: 0x%X\n", len);
+++			msgs->len += len;
+++			msgs->buf[0] = len;
+++		} else {
+++			if (i == (msgs->len - 1)) {
+++				if (is_lastmsg) {
+++					dev_dbg(&wishbone->adap.dev, "is_lastmsg_lastbyte\n");
+++					val = OC_I2C_RD | OC_I2C_STO | OC_I2C_ACK;
+++					wishbone->stopped = 1;
+++				} else {
+++					dev_dbg(&wishbone->adap.dev, "is_lastbyte\n");
+++					val = OC_I2C_RD | OC_I2C_ACK;
+++				}
+++			} else {
+++				val = OC_I2C_RD;
+++			}
+++
+++			wishbone_i2c_cpld_write(wishbone, OC_CPLD_I2C_CR, val);
+++			result = wishbone_i2c_trx_complete(wishbone);
+++			if (result)
+++				return result;
+++			msgs->buf[i] = wishbone_i2c_cpld_read(wishbone, OC_CPLD_I2C_RXR);
+++		}
+++		dev_dbg(&wishbone->adap.dev,
+++			"read byte: B%d=0x%X\n", i, msgs->buf[i]);
+++	}
+++	return 0;
+++}
+++
+++static int wishbone_i2c_xfer(struct i2c_adapter *adap,
+++						struct i2c_msg *msgs, int num)
+++{
+++	unsigned int i;
+++	int result;
+++	bool is_lastmsg = false;
+++	struct wishbone_i2c *wishbone = i2c_get_adapdata(adap);
+++
+++	dev_dbg(&wishbone->adap.dev, "xfer\n");
+++
+++	/* Start I2C transfer */
+++	wishbone_i2c_start(wishbone);
+++
+++	/* read/write data */
+++	for (i = 0; i < num; i++) {
+++		if (i == num - 1)
+++			is_lastmsg = true;
+++
+++		dev_dbg(&wishbone->adap.dev, "transfer message: %d\n", i);
+++		/* write/read data */
+++#ifdef CONFIG_I2C_DEBUG_BUS
+++		int val;
+++		val = wishbone_i2c_cpld_read(wishbone, OC_CPLD_I2C_CR);
+++		dev_dbg(&wishbone->adap.dev,
+++			"COMMAND: STA=%d, STO=%d, RD=%d, WR=%d, ACK=%d, IACK=%d\n",
+++			(val & OC_I2C_STA ? 1 : 0), (val & OC_I2C_STO ? 1 : 0),
+++			(val & OC_I2C_RD ? 1 : 0), (val & OC_I2C_WR ? 1 : 0),
+++			(val & OC_I2C_ACK ? 1 : 0), (val & OC_I2C_IACK ? 1 : 0));
+++		val = wishbone_i2c_cpld_read(wishbone, OC_CPLD_I2C_SR);
+++		dev_dbg(&wishbone->adap.dev,
+++			"STATUS: RXACK=%d, BUSY=%d, AL=%d, TIP=%d, IF=%d\n",
+++			(val & OC_I2C_RXACK ? 1 : 0), (val & OC_I2C_BUSY ? 1 : 0),
+++			(val & OC_I2C_AL ? 1 : 0), (val & OC_I2C_TIP ? 1 : 0),
+++			(val & OC_I2C_IF ? 1 : 0));
+++#endif
+++		if (msgs[i].flags & I2C_M_RD)
+++			result = wishbone_i2c_read(wishbone, &msgs[i], is_lastmsg);
+++		else {
+++			result = wishbone_i2c_write(wishbone, &msgs[i]);
+++		}
+++		if (result)
+++			goto fail0;
+++	}
+++
+++fail0:
+++	/* Stop I2C transfer */
+++	wishbone_i2c_stop(wishbone);
+++
+++	dev_dbg(&wishbone->adap.dev, "exit with: %s: %d\n",
+++		(result < 0) ? "error" : "success msg",
+++			(result < 0) ? result : num);
+++	return (result < 0) ? result : num;
+++}
+++
+++static u32 wishbone_i2c_func(struct i2c_adapter *adap)
+++{
+++	return I2C_FUNC_I2C | I2C_FUNC_SMBUS_EMUL | I2C_FUNC_SMBUS_READ_BLOCK_DATA;
+++}
+++
+++static const struct i2c_algorithm wishbone_i2c_algorithm = {
+++	.master_xfer	= wishbone_i2c_xfer,
+++	.functionality	= wishbone_i2c_func,
+++};
+++
+++static int wishbone_i2c_probe(struct platform_device *pdev)
+++{
+++	struct wishbone_i2c *wishbone;
+++	struct wishbone_i2c_platform_data *platform_data =
+++				dev_get_platdata(&pdev->dev);
+++	struct device_node *of_node = pdev->dev.of_node;
+++	int ret = 0;
+++
+++	wishbone = devm_kzalloc(&pdev->dev, sizeof(*wishbone), GFP_KERNEL);
+++	if (!wishbone)
+++		return -ENOMEM;
+++
+++	ret = of_property_read_u32(of_node, "reg", &wishbone->reg_base);
+++	if (ret < 0) {
+++		dev_err(&pdev->dev, "no reg for node '%s'\n",
+++			of_node->name);
+++		goto fail;
+++	}
+++
+++	ret = of_property_read_u32(of_node, "base-nr", &wishbone->base_nr);
+++	if (ret < 0) {
+++		dev_dbg(&pdev->dev, "no base-nr for node '%s'\n", of_node->name);
+++	}
+++
+++	ret = of_property_read_u32(of_node, "cpld-type", &wishbone->cpld_type);
+++	if (ret < 0) {
+++		dev_err(&pdev->dev, "no cpld-type for node '%s'\n", of_node->name);
+++		goto fail;
+++	}
+++
+++	i2c_set_adapdata(&wishbone->adap, wishbone);
+++	wishbone->adap.nr = wishbone->base_nr ? wishbone->base_nr : pdev->id;
+++	wishbone->adap.owner = THIS_MODULE;
+++	snprintf(wishbone->adap.name, sizeof(wishbone->adap.name),
+++		 "%s", pdev->name);
+++	wishbone->adap.dev.parent = &pdev->dev;
+++	wishbone->adap.dev.of_node = of_node;
+++	wishbone->adap.class = I2C_CLASS_DEPRECATED;
+++	wishbone->adap.algo = &wishbone_i2c_algorithm;
+++	wishbone->adap.retries = 3;
+++
+++	if (platform_data) {
+++		wishbone->adap.timeout = platform_data->timeout;
+++	} else {
+++		wishbone->adap.timeout = HZ / 5;
+++	}
+++
+++	ret = wishbone_i2c_init(wishbone);
+++	if (ret) {
+++		dev_err(&pdev->dev, "init wishbone i2c fail\n");
+++		ret = -EBUSY;
+++		goto fail;
+++	}
+++
+++	ret = i2c_add_numbered_adapter(&wishbone->adap);
+++	if (ret) {
+++		dev_err(&pdev->dev, "add wishbone i2c adapter fail\n");
+++		ret = -EINVAL;
+++		goto fail;
+++	}
+++
+++	platform_set_drvdata(pdev, wishbone);
+++
+++	dev_info(&pdev->dev, "wishbone i2c registered.\n");
+++	return 0;
+++
+++fail:
+++	return ret;
+++}
+++
+++static int wishbone_i2c_remove(struct platform_device *pdev)
+++{
+++	struct wishbone_i2c *wishbone = platform_get_drvdata(pdev);
+++
+++	wishbone_i2c_deinit(wishbone);
+++	i2c_del_adapter(&wishbone->adap);
+++	return 0;
+++}
+++
+++#ifdef CONFIG_OF
+++static const struct of_device_id i2c_pca_of_match_table[] = {
+++	{ .compatible = "accton,wishbone-i2c" },
+++	{},
+++};
+++MODULE_DEVICE_TABLE(of, i2c_pca_of_match_table);
+++#endif
+++
+++static struct platform_driver wishbone_i2c_driver = {
+++	.probe = wishbone_i2c_probe,
+++	.remove = wishbone_i2c_remove,
+++	.driver = {
+++		.name = "wishbone-i2c",
+++		.of_match_table = of_match_ptr(i2c_pca_of_match_table),
+++	},
+++};
+++
+++module_platform_driver(wishbone_i2c_driver);
+++
+++MODULE_AUTHOR("Ang Liu <ang_liu@accton.com.cn>");
+++MODULE_DESCRIPTION("Accton CPLD wishbone I2C adapter driver");
+++MODULE_LICENSE("GPL v2");
++diff --git a/drivers/i2c/muxes/i2c-wishbone-cpld.h b/drivers/i2c/muxes/i2c-wishbone-cpld.h
++new file mode 100644
++index 000000000..07a0e3be1
++--- /dev/null
+++++ b/drivers/i2c/muxes/i2c-wishbone-cpld.h
++@@ -0,0 +1,9 @@
+++/* SPDX-License-Identifier: GPL-2.0 */
+++#ifndef _LINUX_I2C_WISHBONE_CPLD_H
+++#define _LINUX_I2C_WISHBONE_CPLD_H
+++
+++struct wishbone_i2c_platform_data {
+++	int timeout;		/* timeout in jiffies */
+++};
+++
+++#endif /* _LINUX_I2C_WISHBONE_CPLD_H */
++-- 
++2.34.1
++
+diff --git a/patch/kconfig-inclusions b/patch/kconfig-inclusions
+index 779e223..af57a71 100644
+--- a/patch/kconfig-inclusions
++++ b/patch/kconfig-inclusions
+@@ -201,6 +201,9 @@ CONFIG_RING_BUFFER_ALLOW_SWAP=y
+ CONFIG_KEXEC_FILE=y
+ 
+ [marvell-arm64]
++CONFIG_SPI_ARMADA_3700=m
++CONFIG_SENSORS_MAX31785=m
++CONFIG_I2C_ACCTON_CPLD=m
+ 
+ [pensando]
+ CONFIG_ARCH_PENSANDO=y
+diff --git a/patch/series b/patch/series
+index 66fbc02..41ce49c 100755
+--- a/patch/series
++++ b/patch/series
+@@ -229,3 +229,4 @@ cisco-npu-disable-other-bars.patch
+ # Do not add any public patch below this marker
+ #
+ ############################################################
++0009-added-accton-cpld-support.patch
+\ No newline at end of file
+-- 
+2.25.1
+

@@ -17,3 +17,4 @@
 0002-Add-marvell-larch-sim-platform-support.patch|src/sonic-sairedis
 0002-Fix-syncd-build.patch|src/sonic-sairedis
 0001-swss-add-marvell-larch-sim-platform-support.patch|src/sonic-swss
+0001-sync-eps6800-platform.patch|src/sonic-linux-kernel
