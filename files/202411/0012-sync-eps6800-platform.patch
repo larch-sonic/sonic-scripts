@@ -1,4 +1,4 @@
-From 68cd329e9a4b8c1d3e84561a6baafabe3f85e2ed Mon Sep 17 00:00:00 2001
+From 77722582358cc6c579757b159255e461ce6007d8 Mon Sep 17 00:00:00 2001
 From: Sergey Syzonov <ssyzonov@larch-networks.com>
 Date: Sun, 19 Apr 2026 23:18:47 +0300
 Subject: [PATCH] sync eps6800 platform
@@ -12,14 +12,36 @@ Subject: [PATCH] sync eps6800 platform
  .../system_health_monitoring_config.json      |   2 +-
  .../scripts/cn9130-eps6800-init.sh            |  38 +
  .../cn9130-eps6800/sonic_platform/chassis.py  | 296 ++++--
+ .../cn9130-eps6800/sonic_platform/cpld.py     |  28 +
  .../cn9130-eps6800/sonic_platform/eeprom.py   | 163 ++--
+ .../cn9130-eps6800/sonic_platform/fan.py      | 101 ++
+ .../sonic_platform/fan_drawer.py              |  99 ++
+ .../cn9130-eps6800/sonic_platform/led.py      | 214 +++++
+ .../cn9130-eps6800/sonic_platform/psu.py      | 271 ++++++
  .../cn9130-eps6800/sonic_platform/sfp.py      | 470 ++++++---
  .../sonic_platform/sfp_event.py               | 112 ---
- 11 files changed, 1481 insertions(+), 505 deletions(-)
+ .../cn9130-eps6800/sonic_platform/thermal.py  | 157 +++
+ .../sonic_platform/thermal_actions.py         |  37 +
+ .../sonic_platform/thermal_conditions.py      |  77 ++
+ .../sonic_platform/thermal_infos.py           | 156 +++
+ .../sonic_platform/thermal_manager.py         |  24 +
+ .../sonic_platform/thermal_policy.py          |   5 +
+ 22 files changed, 2650 insertions(+), 505 deletions(-)
+ create mode 100644 platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/cpld.py
+ create mode 100644 platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/fan.py
+ create mode 100644 platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/fan_drawer.py
+ create mode 100644 platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/led.py
+ create mode 100644 platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/psu.py
  delete mode 100644 platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/sfp_event.py
+ create mode 100644 platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/thermal.py
+ create mode 100644 platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/thermal_actions.py
+ create mode 100644 platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/thermal_conditions.py
+ create mode 100644 platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/thermal_infos.py
+ create mode 100644 platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/thermal_manager.py
+ create mode 100644 platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/thermal_policy.py
 
 diff --git a/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-L1-ALD2_48x10G-6x100G.md5 b/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-L1-ALD2_48x10G-6x100G.md5
-index 9fb6fb77d8..a830f6a298 100644
+index 9fb6fb77d..a830f6a29 100644
 --- a/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-L1-ALD2_48x10G-6x100G.md5
 +++ b/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-L1-ALD2_48x10G-6x100G.md5
 @@ -1 +1 @@
@@ -28,7 +50,7 @@ index 9fb6fb77d8..a830f6a298 100644
 +7f268d70492551e318dd25b788529beb
 \ No newline at end of file
 diff --git a/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-L1-ALD2_48x10G-6x100G.xml b/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-L1-ALD2_48x10G-6x100G.xml
-index 2e510daab4..4ad410e619 100644
+index 2e510daab..4ad410e61 100644
 --- a/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-L1-ALD2_48x10G-6x100G.xml
 +++ b/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-L1-ALD2_48x10G-6x100G.xml
 @@ -851,6 +851,31 @@
@@ -1207,7 +1229,7 @@ index 2e510daab4..4ad410e619 100644
      </ASKL1plt:Port>
    </ASKL1plt:ASK-L1>
 diff --git a/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-PP-ALD2_48x10G-6x100G.md5 b/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-PP-ALD2_48x10G-6x100G.md5
-index 6bf975e412..ef77f71346 100644
+index 6bf975e41..ef77f7134 100644
 --- a/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-PP-ALD2_48x10G-6x100G.md5
 +++ b/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-PP-ALD2_48x10G-6x100G.md5
 @@ -1 +1 @@
@@ -1216,7 +1238,7 @@ index 6bf975e412..ef77f71346 100644
 +5220d698a203a3fa637e4e48532e0133
 \ No newline at end of file
 diff --git a/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-PP-ALD2_48x10G-6x100G.xml b/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-PP-ALD2_48x10G-6x100G.xml
-index 1f169afbcd..e6352f10a1 100644
+index 1f169afbc..e6352f10a 100644
 --- a/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-PP-ALD2_48x10G-6x100G.xml
 +++ b/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-PP-ALD2_48x10G-6x100G.xml
 @@ -550,7 +550,7 @@
@@ -1229,7 +1251,7 @@ index 1f169afbcd..e6352f10a1 100644
        </askppplt:Phase1>
        <askppplt:Phase2>
 diff --git a/device/larch/arm64-larch_cn9130-eps6800-r0/pmon_daemon_control.json b/device/larch/arm64-larch_cn9130-eps6800-r0/pmon_daemon_control.json
-index 39deb88be0..038b1ca893 100644
+index 39deb88be..038b1ca89 100644
 --- a/device/larch/arm64-larch_cn9130-eps6800-r0/pmon_daemon_control.json
 +++ b/device/larch/arm64-larch_cn9130-eps6800-r0/pmon_daemon_control.json
 @@ -1,8 +1,8 @@
@@ -1246,7 +1268,7 @@ index 39deb88be0..038b1ca893 100644
 +    "skip_syseepromd": false
  }
 diff --git a/device/larch/arm64-larch_cn9130-eps6800-r0/system_health_monitoring_config.json b/device/larch/arm64-larch_cn9130-eps6800-r0/system_health_monitoring_config.json
-index 80c66ef32b..8b2f75138f 100644
+index 80c66ef32..8b2f75138 100644
 --- a/device/larch/arm64-larch_cn9130-eps6800-r0/system_health_monitoring_config.json
 +++ b/device/larch/arm64-larch_cn9130-eps6800-r0/system_health_monitoring_config.json
 @@ -1,6 +1,6 @@
@@ -1258,7 +1280,7 @@ index 80c66ef32b..8b2f75138f 100644
      "devices_to_ignore": [
          "asic",
 diff --git a/platform/marvell/sonic-platform-larch/cn9130-eps6800/scripts/cn9130-eps6800-init.sh b/platform/marvell/sonic-platform-larch/cn9130-eps6800/scripts/cn9130-eps6800-init.sh
-index c5cd29fdf9..2d5c9211b3 100644
+index c5cd29fdf..2d5c9211b 100644
 --- a/platform/marvell/sonic-platform-larch/cn9130-eps6800/scripts/cn9130-eps6800-init.sh
 +++ b/platform/marvell/sonic-platform-larch/cn9130-eps6800/scripts/cn9130-eps6800-init.sh
 @@ -2,6 +2,35 @@
@@ -1314,7 +1336,7 @@ index c5cd29fdf9..2d5c9211b3 100644
  
  # - Main entry
 diff --git a/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/chassis.py b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/chassis.py
-index d908d420e1..f3bfac7de5 100644
+index d908d420e..f3bfac7de 100644
 --- a/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/chassis.py
 +++ b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/chassis.py
 @@ -1,4 +1,5 @@
@@ -1671,8 +1693,42 @@ index d908d420e1..f3bfac7de5 100644
 +            specified.
 +        """
 +        return self._led.get_led("system")
+diff --git a/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/cpld.py b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/cpld.py
+new file mode 100644
+index 000000000..a3a1ec739
+--- /dev/null
++++ b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/cpld.py
+@@ -0,0 +1,28 @@
++import re
++
++class CPLD:
++    def __init__(self, base_addr):
++        self.base_path = '/sys/bus/i2c/devices/' + base_addr + '/'
++
++    def read_register(self, reg):
++        self.write_sysfs_file(self.base_path + 'reg_offset', reg)
++        return self.read_sysfs_file(self.base_path + 'reg_value')
++    
++    def write_register(self, reg, value):
++        self.write_sysfs_file(self.base_path + 'reg_offset', reg)
++        self.write_sysfs_file(self.base_path + 'reg_value', value)
++        
++    def write_sysfs_file(self, sysfs_file, value):
++        with open(sysfs_file, 'w') as fd:
++            fd.write(str(hex(value)))
++
++    def read_sysfs_file(self, sysfs_file) -> str:
++        with open(sysfs_file, 'r') as fd:
++            rv = fd.read()
++
++        match = re.search(r"val:(\S+)", rv)
++        if match:
++            val = match.group(1)
++            return int(val, 16)
++
++        raise IOError("Unable to open %s file !" % sysfs_file)
 diff --git a/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/eeprom.py b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/eeprom.py
-index 1096720804..610a5f751a 100644
+index 109672080..610a5f751 100644
 --- a/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/eeprom.py
 +++ b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/eeprom.py
 @@ -1,68 +1,34 @@
@@ -1882,8 +1938,720 @@ index 1096720804..610a5f751a 100644
  
      def system_eeprom_info(self):
          """
+diff --git a/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/fan.py b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/fan.py
+new file mode 100644
+index 000000000..371c334fb
+--- /dev/null
++++ b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/fan.py
+@@ -0,0 +1,101 @@
++from sonic_platform_base.fan_base import FanBase
++
++# PWM registers
++FAN_PWM_REG = [0x57, 0x58, 0x59, 0x60]
++
++# Speed registers
++FAN_SPEED_REG = [0x61, 0x62, 0x63, 0x64]
++FAN_ABS_INT_REG = 0x85
++
++RAW_MAX = 0xB0  # value at 100% PWM
++
++FANTRAY_NAME_LIST = [
++    "FANTRAY1",
++    "FANTRAY2",
++    "FANTRAY3",
++    "FANTRAY4"
++]
++
++class Fan(FanBase):
++    """
++    CPLD controlled fan
++    """
++
++    def __init__(self, fan_tray_index, fan_index, cpld):
++        super().__init__()
++
++        self.fan_tray_index = fan_tray_index
++        self.fan_index = fan_index
++        self.name = f"Fan{fan_index}"
++        self.cpld = cpld
++
++    # -------------------------------------------------
++    # Low level I2C helpers
++    # -------------------------------------------------
++
++    def _read_byte(self, reg):
++        return self.cpld.read_register(reg)
++
++    def _write_byte(self, reg, val):
++        self.cpld.write_register(reg, val)
++
++    # -------------------------------------------------
++
++    def _get_pwm_reg(self):
++        return FAN_PWM_REG[self.fan_tray_index]
++
++    def _get_speed_reg(self):
++        return FAN_SPEED_REG[self.fan_tray_index]
++
++    def _read_speed_raw(self):
++        return self._read_byte(self._get_speed_reg())
++
++    # -------------------------------------------------
++    # SONiC API
++    # -------------------------------------------------
++
++    def get_name(self):
++        return FANTRAY_NAME_LIST[self.fan_tray_index] + "_" + self.name
++
++    def get_presence(self):
++        return not self._read_byte(FAN_ABS_INT_REG) & (1 << self.fan_tray_index)
++
++    def get_status(self):
++        return self.get_presence()
++    
++    def get_speed(self):
++        raw = self._read_speed_raw()
++
++        if raw == 0:
++            return 0
++
++        percent = int((raw * 100) / RAW_MAX)
++
++        if percent > 100:
++            percent = 100
++
++        return percent
++
++    def set_speed(self, percent):
++
++        if percent < 0:
++            percent = 0
++        if percent > 100:
++            percent = 100
++
++        pwm = int((percent * 255) / 100)
++
++        self._write_byte(self._get_pwm_reg(), pwm)
++
++        return True
++
++    def get_status_led(self):
++
++        if not self.get_presence():
++            return self.STATUS_LED_COLOR_OFF
++
++        return self.STATUS_LED_COLOR_GREEN
++
++    def set_status_led(self, color):
++        return False
++    
+\ No newline at end of file
+diff --git a/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/fan_drawer.py b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/fan_drawer.py
+new file mode 100644
+index 000000000..41cc8230b
+--- /dev/null
++++ b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/fan_drawer.py
+@@ -0,0 +1,99 @@
++########################################################################
++#
++# Module contains an implementation of SONiC Platform Base API and
++# provides the Fan-Drawers' information available in the platform.
++#
++########################################################################
++
++try:
++    from sonic_platform_base.fan_drawer_base import FanDrawerBase
++except ImportError as e:
++    raise ImportError(str(e) + "- required module not found")
++
++NUM_FANS_PER_TRAY = 1
++
++
++class FanDrawer(FanDrawerBase):
++    def __init__(self, fantray_index, cpld):
++        super().__init__()
++
++        # FanTray indexing is 0-based in platforms
++        self.fantrayindex = fantray_index
++        self.__initialize_fan_drawer(cpld)
++
++    def __initialize_fan_drawer(self, cpld):
++        from sonic_platform.fan import Fan
++
++        for i in range(NUM_FANS_PER_TRAY):
++            self._fan_list.append(Fan(self.fantrayindex, i, cpld))
++
++    def get_name(self):
++        """
++        Retrieves the fan drawer name
++        Returns:
++            string: The name of the device
++        """
++        return "FanTray{}".format(self.fantrayindex + 1)
++
++    def get_presence(self):
++        """
++        Retrieves the presence of the device
++        Returns:
++            bool: True if device is present, False if not
++        """
++        return self._fan_list[0].get_presence()
++
++    def get_model(self):
++        """
++        Retrieves the model number (or part number) of the device
++        Returns:
++            string: Model/part number of device
++        """
++        return self._fan_list[0].get_model()
++
++    def get_serial(self):
++        """
++        Retrieves the serial number of the device
++        Returns:
++            string: Serial number of device
++        """
++        return self._fan_list[0].get_serial()
++
++    def get_status(self):
++        """
++        Retrieves the operational status of the device
++        Returns:
++            A boolean value, True if device is operating properly, False if not
++        """
++        return self._fan_list[0].get_status()
++
++    def get_position_in_parent(self):
++        """
++        Retrieves 1-based relative physical position in parent device.
++        If the agent cannot determine the parent-relative position
++        for some reason, or if the associated value of
++        entPhysicalContainedIn is'0', then the value '-1' is returned
++        Returns:
++            integer: The 1-based relative physical position in parent device
++            or -1 if cannot determine the position
++        """
++        return (self.fantrayindex + 1)
++
++    def is_replaceable(self):
++        """
++        Indicate whether this device is replaceable.
++        Returns:
++            bool: True if it is replaceable.
++        """
++        return True
++
++    def set_status_led(self, color):
++        """
++        Sets the state of the fan drawer status LED
++        Args:
++            color: A string representing the color with which to set the
++                   fan drawer status LED
++        Returns:
++            bool: True if status LED state is set successfully, False if not
++        """
++        return False #Not supported
+diff --git a/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/led.py b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/led.py
+new file mode 100644
+index 000000000..cf5c95713
+--- /dev/null
++++ b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/led.py
+@@ -0,0 +1,214 @@
++import threading
++import time
++from sonic_py_common.logger import Logger
++
++logger = Logger()
++
++class LedController:
++    """
++    CPLD LED controller via register 0x77.
++    Software blink support (3Hz).
++    """
++
++    STATUS_LED_COLOR_OFF = "off"
++
++    STATUS_LED_COLOR_GREEN = "green"
++    STATUS_LED_COLOR_GREEN_BLINK = "green_blink"
++
++    STATUS_LED_COLOR_AMBER = "amber"
++    STATUS_LED_COLOR_AMBER_BLINK = "amber_blink"
++
++    STATUS_LED_COLOR_RED = "red"
++    STATUS_LED_COLOR_RED_BLINK = "red_blink"
++
++    STATUS_LED_COLOR_YELLOW = "yellow"
++    STATUS_LED_COLOR_YELLOW_BLINK = "yellow_blink"
++
++    REG = 0x77
++
++    LED_SYSTEM = "system"
++    LED_STACK = "stack"
++    LED_MST = "mst"
++    LED_PSU = "psu"
++    LED_FAN = "fan"
++
++    BLINK_PERIOD = 0.33  # ~3Hz
++
++
++
++    def __init__(self, cpld):
++        self.cpld = cpld
++
++        self._blink_threads = {}
++        self._blink_stop = {}
++        self._blink_color = {}
++
++    # -------------------------------------------------
++    # Low-level
++    # -------------------------------------------------
++
++    def _read(self):
++        return self.cpld.read_register(self.REG)
++
++    def _write(self, val):
++        self.cpld.write_register(self.REG, val)
++
++    def _normalize_color(self, color):
++        if color.endswith("_blink"):
++            return color.replace("_blink", ""), True
++        return color, False
++
++    # -------------------------------------------------
++    # HW SET (no blink)
++    # -------------------------------------------------
++
++    def _set_hw(self, name, base_color):
++        try:
++            state = self._read()
++
++            # SYSTEM (bits 1-0)
++            if name == self.LED_SYSTEM:
++                state &= ~0b11
++
++                if base_color == self.STATUS_LED_COLOR_GREEN:
++                    state |= 0b00
++                elif base_color in ("yellow", "amber", "red"):
++                    state |= 0b01
++
++            # STACK (bit 4, active low)
++            elif name == self.LED_STACK:
++                if base_color == self.STATUS_LED_COLOR_GREEN:
++                    state &= ~(1 << 4)
++                else:
++                    state |= (1 << 4)
++
++            # MST (bit 3)
++            elif name == self.LED_MST:
++                if base_color == self.STATUS_LED_COLOR_GREEN:
++                    state &= ~(1 << 3)
++                else:
++                    state |= (1 << 3)
++
++            # PSU (bits 6-5)
++            elif name == self.LED_PSU:
++                state &= ~(0b11 << 5)
++
++                if base_color == self.STATUS_LED_COLOR_GREEN:
++                    state |= (0b01 << 5)
++                elif base_color in ("yellow", "amber", "red"):
++                    state |= (0b10 << 5)
++
++            elif name == self.LED_FAN:
++                raise NotImplementedError("FAN LED not defined")
++
++            else:
++                raise ValueError("Unknown LED")
++
++            self._write(state)
++
++        except Exception as e:
++            logger.log_warning(f"Failed to set LED {name} to {base_color}: {e}")
++
++    # -------------------------------------------------
++    # Blink logic
++    # -------------------------------------------------
++
++    def _stop_blink(self, name):
++        if name in self._blink_stop:
++            self._blink_stop[name].set()
++
++            # wait thread to exit
++            t = self._blink_threads.get(name)
++            if t:
++                t.join(timeout=1)
++
++            del self._blink_stop[name]
++            del self._blink_threads[name]
++
++    def _start_blink(self, name, base_color):
++        self._blink_color[name] = base_color
++        self._stop_blink(name)
++
++        stop_event = threading.Event()
++        self._blink_stop[name] = stop_event
++
++        def _blink():
++            while not stop_event.is_set():
++                self._set_hw(name, base_color)
++                time.sleep(self.BLINK_PERIOD / 2)
++
++                if stop_event.is_set():
++                    break
++
++                self._set_hw(name, self.STATUS_LED_COLOR_OFF)
++                time.sleep(self.BLINK_PERIOD / 2)
++
++        t = threading.Thread(target=_blink, daemon=True)
++        self._blink_threads[name] = t
++        t.start()
++
++    # -------------------------------------------------
++    # API
++    # -------------------------------------------------
++
++    def set_led(self, name, color):
++        logger.log_info(f"SET LED: {name} -> {color}")
++        base_color, blink = self._normalize_color(color)
++        '''
++        if blink:
++            # restart blink if color changed
++            if name in self._blink_stop and self._blink_color.get(name) == base_color:
++                return
++            self._start_blink(name, base_color)
++        else:
++            self._stop_blink(name)
++            self._set_hw(name, base_color)
++        '''
++        self._set_hw(name, base_color)
++
++    def get_led(self, name):
++        state = self._read()
++
++        # SYSTEM
++        if name == self.LED_SYSTEM:
++            val = state & 0b11
++            color = (
++                self.STATUS_LED_COLOR_GREEN
++                if val == 0
++                else self.STATUS_LED_COLOR_AMBER
++            )
++
++        # STACK
++        elif name == self.LED_STACK:
++            color = (
++                self.STATUS_LED_COLOR_OFF
++                if (state & (1 << 4))
++                else self.STATUS_LED_COLOR_GREEN
++            )
++
++        # MST
++        elif name == self.LED_MST:
++            color = (
++                self.STATUS_LED_COLOR_OFF
++                if (state & (1 << 3))
++                else self.STATUS_LED_COLOR_GREEN
++            )
++
++        # PSU
++        elif name == self.LED_PSU:
++            val = (state >> 5) & 0b11
++            if val == 0b01:
++                color = self.STATUS_LED_COLOR_GREEN
++            elif val == 0b10:
++                color = self.STATUS_LED_COLOR_RED
++            else:
++                color = self.STATUS_LED_COLOR_OFF
++
++        else:
++            raise ValueError("Unknown LED")
++
++        # Check if blinking
++        if name in self._blink_stop:
++            color += "_blink"
++
++        return color
+\ No newline at end of file
+diff --git a/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/psu.py b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/psu.py
+new file mode 100644
+index 000000000..f27007fc4
+--- /dev/null
++++ b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/psu.py
+@@ -0,0 +1,271 @@
++#!/usr/bin/env python3
++
++#############################################################################
++#
++# Module contains an implementation of SONiC Platform Base API and
++# provides the PSUs status which are available in the platform
++#
++#############################################################################
++
++import os
++import logging
++
++try:
++    from sonic_platform_base.psu_base import PsuBase
++    from sonic_platform.led import LedController
++except ImportError as e:
++    raise ImportError(str(e) + "- required module not found")
++
++TLV_ATTR_TYPE_MODEL = 2
++TLV_ATTR_TYPE_SERIAL = 5
++
++PSU_EEPROM_PATH = "/sys/bus/i2c/devices/{}-00{}/eeprom"
++PSU_HWMON_PATH = "/sys/bus/i2c/devices/i2c-{0}/{0}-00{1}/hwmon"
++PSU_I2C_MAPPING = {
++    0: {
++        "i2c_num": 59,
++        "psu_addr": "5b",
++        "eeprom_addr": "53"
++    },
++    1: {
++        "i2c_num": 54,
++        "psu_addr": "5a",
++        "eeprom_addr": "52"
++    },
++}
++
++PSU_INT = 0x16
++
++class Psu(PsuBase):
++    """Platform-specific Psu class"""
++
++    PSU_NAME_LIST = ["PSU-1", "PSU-2"]
++    psu_led_status_list = ["ok", "ok"]
++
++    def __init__(self, psu_index, cpld):
++        PsuBase.__init__(self)
++        self.index = psu_index
++        self.cpld = cpld
++        self.led = LedController(self.cpld)
++        self.eeprom_path = PSU_EEPROM_PATH.format(PSU_I2C_MAPPING[self.index]['i2c_num'], PSU_I2C_MAPPING[self.index]['eeprom_addr'])
++        self.hwmon_path = PSU_HWMON_PATH.format(PSU_I2C_MAPPING[self.index]['i2c_num'], PSU_I2C_MAPPING[self.index]['psu_addr'])
++
++    def get_attr_value(self, attr_path):
++
++        retval = 'ERR'
++        if (not os.path.isfile(attr_path)):
++            return retval
++
++        try:
++            with open(attr_path, 'r') as fd:
++                retval = fd.read()
++        except Exception as error:
++            logging.error("Unable to open ", attr_path, " file !")
++
++        retval = retval.rstrip('\r\n')
++
++        fd.close()
++        return retval
++
++    def get_powergood_status(self):
++        """
++        Retrieves the powergood status of PSU
++        Returns:
++            A boolean, True if PSU has stablized its output voltages and passed all
++            its internal self-tests, False if not.
++        """
++        mask = 0
++        if self.index == 0:
++            mask = 0x04
++        elif self.index == 1:
++            mask = 0x08
++
++        return self.cpld.read_register(PSU_INT) & mask
++
++    def get_name(self):
++        """
++        Retrieves the name of the device
++            Returns:
++            string: The name of the device
++        """
++        return self.PSU_NAME_LIST[self.index]
++
++    def get_presence(self):
++        """
++        Retrieves the presence of the PSU
++        Returns:
++            bool: True if PSU is present, False if not
++        """
++        mask = 0
++        if self.index == 0:
++            mask = 0x10
++        elif self.index == 1:
++            mask = 0x20
++
++        return not (self.cpld.read_register(PSU_INT) & mask)
++    
++    def get_status(self):
++        """
++        Retrieves the operational status of the device
++        Returns:
++            A boolean value, True if device is operating properly, False if not
++        """
++        mask = 0
++        if self.index == 0:
++            mask = 0x01
++        elif self.index == 1:
++            mask = 0x02
++
++        return self.cpld.read_register(PSU_INT) & mask
++
++    def get_voltage(self):
++        """
++        Retrieves current PSU voltage output
++        Returns:
++            A float number, the output voltage in volts,
++            e.g. 12.1
++        """
++        psu_voltage = self._get_hwmon_value("in{}_input", "vout1", "in")
++        return float(psu_voltage) / 1000
++
++    def get_current(self):
++        """
++        Retrieves present electric current supplied by PSU
++        Returns:
++            A float number, the electric current in amperes, e.g 15.4
++        """
++        psu_current = self._get_hwmon_value("curr{}_input", "iout1", "cur")
++        return float(psu_current) / 1000
++
++    def get_power(self):
++        """
++        Retrieves current energy supplied by PSU
++        Returns:
++            A float number, the power in watts, e.g. 302.6
++        """
++        psu_power = self._get_hwmon_value("power{}_input", "pout1", "power")
++        return float(psu_power) / 1000000
++
++    def get_model(self):
++        """
++        Retrieves the model number (or part number) of the device
++        Returns:
++            string: Model/part number of device
++        """
++        model = self._read_eeprom(TLV_ATTR_TYPE_MODEL)
++        if not model:
++            return "N/A"
++        return model
++
++    def get_serial(self):
++        """
++        Retrieves the serial number of the device
++        Returns:
++            string: Serial number of device
++        """
++        serial = self._read_eeprom(TLV_ATTR_TYPE_SERIAL)
++        if not serial:
++            return "N/A"
++        return serial
++
++    def is_replaceable(self):
++        """
++        Indicate whether this device is replaceable.
++        Returns:
++            bool: True if it is replaceable.
++        """
++        return True
++
++    def _get_hwmon_value(self, name, label, start):
++        value = 0.0
++
++        label_path = self._search_file_by_contain(
++            self.hwmon_path, label, start)
++        if label_path:
++            dir_name = os.path.dirname(label_path)
++            basename = os.path.basename(label_path)
++            in_num = ''.join(list(filter(str.isdigit, basename)))
++            file_path = os.path.join(dir_name, name.format(in_num))
++            val = self.get_attr_value(file_path)
++            if val != 'ERR':
++                value = float(val)
++        return value
++
++    def _search_file_by_contain(self, directory, search_str, file_start):
++        for dirpath, dirnames, files in os.walk(directory):
++            for name in files:
++                file_path = os.path.join(dirpath, name)
++                if name.startswith(file_start) and search_str in self.get_attr_value(file_path):
++                    return file_path
++        return None
++
++    def _read_eeprom(self, attr_type):
++        content = []
++        attr_idx = 0
++        attr_length = 0
++
++        try:
++            with open(self.eeprom_path, 'r', encoding='unicode_escape') as f:
++                content = f.read()
++            target_offset = ord(content[4])
++            target_offset *= 8  # spec defined: offset are in multiples of 8 bytes
++
++            attr_idx = target_offset + 3
++            for i in range(1, attr_type):
++                if attr_idx > len(content):
++                    raise SyntaxError
++                attr_length = (ord(content[attr_idx])) & (0x3f)
++                attr_idx += (attr_length + 1)
++
++            attr_length = (ord(content[attr_idx])) & (0x3f)
++            attr_idx += 1
++        except IOError:
++            print("warning [PSU] EEPROM read error: {}".format(self.eeprom_path))
++            return False
++
++        return content[attr_idx:attr_idx + attr_length]
++
++
++    def set_status_led(self, color):
++        """
++        Set the PSU module LED and update the global LED based on the state of all PSUs.
++
++        Args:
++            color (str): LED color for this PSU module ("green", "red", "amber", etc.)
++
++        Returns:
++            bool: True if the LED update was successful
++        """
++
++        is_ok = (color == self.STATUS_LED_COLOR_GREEN)
++
++        self.psu_led_status_list[self.index] = "ok" if is_ok else "fault"
++
++        if all(status == "ok" for status in self.psu_led_status_list):
++            final_color = self.STATUS_LED_COLOR_GREEN
++        else:
++            final_color = self.STATUS_LED_COLOR_RED
++
++        self.led.set_led("psu", final_color)
++
++        return True
++
++
++    def get_status_led(self):
++        """
++        Gets the state of the PSU status LED
++        Returns:
++            A string, one of the predefined STATUS_LED_COLOR_* strings above
++        """
++        if not self.get_presence():
++            return  self.STATUS_LED_COLOR_OFF
++
++        status=self.get_status()
++        if status is None:
++            return  self.STATUS_LED_COLOR_OFF
++
++        return {
++            1: self.STATUS_LED_COLOR_GREEN,
++            0: self.STATUS_LED_COLOR_RED
++        }.get(status, self.STATUS_LED_COLOR_OFF)
++    
+\ No newline at end of file
 diff --git a/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/sfp.py b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/sfp.py
-index 12cd4f732e..79196b24f4 100644
+index 12cd4f732..79196b24f 100644
 --- a/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/sfp.py
 +++ b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/sfp.py
 @@ -1,214 +1,394 @@
@@ -2428,7 +3196,7 @@ index 12cd4f732e..79196b24f4 100644
 +            return  '/sys/bus/i2c/devices/' + str(channel) + '-0050/eeprom'
 diff --git a/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/sfp_event.py b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/sfp_event.py
 deleted file mode 100644
-index 7f3d6c97bd..0000000000
+index 7f3d6c97b..000000000
 --- a/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/sfp_event.py
 +++ /dev/null
 @@ -1,112 +0,0 @@
@@ -2544,6 +3312,500 @@ index 7f3d6c97bd..0000000000
 -                        time.sleep(timeout)
 -                    return True, {}
 -        return False, {}
+diff --git a/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/thermal.py b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/thermal.py
+new file mode 100644
+index 000000000..8828ac0be
+--- /dev/null
++++ b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/thermal.py
+@@ -0,0 +1,157 @@
++#!/usr/bin/env python
++
++#############################################################################
++#
++# Thermal contains an implementation of SONiC Platform Base API and
++# provides the thermal device status which are available in the platform
++#
++#############################################################################
++
++import os
++import os.path
++
++try:
++    from sonic_platform_base.thermal_base import ThermalBase
++except ImportError as e:
++    raise ImportError(str(e) + "- required module not found")
++
++
++class Thermal(ThermalBase):
++    """Platform-specific Thermal class"""
++
++    THERMAL_NAME_LIST = []
++
++    def __init__(self, thermal_index):
++        self.index = thermal_index
++
++        # Add thermal name
++        if not self.THERMAL_NAME_LIST:
++            self.THERMAL_NAME_LIST.append("Main board temperature sensor : 1")
++            self.THERMAL_NAME_LIST.append("Main board temperature sensor : 2")
++            self.THERMAL_NAME_LIST.append("Main board temperature sensor : 3")
++
++        # Set thermal path
++        thermal_path = {
++            0: "/sys/class/hwmon/hwmon1",
++            1: "/sys/class/hwmon/hwmon2",
++            2: "/sys/class/hwmon/hwmon3",
++        }.get(self.index, None)
++
++        # Current temprature file names
++        cur_temp = {
++            0: "temp1_input",
++            1: "temp1_input",
++            2: "temp1_input",
++        }.get(self.index, None)
++
++        # Max temprature file names
++        max_temp = {
++            0: "temp1_max",
++            1: "temp1_max",
++            2: "temp1_max",
++        }.get(self.index, None)
++
++        # Critical high temprature default values
++        self.crit_temp_def_val = {
++            0: 100.0,
++            1: 100.0,
++            2: 100.0,
++        }.get(self.index, None)
++
++       # Set hwmon path
++        self.cur_temp_file = "{}/{}".format(thermal_path, cur_temp)
++        self.max_temp_file = "{}/{}".format(thermal_path, max_temp) if max_temp else None
++        self.ss_key = self.THERMAL_NAME_LIST[self.index]
++        self.ss_index = 1
++
++    def __read_txt_file(self, file_path):
++        try:
++            with open(file_path, 'r') as fd:
++                data = fd.read()
++                return data.strip()
++        except IOError:
++            raise IOError("Unable to open %s file !" % file_path)
++
++    def __get_temp(self, temp_file):
++        raw_temp = self.__read_txt_file(temp_file)
++
++        temp = float(raw_temp)/1000
++
++        return float("{:.3f}".format(temp))
++
++    def get_temperature(self):
++        """
++        Retrieves current temperature reading from thermal
++        Returns:
++            A float number of current temperature in Celsius up to nearest thousandth
++            of one degree Celsius, e.g. 30.125
++        """
++        return self.__get_temp(self.cur_temp_file)
++
++    def get_high_threshold(self):
++        """
++        Retrieves the high threshold temperature of thermal sensor
++        Returns:
++            A float number, the high threshold temperature of thermal in Celsius
++            up to nearest thousandth of one degree Celsius, e.g. 30.125
++        """
++        return self.__get_temp(self.max_temp_file)
++
++    def get_high_critical_threshold(self):
++        """
++        Retrieves the high critical threshold temperature of thermal sensor
++        Actions should be taken immediately if the temperature becomes higher than the high critical
++        threshold otherwise the device will be damaged.
++
++        :return: A float number, the high critical threshold temperature of thermal in Celsius
++                 up to nearest thousandth of one degree Celsius, e.g. 30.125
++        """
++        return self.crit_temp_def_val
++
++    def get_low_critical_threshold(self):
++        """
++        Retrieves the low critical threshold temperature of thermal sensor
++        Actions should be taken immediately if the temperature becomes lower than the low critical
++        threshold otherwise the device will be damaged.
++
++        :return: A float number, the low critical threshold temperature of thermal in Celsius
++                 up to nearest thousandth of one degree Celsius, e.g. 30.125
++        """
++        return 0.0
++
++    def get_low_threshold(self):
++        """
++        Retrieves the low threshold temperature of thermal sensor
++        Actions should be taken if the temperature becomes lower than the low threshold.
++
++        :return: A float number, the low threshold temperature of thermal in Celsius
++                 up to nearest thousandth of one degree Celsius, e.g. 30.125
++        """
++        return 0.0
++
++    def get_name(self):
++        """
++        Retrieves the name of the thermal device
++            Returns:
++            string: The name of the thermal device
++        """
++        return self.THERMAL_NAME_LIST[self.index]
++
++    def get_presence(self):
++        """
++        Retrieves the presence of the thermal sensor
++        Returns:
++            bool: True if thermal sensor is present, False if not
++        """
++        return os.path.isfile(self.cur_temp_file)
++
++    def get_status(self):
++        """
++        Retrieves the operational status of the device
++        Returns:
++            A boolean value, True if device is operating properly, False if not
++        """
++        if not self.get_presence():
++            return False
++
++        return True
+diff --git a/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/thermal_actions.py b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/thermal_actions.py
+new file mode 100644
+index 000000000..c7b851f57
+--- /dev/null
++++ b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/thermal_actions.py
+@@ -0,0 +1,37 @@
++from sonic_platform_base.sonic_thermal_control.thermal_action_base import ThermalPolicyActionBase
++from sonic_platform_base.sonic_thermal_control.thermal_json_object import thermal_json_object
++from sonic_py_common.logger import Logger
++
++logger = Logger()
++
++class SetFanSpeedAction(ThermalPolicyActionBase):
++   JSON_FIELD_SPEED = "speed"
++
++   def __init__(self):
++      self.speed = None
++
++   def load_from_json(self, json_obj):
++      if self.JSON_FIELD_SPEED in json_obj:
++         speed = float(json_obj[self.JSON_FIELD_SPEED])
++         if speed < 0 or speed > 100:
++            raise ValueError('SetFanSpeedAction invalid speed value {} in JSON policy file, valid value should be [0, 100]'.format(speed))
++         self.speed = speed
++      else:
++         raise ValueError("SetFanSpeedAction missing field in json file")
++
++@thermal_json_object("fan.all.set_speed")
++class SetAllFanSpeedAction(SetFanSpeedAction):
++    """
++    Action to set speed for all fans
++    """
++    def execute(self, thermal_info_dict):
++        """
++        Set speed for all fans
++        :param thermal_info_dict: A dictionary stores all thermal information.
++        :return:
++        """
++        from .thermal_infos import FanInfo
++        if FanInfo.INFO_NAME in thermal_info_dict and isinstance(thermal_info_dict[FanInfo.INFO_NAME], FanInfo):
++            fan_info_obj = thermal_info_dict[FanInfo.INFO_NAME]
++            for fan in fan_info_obj.get_present_fans():
++                fan.set_speed(self.speed)
+diff --git a/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/thermal_conditions.py b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/thermal_conditions.py
+new file mode 100644
+index 000000000..45f8ff91a
+--- /dev/null
++++ b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/thermal_conditions.py
+@@ -0,0 +1,77 @@
++from sonic_platform_base.sonic_thermal_control.thermal_condition_base import ThermalPolicyConditionBase
++from sonic_platform_base.sonic_thermal_control.thermal_json_object import thermal_json_object
++
++
++class FanCondition(ThermalPolicyConditionBase):
++    def get_fan_info(self, thermal_info_dict):
++        from .thermal_infos import FanInfo
++        if FanInfo.INFO_NAME in thermal_info_dict and isinstance(thermal_info_dict[FanInfo.INFO_NAME], FanInfo):
++            return thermal_info_dict[FanInfo.INFO_NAME]
++        else:
++            return None
++
++
++@thermal_json_object('fan.any.absence')
++class AnyFanAbsenceCondition(FanCondition):
++    def is_match(self, thermal_info_dict):
++        fan_info_obj = self.get_fan_info(thermal_info_dict)
++        return len(fan_info_obj.get_absent_fans()) > 0 if fan_info_obj else False
++
++
++@thermal_json_object('fan.any.fault')
++class AnyFanFaultCondition(FanCondition):
++    def is_match(self, thermal_info_dict):
++        fan_info_obj = self.get_fan_info(thermal_info_dict)
++        return len(fan_info_obj.get_fault_fans()) > 0 if fan_info_obj else False
++
++
++@thermal_json_object('fan.all.presence')
++class AllFanPresenceCondition(FanCondition):
++    def is_match(self, thermal_info_dict):
++        fan_info_obj = self.get_fan_info(thermal_info_dict)
++        return len(fan_info_obj.get_absent_fans()) == 0 if fan_info_obj else False
++
++
++@thermal_json_object('fan.all.good')
++class AllFanGoodCondition(FanCondition):
++    def is_match(self, thermal_info_dict):
++        fan_info_obj = self.get_fan_info(thermal_info_dict)
++        return len(fan_info_obj.get_fault_fans()) == 0 if fan_info_obj else False
++
++
++class ThermalCondition(ThermalPolicyConditionBase):
++    def get_thermal_info(self, thermal_info_dict):
++        from .thermal_infos import ThermalInfo
++        if ThermalInfo.INFO_NAME in thermal_info_dict and isinstance(thermal_info_dict[ThermalInfo.INFO_NAME], ThermalInfo):
++            return thermal_info_dict[ThermalInfo.INFO_NAME]
++        else:
++            return None
++
++
++@thermal_json_object('thermal.over.high_threshold')
++class ThermalOverHighCriticalCondition(ThermalCondition):
++    def is_match(self, thermal_info_dict):
++        thermal_info_obj = self.get_thermal_info(thermal_info_dict)
++        if thermal_info_obj:
++            return thermal_info_obj.is_over_high_threshold()
++        else:
++            return False
++
++
++@thermal_json_object('thermal.over.high_critical_threshold')
++class ThermalOverHighCriticalCondition(ThermalCondition):
++    def is_match(self, thermal_info_dict):
++        thermal_info_obj = self.get_thermal_info(thermal_info_dict)
++        if thermal_info_obj:
++            return thermal_info_obj.is_over_high_critical_threshold()
++        else:
++            return False
++
++@thermal_json_object('thermal.all.good')
++class ThermalGoodCondition(ThermalCondition):
++    def is_match(self, thermal_info_dict):
++        thermal_info_obj = self.get_thermal_info(thermal_info_dict)
++        if thermal_info_obj:
++            return not thermal_info_obj.is_over_threshold()
++        else:
++            return False
+diff --git a/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/thermal_infos.py b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/thermal_infos.py
+new file mode 100644
+index 000000000..5536d17f1
+--- /dev/null
++++ b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/thermal_infos.py
+@@ -0,0 +1,156 @@
++from sonic_platform_base.sonic_thermal_control.thermal_info_base import ThermalPolicyInfoBase
++from sonic_platform_base.sonic_thermal_control.thermal_json_object import thermal_json_object
++
++
++@thermal_json_object('fan_info')
++class FanInfo(ThermalPolicyInfoBase):
++    """
++    Fan information needed by thermal policy
++    """
++
++    # Fan information name
++    INFO_NAME = 'fan_info'
++
++    def __init__(self):
++        self._absent_fans = set()
++        self._present_fans = set()
++        self._fault_fans = set()
++        self._status_changed = False
++
++    def collect(self, chassis):
++        """
++        Collect absence and presence fans.
++        :param chassis: The chassis object
++        :return:
++        """
++        self._status_changed = False
++        for fan in chassis.get_all_fans():
++            presence = fan.get_presence()
++            status = fan.get_status()
++            if presence and fan not in self._present_fans:
++                self._present_fans.add(fan)
++                self._status_changed = True
++                if fan in self._absent_fans:
++                    self._absent_fans.remove(fan)
++            elif not presence and fan not in self._absent_fans:
++                self._absent_fans.add(fan)
++                self._status_changed = True
++                if fan in self._present_fans:
++                    self._present_fans.remove(fan)
++
++            if not status and fan not in self._fault_fans:
++                self._fault_fans.add(fan)
++                self._status_changed = True
++
++            elif status and fan in self._fault_fans:
++                self._fault_fans.remove(fan)
++                self._status_changed = True
++
++    def get_absent_fans(self):
++        """
++        Retrieves absent fans
++        :return: A set of absent fans
++        """
++        return self._absent_fans
++
++    def get_present_fans(self):
++        """
++        Retrieves present fans
++        :return: A set of present fans
++        """
++        return self._present_fans
++
++    def get_fault_fans(self):
++        """
++        Retrieves fault fans
++        :return: A set of fault fans
++        """
++        return self._fault_fans
++
++    def is_status_changed(self):
++        """
++        Retrieves if the status of fan information changed
++        :return: True if status changed else False
++        """
++        return self._status_changed
++
++
++@thermal_json_object('thermal_info')
++class ThermalInfo(ThermalPolicyInfoBase):
++    """
++    Thermal information needed by thermal policy
++    """
++
++    # Fan information name
++    INFO_NAME = 'thermal_info'
++
++    def collect(self, chassis):
++        """
++        Collect thermal sensor temperature change status
++        :param chassis: The chassis object
++        :return:
++        """
++        self._over_high_threshold = False
++        self._over_high_critical_threshold = False
++
++        # Calculate average temp within the device
++        temp = 0
++        num_of_thermals = chassis.get_num_thermals()
++        for index in range(num_of_thermals):
++            thermal = chassis.get_thermal(index)
++            temp = thermal.get_temperature()
++            high_threshold = thermal.get_high_threshold()
++            high_critical_threshold = thermal.get_high_critical_threshold()
++
++            if high_threshold and temp > high_threshold:
++                self._over_high_threshold = True
++
++            if high_critical_threshold and temp > high_critical_threshold:
++                self._over_high_critical_threshold = True
++
++    def is_over_threshold(self):
++        """
++        Retrieves if the temperature is over any threshold
++        :return: True if the temperature is over any threshold else False
++        """
++        return self._over_high_threshold or self._over_high_critical_threshold
++
++    def is_over_high_critical_threshold(self):
++        """
++        Retrieves if the temperature is over high critical threshold
++        :return: True if the temperature is over high critical threshold else False
++        """
++        return self._over_high_critical_threshold
++
++    def is_over_high_threshold(self):
++        """
++        Retrieves if the temperature is over high threshold
++        :return: True if the temperature is over high threshold else False
++        """
++        return self._over_high_threshold
++
++
++@thermal_json_object('chassis_info')
++class ChassisInfo(ThermalPolicyInfoBase):
++    """
++    Chassis information needed by thermal policy
++    """
++    INFO_NAME = 'chassis_info'
++
++    def __init__(self):
++        self._chassis = None
++
++    def collect(self, chassis):
++        """
++        Collect platform chassis.
++        :param chassis: The chassis object
++        :return:
++        """
++        self._chassis = chassis
++
++    def get_chassis(self):
++        """
++        Retrieves platform chassis object
++        :return: A platform chassis object.
++        """
++        return self._chassis
+diff --git a/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/thermal_manager.py b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/thermal_manager.py
+new file mode 100644
+index 000000000..d751c563a
+--- /dev/null
++++ b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/thermal_manager.py
+@@ -0,0 +1,24 @@
++from sonic_platform_base.sonic_thermal_control.thermal_manager_base import ThermalManagerBase
++
++from .thermal_actions import *
++from .thermal_conditions import *
++from .thermal_infos import *
++
++class ThermalManager(ThermalManagerBase):
++    @classmethod
++    def initialize(cls):
++        """
++        Initialize thermal manager, including register thermal condition types and thermal action types
++        and any other vendor specific initialization.
++        :return:
++        """
++        return True
++
++    @classmethod
++    def deinitialize(cls):
++        """
++        Destroy thermal manager, including any vendor specific cleanup. The default behavior of this function
++        is a no-op.
++        :return:
++        """
++        return True
+\ No newline at end of file
+diff --git a/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/thermal_policy.py b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/thermal_policy.py
+new file mode 100644
+index 000000000..275bbeb8d
+--- /dev/null
++++ b/platform/marvell/sonic-platform-larch/cn9130-eps6800/sonic_platform/thermal_policy.py
+@@ -0,0 +1,5 @@
++from sonic_platform_base.sonic_thermal_control.thermal_policy import ThermalPolicy
++
++class ThermalPolicy(ThermalPolicy):
++    super().__init__()
++ 
+\ No newline at end of file
 -- 
 2.25.1
 

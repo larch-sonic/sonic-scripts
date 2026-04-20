@@ -1,0 +1,528 @@
+From 653969e6705195b166e48cb2c716c185601c183d Mon Sep 17 00:00:00 2001
+From: Sergey Syzonov <ssyzonov@larch-networks.com>
+Date: Mon, 20 Apr 2026 13:04:00 +0300
+Subject: [PATCH] sync arm64 sonic.fit
+
+---
+ .../larch-static/boot/ln1524g-4xgf-v6.dtb     | Bin 0 -> 11235 bytes
+ .../larch-static/boot/ln3548xgf-6z-v5.dtb     | Bin 0 -> 45034 bytes
+ platform/marvell/sonic_fit.its                | 184 ++++--------------
+ 3 files changed, 43 insertions(+), 141 deletions(-)
+ create mode 100644 platform/marvell/larch-static/boot/ln1524g-4xgf-v6.dtb
+ create mode 100644 platform/marvell/larch-static/boot/ln3548xgf-6z-v5.dtb
+
+diff --git a/platform/marvell/larch-static/boot/ln1524g-4xgf-v6.dtb b/platform/marvell/larch-static/boot/ln1524g-4xgf-v6.dtb
+new file mode 100644
+index 0000000000000000000000000000000000000000..593344ce2674214f4bd3f7ee7ff34e7b33773a51
+GIT binary patch
+literal 11235
+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
+
+literal 0
+HcmV?d00001
+
+diff --git a/platform/marvell/larch-static/boot/ln3548xgf-6z-v5.dtb b/platform/marvell/larch-static/boot/ln3548xgf-6z-v5.dtb
+new file mode 100644
+index 0000000000000000000000000000000000000000..a9bc4e4c997453fd3cbe0f2773982d8f2d37cb4e
+GIT binary patch
+literal 45034
+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
+Q?eXIWhEEATQ($8M4;M*M*Z=?k
+
+literal 0
+HcmV?d00001
+
+diff --git a/platform/marvell/sonic_fit.its b/platform/marvell/sonic_fit.its
+index f8c3d8dbe..a1beaeb98 100644
+--- a/platform/marvell/sonic_fit.its
++++ b/platform/marvell/sonic_fit.its
+@@ -5,118 +5,6 @@
+     #address-cells = <1>;
+   
+     images {
+-        kernel_ac5x {
+-            description = "Linux Kernel for AC5x";
+-            data = /incbin/("/boot/vmlinuz-6.1.0-29-2-arm64");
+-            type = "kernel";
+-            arch = "arm64";
+-            os = "linux";
+-            compression = "none";
+-            load = <0x2 0x2080000>;
+-            entry = <0x2 0x2080000>;
+-            hash@1 {
+-                algo = "sha1";
+-            };
+-        };
+-        fdt_ac5x {
+-            description = "Flattened Device Tree blob for AC5x";
+-            data = /incbin/("/usr/lib/linux-image-6.1.0-29-2-arm64/marvell/ac5-98dx35xx-rd.dtb");
+-            type = "flat_dt";
+-            arch = "arm64";
+-            compression = "none";
+-            load = <0x2 0x1000000>;
+-            hash@1 {
+-                algo = "sha1";
+-            };
+-        };
+-        fdt_7215_a1 {
+-            description = "Flattened Device Tree blob for 7215_IXS_A1";
+-            data = /incbin/("/usr/lib/linux-image-6.1.0-29-2-arm64/marvell/7215-ixs-a1.dtb");
+-            type = "flat_dt";
+-            arch = "arm64";
+-            compression = "none";
+-            load = <0x11000000>;
+-            hash@1 {
+-                algo = "sha1";
+-            };
+-        };
+-        ramdisk_ac5x {
+-            description = "ramdisk for AC5x";
+-            data = /incbin/("/boot/initrd.img-6.1.0-29-2-arm64");
+-            type = "ramdisk";
+-            arch = "arm64";
+-            os = "linux";
+-            compression = "gzip";
+-            load = <0x2 0x6000000>;
+-            entry = <0x2 0x6000000>;
+-            hash@1 {
+-                algo = "sha1";
+-            };
+-        };
+-        kernel_1 {
+-            description = "Linux Kernel";
+-            data = /incbin/("/boot/vmlinuz-6.1.0-29-2-arm64");
+-            type = "kernel";
+-            arch = "arm64";
+-            os = "linux";
+-            compression = "none";
+-            load = <0x1000000>;
+-            entry = <0x1000000>;
+-            hash@1 {
+-                algo = "sha1";
+-            };
+-        };
+-        ramdisk_1 {
+-            description = "ramdisk";
+-            data = /incbin/("/boot/initrd.img-6.1.0-29-2-arm64");
+-            type = "ramdisk";
+-            arch = "arm64";
+-            os = "linux";
+-            compression = "gzip";
+-            load = <0x6000000>;
+-            entry = <0x6000000>;
+-            hash@1 {
+-                algo = "sha1";
+-            };
+-        };
+-        kernel_2 {
+-            description = "Linux Kernel";
+-            data = /incbin/("/boot/vmlinuz-6.1.0-29-2-arm64");
+-            type = "kernel";
+-            arch = "arm64";
+-            os = "linux";
+-            compression = "none";
+-            load = <0x12000000>;
+-            entry = <0x12000000>;
+-            hash@1 {
+-                algo = "sha1";
+-            };
+-        };
+-        ramdisk_2 {
+-            description = "ramdisk";
+-            data = /incbin/("/boot/initrd.img-6.1.0-29-2-arm64");
+-            type = "ramdisk";
+-            arch = "arm64";
+-            os = "linux";
+-            compression = "gzip";
+-            load = <0x18000000>;
+-            entry = <0x18000000>;
+-            hash@1 {
+-                algo = "sha1";
+-            };
+-        };
+-        fdt_cn9131 {
+-            description = "Flattened Device Tree blob";
+-            data = /incbin/("/boot/cn9131-db-comexpress.dtb");
+-            type = "flat_dt";
+-            arch = "arm64";
+-            compression = "none";
+-            load = <0x0a00000>;
+-            entry = <0x0a00000>;
+-            hash@1 {
+-                algo = "sha1";
+-            };
+-        };
+         kernel_internal_A55 {
+             description = "Linux Kernel for AC5x";
+             data = /incbin/("/boot/vmlinuz-6.1.0-29-2-arm64");
+@@ -209,7 +97,7 @@
+                 algo = "sha1";
+             };
+         };
+-        fdt_cn9131_larch {
++        fdt_cn9131 {
+             description = "Flattened Device Tree blob";
+             data = /incbin/("/boot/cn9131-ext-98cx.dtb");
+             type = "flat_dt";
+@@ -257,6 +145,18 @@
+                 algo = "sha1";
+             };
+         };
++        fdt_ln3548xgf-6z-v5 {
++            description = "Flattened Device Tree blob for ln3548xgf-6z-v5";
++            data = /incbin/("/boot/ln3548xgf-6z-v5.dtb");
++            type = "flat_dt";
++            arch = "arm64";
++            compression = "none";
++            load = <0x1000000>;
++            entry = <0x1000000>;
++            hash@1 {
++                algo = "sha1";
++            };
++        };
+         fdt_qn-sr-400 {
+             description = "Flattened Device Tree blob for qn-sr-400";
+             data = /incbin/("/boot/qn-sr-400.dtb");
+@@ -337,36 +237,20 @@
+                 algo = "sha1";
+             };
+         };
+-    };
+-    configurations {
+-        default = "conf_ac5x";
+-        conf_ac5x {
+-            description = "Boot Linux kernel with FDT blob + ramdisk for RD_AC5x";
+-            kernel = "kernel_ac5x";
+-            fdt = "fdt_ac5x";
+-            ramdisk = "ramdisk_ac5x";
+-            hash@1 {
+-                algo = "sha1";
+-            };
+-        };
+-        conf_7215_a1 {
+-            description = "Boot Linux kernel with FDT blob + ramdisk for 7125_IXS_A1";
+-            kernel = "kernel_2";
+-            fdt = "fdt_7215_a1";
+-            ramdisk = "ramdisk_2";
+-            hash@1 {
+-                algo = "sha1";
+-            };
+-        };
+-        conf_cn9131 {
+-            description = "Boot Linux kernel with FDT blob + ramdisk for CN9131";
+-            kernel = "kernel_1";
+-            fdt = "fdt_cn9131";
+-            ramdisk = "ramdisk_1";
++        fdt_ln1524g-4xgf-v6 {
++            description = "Flattened Device Tree blob";
++            data = /incbin/("/boot/ln1524g-4xgf-v6.dtb");
++            type = "flat_dt";
++            arch = "arm64";
++            compression = "none";
++            load = <0x2 0x1000000>;
+             hash@1 {
+                 algo = "sha1";
+             };
+         };
++    };
++    configurations {
++        default = "conf_ln3848g";
+         conf_ln3848g {
+             description = "Boot Linux kernel with FDT blob + ramdisk for RD_AC5x";
+             kernel = "kernel_internal_A55";
+@@ -415,7 +299,7 @@
+         conf_cn9131-ext-98cx {
+             description = "Boot Linux kernel with FDT blob + ramdisk for CN9131";
+             kernel = "kernel_octeon";
+-            fdt = "fdt_cn9131_larch";
++            fdt = "fdt_cn9131";
+             ramdisk = "ramdisk_common";
+             hash@1 {
+                 algo = "sha1";
+@@ -424,7 +308,7 @@
+         conf_cn9130-eps6800 {
+             description = "Boot Linux kernel with FDT blob + ramdisk for CN9131";
+             kernel = "kernel_octeon";
+-            fdt = "fdt_cn9131_larch";
++            fdt = "fdt_cn9130";
+             ramdisk = "ramdisk_common";
+             hash@1 {
+                 algo = "sha1";
+@@ -502,6 +386,15 @@
+                 algo = "sha1";
+             };
+         };
++        conf_ln3548xgf-6z-v5 {
++            description = "Boot Linux kernel with FDT blob + ramdisk";
++            kernel = "kernel_octeon";
++            fdt = "fdt_ln3548xgf-6z-v5";
++            ramdisk = "ramdisk_common";
++            hash@1 {
++                algo = "sha1";
++            };
++        };
+         conf_ln1524g4mg-6xgf {
+             description = "Boot Linux kernel with FDT blob + ramdisk for RD_AC5x";
+             kernel = "kernel_internal_A55";
+@@ -511,5 +404,14 @@
+                 algo = "sha1";
+             };
+         };
++        conf_ln1524g-4xgf-v6 {
++            description = "Boot Linux kernel with FDT blob + ramdisk for RD_AC5x";
++            kernel = "kernel_internal_A55";
++            fdt = "fdt_ln1524g-4xgf-v6";
++            ramdisk = "ramdisk_common";
++            hash@1 {
++                algo = "sha1";
++            };
++        };
+    };
+ };
+-- 
+2.25.1
+
