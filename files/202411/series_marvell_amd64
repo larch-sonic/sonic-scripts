@@ -12,6 +12,7 @@
 0012-sync-eps6800-platform.patch|sonic-buildimage
 0013-update-openssh-src-deb-package.patch|sonic-buildimage
 0014-sync-arm64-sonic.fit.patch|sonic-buildimage
+0015-Add-support-for-ln1524g-4xgf-v6-platform.patch|sonic-buildimage
 0001-Patch-for-SAI-to-support-Larch-changes.patch|src/sonic-sairedis/SAI
 0001-Move-sai-redis-to-SAI-v1.16.1-with-Larch-Networks-pa.patch|src/sonic-sairedis
 0002-Fix-syncd-build.patch|src/sonic-sairedis
