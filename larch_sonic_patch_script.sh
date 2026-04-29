@@ -162,8 +162,33 @@ apply_sonicbuildimage_patches()
 	pushd patches
 	wget_cp $WGET_PATH/$patch_file
 	popd
-	git am patches/$patch_file
+	git am --3way patches/$patch_file
 	ret=$?
+	if [ $ret -ne 0 ]; then
+		# Try to resolve conflicts in version-lock files by accepting HEAD
+		conflict_files=$(git diff --name-only --diff-filter=U)
+		version_only=true
+		for f in $conflict_files; do
+			if [[ "$f" != files/build/versions/* ]]; then
+				version_only=false
+				break
+			fi
+		done
+		if [ "$version_only" = true ] && [ -n "$conflict_files" ]; then
+			log "Auto-resolving version-lock conflicts by accepting HEAD for: $conflict_files"
+			for f in $conflict_files; do
+				if git cat-file -e HEAD:"$f" 2>/dev/null; then
+					git checkout HEAD -- "$f"
+				else
+					# File was deleted in HEAD (modify/delete conflict)
+					git rm -f "$f" 2>/dev/null
+				fi
+			done
+			git add $conflict_files 2>/dev/null
+			git am --continue
+			ret=$?
+		fi
+	fi
 	if [ $ret -ne 0 ]; then
         ((err_cnt++))
 		if [ "$PATCH_ERR_SKIP" == "" ]; then
@@ -187,7 +212,7 @@ apply_submodule_patches()
 	wget_cp $WGET_PATH/${patch}
 	popd
 	pushd ${dir}
-	git am $CWD/patches/${patch}
+	git am --3way $CWD/patches/${patch}
 	ret=$?
 	if [ $ret -ne 0 ]; then
         ((err_cnt++))
