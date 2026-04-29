@@ -38,7 +38,7 @@ jobs:
 
       # Runs a single command using the runners shell
       - name: Start to build Community Sonic using a script
-        run: ./sonic_build_script.sh -b 202511 -p marvell-prestera -a arm64 --patch_script https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/${{ github.head_ref || github.ref_name }}/larch_sonic_patch_script.sh -c ea0fcbf4fa89ea564ee11f47ceb080c0d830fc67 --other_build_options "SONIC_BUILD_JOBS=8"
+        run: ./sonic_build_script.sh -b 202511 -p marvell-prestera -a arm64 --patch_script https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/${{ github.head_ref || github.ref_name }}/larch_sonic_patch_script.sh -c d7aa7e9c120ff00d9838f9f3b706bee3b1bbe2bb --other_build_options "SONIC_BUILD_JOBS=8"
       
       # - name: Upload build artifacts
       #   uses: actions/upload-artifact@v4
@@ -141,7 +141,7 @@ jobs:
 
       # Runs a single command using the runners shell
       - name: Start to build Community Sonic using a script
-        run: ./sonic_build_script.sh -b 202511 -p marvell-larch-sim -a amd64 --patch_script https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/${{ github.head_ref || github.ref_name }}/larch_sonic_patch_script.sh -c ea0fcbf4fa89ea564ee11f47ceb080c0d830fc67 --other_build_options "SONIC_BUILD_JOBS=8"
+        run: ./sonic_build_script.sh -b 202511 -p marvell-larch-sim -a amd64 --patch_script https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/${{ github.head_ref || github.ref_name }}/larch_sonic_patch_script.sh -c d7aa7e9c120ff00d9838f9f3b706bee3b1bbe2bb --other_build_options "SONIC_BUILD_JOBS=8"
       
       # - name: Upload build artifacts
       #   uses: actions/upload-artifact@v4
@@ -244,7 +244,7 @@ jobs:
 
       # Runs a single command using the runners shell
       - name: Start to build Community Sonic using a script
-        run: ./sonic_build_script.sh -b 202511 -p marvell-prestera -a amd64 --patch_script https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/${{ github.head_ref || github.ref_name }}/larch_sonic_patch_script.sh -c ea0fcbf4fa89ea564ee11f47ceb080c0d830fc67 --other_build_options "SONIC_BUILD_JOBS=8"
+        run: ./sonic_build_script.sh -b 202511 -p marvell-prestera -a amd64 --patch_script https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/${{ github.head_ref || github.ref_name }}/larch_sonic_patch_script.sh -c d7aa7e9c120ff00d9838f9f3b706bee3b1bbe2bb --other_build_options "SONIC_BUILD_JOBS=8"
       
       # - name: Upload build artifacts
       #   uses: actions/upload-artifact@v4
