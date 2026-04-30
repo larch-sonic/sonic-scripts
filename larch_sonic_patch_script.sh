@@ -271,6 +271,15 @@ main()
 		exit 1
 	fi
 
+	# Remove host-base-image version directory: pinned versions include
+	# binNMU (+bN) rebuilds not available in Debian snapshot mirrors.
+	# Without this dir, build_debian_base_system.sh uses plain debootstrap.
+	if [ -d files/build/versions/host-base-image ]; then
+		log "Removing host-base-image version pins (binNMU pins not in snapshot)"
+		git rm -rf files/build/versions/host-base-image
+		git commit -m "Remove host-base-image version pins to use plain debootstrap"
+	fi
+
 	echo "make init" >> build_cmd.txt
 	make init
 	git submodule sync --recursive
