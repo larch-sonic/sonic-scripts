@@ -162,7 +162,7 @@ apply_sonicbuildimage_patches()
 	pushd patches
 	wget_cp $WGET_PATH/$patch_file
 	popd
-	git am patches/$patch_file
+	git am --3way patches/$patch_file
 	ret=$?
 	if [ $ret -ne 0 ]; then
         ((err_cnt++))
@@ -187,7 +187,7 @@ apply_submodule_patches()
 	wget_cp $WGET_PATH/${patch}
 	popd
 	pushd ${dir}
-	git am $CWD/patches/${patch}
+	git am --3way $CWD/patches/${patch}
 	ret=$?
 	if [ $ret -ne 0 ]; then
         ((err_cnt++))
