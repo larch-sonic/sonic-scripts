@@ -1,4 +1,2 @@
 0001-Add-Larch-platforms.patch|sonic-buildimage
-0003-Fix-arm-build.patch|sonic-buildimage
-0005-Fix-amd4-hw-build.patch|sonic-buildimage
 0008-Enable-ospf-and-isis-traps-by-default.patch|sonic-buildimage

@@ -1,0 +1,1263 @@
+From 1348019955c5b02f8a38ffa124fe2ed1ab600658 Mon Sep 17 00:00:00 2001
+From: Kostiantyn Buravchenko <kburavchenko@larch-networks.com>
+Date: Fri, 1 May 2026 20:01:19 +0300
+Subject: [PATCH] Add marvell-larch-sim platform
+
+---
+ .../docker-syncd-mrvl-prestera-rpc.dep        |   8 ++
+ .../docker-syncd-mrvl-prestera-rpc.mk         |  27 ++++
+ .../99-syncd.conf                             |   2 +
+ .../Dockerfile.j2                             |  59 ++++++++
+ .../ptf_nn_agent.conf                         |  10 ++
+ .../docker-syncd-mrvl-prestera.dep            |  10 ++
+ .../docker-syncd-mrvl-prestera.mk             |  17 +++
+ .../docker-syncd-mrvl-prestera/Dockerfile.j2  |  38 +++++
+ .../critical_processes                        |   2 +
+ .../docker-syncd-mrvl-prestera/slan.sh        |  15 ++
+ .../supervisord.conf                          |  55 +++++++
+ .../docker-syncd-mrvl-prestera/syncd.sh       |  12 ++
+ .../docker-syncd-mrvl-prestera/syncd_start.sh |  10 ++
+ platform/marvell-larch-sim/kvm-image.mk       |  15 ++
+ .../marvell-larch-sim/libsaithrift-dev.dep    |  11 ++
+ .../marvell-larch-sim/libsaithrift-dev.mk     |  25 ++++
+ platform/marvell-larch-sim/one-image.dep      |   1 +
+ platform/marvell-larch-sim/one-image.mk       |  13 ++
+ platform/marvell-larch-sim/onie.mk            |  10 ++
+ platform/marvell-larch-sim/platform-larch.dep |   9 ++
+ platform/marvell-larch-sim/platform-larch.mk  |   9 ++
+ platform/marvell-larch-sim/platform.conf      |   0
+ platform/marvell-larch-sim/rules.dep          |   5 +
+ platform/marvell-larch-sim/rules.mk           |  26 ++++
+ platform/marvell-larch-sim/sai.dep            |   7 +
+ platform/marvell-larch-sim/sai.mk             |  18 +++
+ .../sonic-platform-larch/debian/changelog     |   4 +
+ .../sonic-platform-larch/debian/compat        |   1 +
+ .../sonic-platform-larch/debian/control       |  12 ++
+ .../sonic-platform-larch/debian/rules         |  38 +++++
+ .../debian/sonic-platform-larchvm.install     |   3 +
+ .../debian/sonic-platform-larchvm.postinst    |  20 +++
+ .../files/etc/modules-load.d/mpls.conf        |   2 +
+ .../files/etc/sonic/telemetry/cert.cer        |  35 +++++
+ .../files/etc/sonic/telemetry/key.key         |  52 +++++++
+ .../files/etc/sysctl.d/90-mpls.conf           |   1 +
+ .../files/scripts/larchvm-init.sh             |  43 ++++++
+ .../files/service/larchvm-init.service        |  11 ++
+ .../sonic-platform-larch/larchvm/setup.py     |  13 ++
+ .../larchvm/sonic_platform/__init__.py        |   2 +
+ .../larchvm/sonic_platform/chassis.py         | 134 ++++++++++++++++++
+ .../larchvm/sonic_platform/platform.py        |  25 ++++
+ .../larchvm/sysctl/zz-dqs5000-nmi.conf        |   7 +
+ platform/marvell-larch-sim/utils/run_qemu.sh  |  90 ++++++++++++
+ 44 files changed, 907 insertions(+)
+ create mode 100644 platform/marvell-larch-sim/docker-syncd-mrvl-prestera-rpc.dep
+ create mode 100644 platform/marvell-larch-sim/docker-syncd-mrvl-prestera-rpc.mk
+ create mode 100644 platform/marvell-larch-sim/docker-syncd-mrvl-prestera-rpc/99-syncd.conf
+ create mode 100644 platform/marvell-larch-sim/docker-syncd-mrvl-prestera-rpc/Dockerfile.j2
+ create mode 100644 platform/marvell-larch-sim/docker-syncd-mrvl-prestera-rpc/ptf_nn_agent.conf
+ create mode 100644 platform/marvell-larch-sim/docker-syncd-mrvl-prestera.dep
+ create mode 100644 platform/marvell-larch-sim/docker-syncd-mrvl-prestera.mk
+ create mode 100755 platform/marvell-larch-sim/docker-syncd-mrvl-prestera/Dockerfile.j2
+ create mode 100644 platform/marvell-larch-sim/docker-syncd-mrvl-prestera/critical_processes
+ create mode 100755 platform/marvell-larch-sim/docker-syncd-mrvl-prestera/slan.sh
+ create mode 100644 platform/marvell-larch-sim/docker-syncd-mrvl-prestera/supervisord.conf
+ create mode 100755 platform/marvell-larch-sim/docker-syncd-mrvl-prestera/syncd.sh
+ create mode 100755 platform/marvell-larch-sim/docker-syncd-mrvl-prestera/syncd_start.sh
+ create mode 100644 platform/marvell-larch-sim/kvm-image.mk
+ create mode 100644 platform/marvell-larch-sim/libsaithrift-dev.dep
+ create mode 100644 platform/marvell-larch-sim/libsaithrift-dev.mk
+ create mode 100644 platform/marvell-larch-sim/one-image.dep
+ create mode 100644 platform/marvell-larch-sim/one-image.mk
+ create mode 100644 platform/marvell-larch-sim/onie.mk
+ create mode 100644 platform/marvell-larch-sim/platform-larch.dep
+ create mode 100644 platform/marvell-larch-sim/platform-larch.mk
+ create mode 100644 platform/marvell-larch-sim/platform.conf
+ create mode 100644 platform/marvell-larch-sim/rules.dep
+ create mode 100644 platform/marvell-larch-sim/rules.mk
+ create mode 100644 platform/marvell-larch-sim/sai.dep
+ create mode 100644 platform/marvell-larch-sim/sai.mk
+ create mode 100644 platform/marvell-larch-sim/sonic-platform-larch/debian/changelog
+ create mode 100644 platform/marvell-larch-sim/sonic-platform-larch/debian/compat
+ create mode 100644 platform/marvell-larch-sim/sonic-platform-larch/debian/control
+ create mode 100755 platform/marvell-larch-sim/sonic-platform-larch/debian/rules
+ create mode 100644 platform/marvell-larch-sim/sonic-platform-larch/debian/sonic-platform-larchvm.install
+ create mode 100644 platform/marvell-larch-sim/sonic-platform-larch/debian/sonic-platform-larchvm.postinst
+ create mode 100644 platform/marvell-larch-sim/sonic-platform-larch/files/etc/modules-load.d/mpls.conf
+ create mode 100644 platform/marvell-larch-sim/sonic-platform-larch/files/etc/sonic/telemetry/cert.cer
+ create mode 100644 platform/marvell-larch-sim/sonic-platform-larch/files/etc/sonic/telemetry/key.key
+ create mode 100644 platform/marvell-larch-sim/sonic-platform-larch/files/etc/sysctl.d/90-mpls.conf
+ create mode 100644 platform/marvell-larch-sim/sonic-platform-larch/files/scripts/larchvm-init.sh
+ create mode 100644 platform/marvell-larch-sim/sonic-platform-larch/files/service/larchvm-init.service
+ create mode 100644 platform/marvell-larch-sim/sonic-platform-larch/larchvm/setup.py
+ create mode 100644 platform/marvell-larch-sim/sonic-platform-larch/larchvm/sonic_platform/__init__.py
+ create mode 100644 platform/marvell-larch-sim/sonic-platform-larch/larchvm/sonic_platform/chassis.py
+ create mode 100644 platform/marvell-larch-sim/sonic-platform-larch/larchvm/sonic_platform/platform.py
+ create mode 100644 platform/marvell-larch-sim/sonic-platform-larch/larchvm/sysctl/zz-dqs5000-nmi.conf
+ create mode 100755 platform/marvell-larch-sim/utils/run_qemu.sh
+
+diff --git a/platform/marvell-larch-sim/docker-syncd-mrvl-prestera-rpc.dep b/platform/marvell-larch-sim/docker-syncd-mrvl-prestera-rpc.dep
+new file mode 100644
+index 000000000..cb6ed4eeb
+--- /dev/null
++++ b/platform/marvell-larch-sim/docker-syncd-mrvl-prestera-rpc.dep
+@@ -0,0 +1,8 @@
++DPATH       := $($(DOCKER_SYNCD_MRVL_RPC)_PATH)
++DEP_FILES   := $(SONIC_COMMON_FILES_LIST) $(PLATFORM_PATH)/docker-syncd-mrvl-prestera-rpc.mk $(PLATFORM_PATH)/docker-syncd-mrvl-prestera-rpc.dep
++DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
++DEP_FILES   += $(shell git ls-files $(DPATH))
++
++$(DOCKER_SYNCD_MRVL_RPC)_CACHE_MODE  := GIT_CONTENT_SHA
++$(DOCKER_SYNCD_MRVL_RPC)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
++$(DOCKER_SYNCD_MRVL_RPC)_DEP_FILES   := $(DEP_FILES)
+diff --git a/platform/marvell-larch-sim/docker-syncd-mrvl-prestera-rpc.mk b/platform/marvell-larch-sim/docker-syncd-mrvl-prestera-rpc.mk
+new file mode 100644
+index 000000000..7bd40c7fb
+--- /dev/null
++++ b/platform/marvell-larch-sim/docker-syncd-mrvl-prestera-rpc.mk
+@@ -0,0 +1,27 @@
++# docker image for mrvl syncd with rpc
++
++DOCKER_SYNCD_MRVL_RPC = docker-syncd-mrvl-prestera-rpc.gz
++$(DOCKER_SYNCD_MRVL_RPC)_PATH = $(PLATFORM_PATH)/docker-syncd-mrvl-prestera-rpc
++$(DOCKER_SYNCD_MRVL_RPC)_DEPENDS += $(SYNCD_RPC)
++$(DOCKER_SYNCD_MRVL_RPC)_PYTHON_WHEELS += $(PTF_PY3)
++ifeq ($(INSTALL_DEBUG_TOOLS), y)
++$(DOCKER_SYNCD_MRVL_RPC)_DEPENDS += $(SYNCD_RPC_DBG) \
++                                    $(LIBSWSSCOMMON_DBG) \
++                                    $(LIBSAIMETADATA_DBG) \
++                                    $(LIBSAIREDIS_DBG)
++endif
++$(DOCKER_SYNCD_MRVL_RPC)_LOAD_DOCKERS += $(DOCKER_SYNCD_BASE)
++SONIC_DOCKER_IMAGES += $(DOCKER_SYNCD_MRVL_RPC)
++ifeq ($(ENABLE_SYNCD_RPC),y)
++SONIC_INSTALL_DOCKER_IMAGES += $(DOCKER_SYNCD_MRVL_RPC)
++endif
++
++$(DOCKER_SYNCD_MRVL_RPC)_CONTAINER_NAME = syncd
++$(DOCKER_SYNCD_MRVL_RPC)_VERSION = 1.0.0+rpc
++$(DOCKER_SYNCD_MRVL_RPC)_PACKAGE_NAME = syncd
++$(DOCKER_SYNCD_MRVL_RPC)_RUN_OPT += --privileged -t
++$(DOCKER_SYNCD_MRVL_RPC)_RUN_OPT += -v /host/machine.conf:/etc/machine.conf
++$(DOCKER_SYNCD_MRVL_RPC)_RUN_OPT += -v /etc/sonic:/etc/sonic:ro
++$(DOCKER_SYNCD_MRVL_RPC)_RUN_OPT += -v /host/warmboot:/var/warmboot
++
++SONIC_BOOKWORM_DOCKERS += $(DOCKER_SYNCD_MRVL_RPC)
+diff --git a/platform/marvell-larch-sim/docker-syncd-mrvl-prestera-rpc/99-syncd.conf b/platform/marvell-larch-sim/docker-syncd-mrvl-prestera-rpc/99-syncd.conf
+new file mode 100644
+index 000000000..f3b57e3b1
+--- /dev/null
++++ b/platform/marvell-larch-sim/docker-syncd-mrvl-prestera-rpc/99-syncd.conf
+@@ -0,0 +1,2 @@
++sysctl -w net.core.rmem_max=509430500
++
+diff --git a/platform/marvell-larch-sim/docker-syncd-mrvl-prestera-rpc/Dockerfile.j2 b/platform/marvell-larch-sim/docker-syncd-mrvl-prestera-rpc/Dockerfile.j2
+new file mode 100644
+index 000000000..02d962d19
+--- /dev/null
++++ b/platform/marvell-larch-sim/docker-syncd-mrvl-prestera-rpc/Dockerfile.j2
+@@ -0,0 +1,59 @@
++FROM docker-syncd-mrvl-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
++{% from "dockers/dockerfile-macros.j2" import install_python_wheels, copy_files %}
++
++## Make apt-get non-interactive
++ENV DEBIAN_FRONTEND=noninteractive
++
++COPY \
++{% for deb in docker_syncd_mrvl_rpc_debs.split(' ') -%}
++debs/{{ deb }}{{' '}}
++{%- endfor -%}
++debs/
++
++RUN apt-get purge -y syncd
++
++## Pre-install the fundamental packages
++RUN apt-get update \
++ && apt-get -y install  \
++    net-tools           \
++    python3-pip		\
++    python3-setuptools	\
++    build-essential     \
++    libssl-dev          \
++    libffi-dev          \
++    python3-dev          \
++    wget                \
++    libqt5core5a        \
++    libqt5network5      \
++    libboost-atomic1.74.0 \
++    libthrift-0.17.0      \
++    libnanomsg5           \
++    libnanomsg-dev
++
++RUN dpkg_apt() { [ -f $1 ] && { dpkg -i $1 || apt-get -y install -f; } || return 1; } ; \
++{% for deb in docker_syncd_mrvl_rpc_debs.split(' ') -%}
++dpkg_apt debs/{{ deb }}{{'; '}}
++{%- endfor %}
++
++RUN pip3 install cffi    \
++ && pip3 install nnpy    \
++ && mkdir -p /opt       \
++ && cd /opt             \
++ && wget https://raw.githubusercontent.com/p4lang/ptf/master/ptf_nn/ptf_nn_agent.py
++
++COPY ["ptf_nn_agent.conf", "/etc/supervisor/conf.d/"]
++
++{% if docker_syncd_mrvl_rpc_whls.strip() -%}
++# Copy locally-built Python wheel dependencies
++{{ copy_files("python-wheels/", docker_syncd_mrvl_rpc_whls.split(' '), "/python-wheels/") }}
++
++# Install locally-built Python wheel dependencies
++{{ install_python_wheels(docker_syncd_mrvl_rpc_whls.split(' ')) }}
++{% endif %}
++
++## Clean up
++RUN apt-get purge -y libyaml-dev python3-dev libffi-dev libssl-dev wget build-essential
++RUN apt-get clean -y; apt-get autoclean -y; apt-get autoremove -y
++RUN rm -rf /root/deps
++
++ENTRYPOINT ["/usr/local/bin/supervisord"]
+diff --git a/platform/marvell-larch-sim/docker-syncd-mrvl-prestera-rpc/ptf_nn_agent.conf b/platform/marvell-larch-sim/docker-syncd-mrvl-prestera-rpc/ptf_nn_agent.conf
+new file mode 100644
+index 000000000..fa1ed0eb1
+--- /dev/null
++++ b/platform/marvell-larch-sim/docker-syncd-mrvl-prestera-rpc/ptf_nn_agent.conf
+@@ -0,0 +1,10 @@
++[program:ptf_nn_agent]
++command=/usr/bin/python /opt/ptf_nn_agent.py --device-socket 1@tcp://0.0.0.0:10900 -i 1-3@Ethernet12 --set-iface-rcv-buffer=109430400
++process_name=ptf_nn_agent
++stdout_logfile=/tmp/ptf_nn_agent.out.log
++stderr_logfile=/tmp/ptf_nn_agent.err.log
++redirect_stderr=false
++autostart=true
++autorestart=true
++startsecs=1
++numprocs=1
+diff --git a/platform/marvell-larch-sim/docker-syncd-mrvl-prestera.dep b/platform/marvell-larch-sim/docker-syncd-mrvl-prestera.dep
+new file mode 100644
+index 000000000..9bb5f572a
+--- /dev/null
++++ b/platform/marvell-larch-sim/docker-syncd-mrvl-prestera.dep
+@@ -0,0 +1,10 @@
++DPATH       := $($(DOCKER_SYNCD_BASE)_PATH)
++DEP_FILES   := $(SONIC_COMMON_FILES_LIST) $(PLATFORM_PATH)/docker-syncd-mrvl-prestera.mk $(PLATFORM_PATH)/docker-syncd-mrvl-prestera.dep $(PLATFORM_PATH)/sai.mk
++DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
++DEP_FILES   += $(shell git ls-files $(DPATH))
++
++$(DOCKER_SYNCD_BASE)_CACHE_MODE  := GIT_CONTENT_SHA
++$(DOCKER_SYNCD_BASE)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
++$(DOCKER_SYNCD_BASE)_DEP_FILES   := $(DEP_FILES)
++
++$(eval $(call add_dbg_docker,$(DOCKER_SYNCD_BASE),$(DOCKER_SYNCD_BASE_DBG)))
+diff --git a/platform/marvell-larch-sim/docker-syncd-mrvl-prestera.mk b/platform/marvell-larch-sim/docker-syncd-mrvl-prestera.mk
+new file mode 100644
+index 000000000..2ba945657
+--- /dev/null
++++ b/platform/marvell-larch-sim/docker-syncd-mrvl-prestera.mk
+@@ -0,0 +1,17 @@
++# docker image for mrvl syncd
++
++DOCKER_SYNCD_PLATFORM_CODE = mrvl-prestera
++include $(PLATFORM_PATH)/../template/docker-syncd-bookworm.mk
++
++$(DOCKER_SYNCD_BASE)_DEPENDS += $(SYNCD)
++$(DOCKER_SYNCD_BASE)_DEPENDS += $(MRVL_SAI)
++
++$(DOCKER_SYNCD_BASE)_DBG_DEPENDS += $(SYNCD_DBG) \
++                                $(LIBSWSSCOMMON_DBG) \
++                                $(LIBSAIMETADATA_DBG) \
++                                $(LIBSAIREDIS_DBG)
++
++$(DOCKER_SYNCD_BASE)_VERSION = 1.0.0
++$(DOCKER_SYNCD_BASE)_PACKAGE_NAME = syncd
++
++$(DOCKER_SYNCD_BASE)_RUN_OPT += -v /host/warmboot:/var/warmboot
+diff --git a/platform/marvell-larch-sim/docker-syncd-mrvl-prestera/Dockerfile.j2 b/platform/marvell-larch-sim/docker-syncd-mrvl-prestera/Dockerfile.j2
+new file mode 100755
+index 000000000..725ef9d9c
+--- /dev/null
++++ b/platform/marvell-larch-sim/docker-syncd-mrvl-prestera/Dockerfile.j2
+@@ -0,0 +1,38 @@
++{% from "dockers/dockerfile-macros.j2" import install_debian_packages, copy_files %}
++ARG BASE=docker-config-engine-bookworm-{{DOCKER_USERNAME}}:{{DOCKER_USERTAG}}
++
++FROM $BASE AS base
++
++ARG docker_container_name
++
++## Make apt-get non-interactive
++ENV DEBIAN_FRONTEND=noninteractive
++
++RUN apt-get update
++
++RUN apt-get update \
++ && apt-get -y install  \
++    net-tools           \
++    iputils-ping
++
++RUN apt-get -y install libpcap-dev libxml2-dev python3-dev swig gdb telnet
++
++{% if docker_syncd_mrvl_prestera_debs.strip() -%}
++# Copy locally-built Debian package dependencies
++{{ copy_files("debs/", docker_syncd_mrvl_prestera_debs.split(' '), "/debs/") }}
++# Install locally-built Debian packages and implicitly install their dependencies
++{{ install_debian_packages(docker_syncd_mrvl_prestera_debs.split(' ')) }}
++{%- endif %}
++
++COPY ["supervisord.conf", "/etc/supervisor/conf.d/"]
++COPY ["critical_processes", "/etc/supervisor/"]
++COPY ["syncd.sh", "/usr/bin/"]
++COPY ["syncd_start.sh", "/usr/bin/"]
++COPY ["slan.sh", "/usr/bin/"]
++
++FROM $BASE
++
++RUN --mount=type=bind,from=base,target=/changes-to-image rsync -axAX --no-D --exclude=/sys --exclude=/proc --exclude=/dev --exclude=resolv.conf /changes-to-image/ /
++
++ENV DEBIAN_FRONTEND=noninteractive
++ENTRYPOINT ["/usr/local/bin/supervisord"]
+diff --git a/platform/marvell-larch-sim/docker-syncd-mrvl-prestera/critical_processes b/platform/marvell-larch-sim/docker-syncd-mrvl-prestera/critical_processes
+new file mode 100644
+index 000000000..b75a4a23e
+--- /dev/null
++++ b/platform/marvell-larch-sim/docker-syncd-mrvl-prestera/critical_processes
+@@ -0,0 +1,2 @@
++program:syncd
++program:slan
+diff --git a/platform/marvell-larch-sim/docker-syncd-mrvl-prestera/slan.sh b/platform/marvell-larch-sim/docker-syncd-mrvl-prestera/slan.sh
+new file mode 100755
+index 000000000..d53d21c04
+--- /dev/null
++++ b/platform/marvell-larch-sim/docker-syncd-mrvl-prestera/slan.sh
+@@ -0,0 +1,15 @@
++#!/usr/bin/env bash
++
++num_port=8
++MAX_MTU=9200
++
++tap_set() {
++  for port in $(seq 1 $num_port); do
++    ip link set up dev eth$port
++    ip link set dev eth$port arp off
++    ip link set dev eth$port mtu $MAX_MTU
++  done
++}
++
++tap_set
++exec /usr/bin/slanConnector_Linux
+diff --git a/platform/marvell-larch-sim/docker-syncd-mrvl-prestera/supervisord.conf b/platform/marvell-larch-sim/docker-syncd-mrvl-prestera/supervisord.conf
+new file mode 100644
+index 000000000..7de4ccfb0
+--- /dev/null
++++ b/platform/marvell-larch-sim/docker-syncd-mrvl-prestera/supervisord.conf
+@@ -0,0 +1,55 @@
++[supervisord]
++logfile_maxbytes=1MB
++logfile_backups=2
++nodaemon=true
++
++[eventlistener:dependent-startup]
++command=python3 -m supervisord_dependent_startup
++autostart=true
++autorestart=unexpected
++startretries=0
++exitcodes=0,3
++events=PROCESS_STATE
++buffer_size=1024
++
++[eventlistener:supervisor-proc-exit-listener]
++command=/usr/bin/supervisor-proc-exit-listener-rs --container-name syncd
++events=PROCESS_STATE_EXITED,PROCESS_STATE_RUNNING
++autostart=true
++autorestart=unexpected
++buffer_size=1024
++
++[program:rsyslogd]
++command=/usr/sbin/rsyslogd -n -iNONE
++priority=1
++autostart=false
++autorestart=false
++stdout_logfile=NONE
++stdout_syslog=true
++stderr_logfile=NONE
++stderr_syslog=true
++dependent_startup=true
++
++[program:slan]
++command=/usr/bin/slan.sh
++priority=2
++autostart=false
++autorestart=false
++stdout_logfile=NONE
++stdout_syslog=true
++stderr_logfile=NONE
++stderr_syslog=true
++dependent_startup=true
++dependent_startup_wait_for=rsyslogd:running
++
++[program:syncd]
++command=/usr/bin/syncd_start.sh
++priority=3
++autostart=false
++autorestart=false
++stdout_logfile=NONE
++stdout_syslog=true
++stderr_logfile=NONE
++stderr_syslog=true
++dependent_startup=true
++dependent_startup_wait_for=slan:running
+diff --git a/platform/marvell-larch-sim/docker-syncd-mrvl-prestera/syncd.sh b/platform/marvell-larch-sim/docker-syncd-mrvl-prestera/syncd.sh
+new file mode 100755
+index 000000000..993cf100f
+--- /dev/null
++++ b/platform/marvell-larch-sim/docker-syncd-mrvl-prestera/syncd.sh
+@@ -0,0 +1,12 @@
++#!/usr/bin/env bash
++
++function clean_up {
++    service syncd stop
++    exit
++}
++
++trap clean_up SIGTERM SIGKILL
++
++service syncd start
++
++read
+diff --git a/platform/marvell-larch-sim/docker-syncd-mrvl-prestera/syncd_start.sh b/platform/marvell-larch-sim/docker-syncd-mrvl-prestera/syncd_start.sh
+new file mode 100755
+index 000000000..746a32985
+--- /dev/null
++++ b/platform/marvell-larch-sim/docker-syncd-mrvl-prestera/syncd_start.sh
+@@ -0,0 +1,10 @@
++#!/usr/bin/env bash
++#
++# Script to start syncd using supervisord
++#
++
++# Source the file that holds common code for systemd and supervisord
++. /usr/bin/syncd_init_common.sh
++
++config_syncd
++exec ${CMD} ${CMD_ARGS}
+diff --git a/platform/marvell-larch-sim/kvm-image.mk b/platform/marvell-larch-sim/kvm-image.mk
+new file mode 100644
+index 000000000..7058e8694
+--- /dev/null
++++ b/platform/marvell-larch-sim/kvm-image.mk
+@@ -0,0 +1,15 @@
++# sonic kvm image
++
++SONIC_KVM_IMAGE = sonic-vs.img.gz
++$(SONIC_KVM_IMAGE)_INSTALLS += $(SYSTEMD_SONIC_GENERATOR)
++$(SONIC_KVM_IMAGE)_MACHINE = vs
++$(SONIC_KVM_IMAGE)_IMAGE_TYPE = kvm
++$(SONIC_KVM_IMAGE)_INSTALLS += $(LARCHVM_PLATFORM)
++ifeq ($(INSTALL_DEBUG_TOOLS),y)
++$(SONIC_KVM_IMAGE)_DOCKERS += $(SONIC_INSTALL_DOCKER_DBG_IMAGES)
++$(SONIC_KVM_IMAGE)_DOCKERS += $(filter-out $(patsubst %-$(DBG_IMAGE_MARK).gz,%.gz, $(SONIC_INSTALL_DOCKER_DBG_IMAGES)), $(SONIC_INSTALL_DOCKER_IMAGES))
++else
++$(SONIC_KVM_IMAGE)_DOCKERS = $(SONIC_INSTALL_DOCKER_IMAGES)
++endif
++$(SONIC_KVM_IMAGE)_FILES = $(ONIE_RECOVERY_IMAGE) $(ONIE_RECOVERY_KVM_4ASIC_IMAGE) $(ONIE_RECOVERY_KVM_6ASIC_IMAGE)
++SONIC_INSTALLERS += $(SONIC_KVM_IMAGE)
+diff --git a/platform/marvell-larch-sim/libsaithrift-dev.dep b/platform/marvell-larch-sim/libsaithrift-dev.dep
+new file mode 100644
+index 000000000..7260effa0
+--- /dev/null
++++ b/platform/marvell-larch-sim/libsaithrift-dev.dep
+@@ -0,0 +1,11 @@
++SPATH       := $($(LIBSAITHRIFT_DEV)_SRC_PATH)
++DEP_FILES   := $(SONIC_COMMON_FILES_LIST) $(PLATFORM_PATH)/libsaithrift-dev.mk $(PLATFORM_PATH)/libsaithrift-dev.dep
++DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
++SMDEP_PATHS := $(SPATH)  $(SPATH)/test/ptf  $(SPATH)/test/saithrift/ctypesgen
++$(foreach path, $(SMDEP_PATHS), $(eval $(path) :=$(filter-out $(SMDEP_PATHS),$(addprefix $(path)/, $(shell cd $(path) &&  git ls-files | grep -Ev " " )))))
++
++$(LIBSAITHRIFT_DEV)_CACHE_MODE  := GIT_CONTENT_SHA
++$(LIBSAITHRIFT_DEV)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
++$(LIBSAITHRIFT_DEV)_DEP_FILES   := $(DEP_FILES)
++$(LIBSAITHRIFT_DEV)_SMDEP_FILES := $(foreach path, $(SMDEP_PATHS), $($(path)))
++$(LIBSAITHRIFT_DEV)_SMDEP_PATHS := $(SMDEP_PATHS)
+diff --git a/platform/marvell-larch-sim/libsaithrift-dev.mk b/platform/marvell-larch-sim/libsaithrift-dev.mk
+new file mode 100644
+index 000000000..eb13006f7
+--- /dev/null
++++ b/platform/marvell-larch-sim/libsaithrift-dev.mk
+@@ -0,0 +1,25 @@
++# libsaithrift-dev package
++
++SAI_VER = 0.9.4
++
++LIBSAITHRIFT_DEV = libsaithrift$(SAITHRIFT_VER)-dev_$(SAI_VER)_$(CONFIGURED_ARCH).deb
++$(LIBSAITHRIFT_DEV)_SRC_PATH = $(SRC_PATH)/sonic-sairedis/SAI
++
++ifeq ($(SAITHRIFT_V2),y)
++$(LIBSAITHRIFT_DEV)_BUILD_ENV = SAITHRIFTV2=true SAITHRIFT_VER=v2
++endif
++
++$(LIBSAITHRIFT_DEV)_DEPENDS += $(MRVL_SAI) $(LIBSAIMETADATA) $(LIBSAIMETADATA_DEV)
++$(LIBSAITHRIFT_DEV)_RDEPENDS += $(MRVL_SAI) $(LIBSAIMETADATA)
++SONIC_DPKG_DEBS += $(LIBSAITHRIFT_DEV)
++
++PYTHON_SAITHRIFT = python-saithrift$(SAITHRIFT_VER)_$(SAI_VER)_$(CONFIGURED_ARCH).deb
++$(eval $(call add_extra_package,$(LIBSAITHRIFT_DEV),$(PYTHON_SAITHRIFT)))
++
++SAISERVER = saiserver$(SAITHRIFT_VER)_$(SAI_VER)_$(CONFIGURED_ARCH).deb
++$(SAISERVER)_RDEPENDS += $(LIBSAITHRIFT_DEV)
++$(eval $(call add_extra_package,$(LIBSAITHRIFT_DEV),$(SAISERVER)))
++
++SAISERVER_DBG = saiserver$(SAITHRIFT_VER)-dbg_$(SAI_VER)_$(CONFIGURED_ARCH).deb
++$(SAISERVER_DBG)_RDEPENDS += $(SAISERVER)
++$(eval $(call add_extra_package,$(LIBSAITHRIFT_DEV),$(SAISERVER_DBG)))
+diff --git a/platform/marvell-larch-sim/one-image.dep b/platform/marvell-larch-sim/one-image.dep
+new file mode 100644
+index 000000000..154112a82
+--- /dev/null
++++ b/platform/marvell-larch-sim/one-image.dep
+@@ -0,0 +1 @@
++$(SONIC_ONE_IMAGE)_CACHE_MODE  := none
+diff --git a/platform/marvell-larch-sim/one-image.mk b/platform/marvell-larch-sim/one-image.mk
+new file mode 100644
+index 000000000..e1cc2e85e
+--- /dev/null
++++ b/platform/marvell-larch-sim/one-image.mk
+@@ -0,0 +1,13 @@
++# sonic marvell one image installer
++
++SONIC_ONE_IMAGE = sonic-marvell-prestera.bin
++$(SONIC_ONE_IMAGE)_MACHINE = vs
++$(SONIC_ONE_IMAGE)_IMAGE_TYPE = onie
++$(SONIC_ONE_IMAGE)_INSTALLS += $(SYSTEMD_SONIC_GENERATOR)
++ifeq ($(INSTALL_DEBUG_TOOLS),y)
++$(SONIC_ONE_IMAGE)_DOCKERS += $(SONIC_INSTALL_DOCKER_DBG_IMAGES)
++$(SONIC_ONE_IMAGE)_DOCKERS += $(filter-out $(patsubst %-$(DBG_IMAGE_MARK).gz,%.gz, $(SONIC_INSTALL_DOCKER_DBG_IMAGES)), $(SONIC_INSTALL_DOCKER_IMAGES))
++else
++$(SONIC_ONE_IMAGE)_DOCKERS = $(SONIC_INSTALL_DOCKER_IMAGES)
++endif
++SONIC_INSTALLERS += $(SONIC_ONE_IMAGE)
+diff --git a/platform/marvell-larch-sim/onie.mk b/platform/marvell-larch-sim/onie.mk
+new file mode 100644
+index 000000000..badd7b351
+--- /dev/null
++++ b/platform/marvell-larch-sim/onie.mk
+@@ -0,0 +1,10 @@
++ONIE_RECOVERY_IMAGE = onie-recovery-x86_64-kvm_x86_64-r0.iso
++$(ONIE_RECOVERY_IMAGE)_URL = "https://packages.trafficmanager.net/public/onie/onie-recovery-x86_64-kvm_x86_64-r0.iso"
++
++ONIE_RECOVERY_KVM_4ASIC_IMAGE = onie-recovery-x86_64-kvm_x86_64_4_asic-r0.iso
++$(ONIE_RECOVERY_KVM_4ASIC_IMAGE)_URL = "https://packages.trafficmanager.net/public/onie/onie-recovery-x86_64-kvm_x86_64_4_asic-r0.iso"
++
++ONIE_RECOVERY_KVM_6ASIC_IMAGE = onie-recovery-x86_64-kvm_x86_64_6_asic-r0.iso
++$(ONIE_RECOVERY_KVM_6ASIC_IMAGE)_URL = "https://packages.trafficmanager.net/public/onie/onie-recovery-x86_64-kvm_x86_64_6_asic-r0.iso"
++
++SONIC_ONLINE_FILES += $(ONIE_RECOVERY_IMAGE) $(ONIE_RECOVERY_KVM_4ASIC_IMAGE) $(ONIE_RECOVERY_KVM_6ASIC_IMAGE)
+diff --git a/platform/marvell-larch-sim/platform-larch.dep b/platform/marvell-larch-sim/platform-larch.dep
+new file mode 100644
+index 000000000..0dff16884
+--- /dev/null
++++ b/platform/marvell-larch-sim/platform-larch.dep
+@@ -0,0 +1,9 @@
++
++MPATH     := $($(LN3848G_PLATFORM)_SRC_PATH)
++DEP_FILES := $(SONIC_COMMON_FILES_LIST) $(PLATFORM_PATH)/platform-larch.mk $(PLATFORM_PATH)/platform-larch.dep
++DEP_FILES += $(SONIC_COMMON_BASE_FILES_LIST)
++DEP_FILES += $(shell git ls-files $(MPATH))
++
++$(LN3848G_PLATFORM)_CACHE_MODE := GIT_CONTENT_SHA
++$(LN3848G_PLATFORM)_DEP_FLAGS  := $(SONIC_COMMON_FLAGS_LIST)
++$(LN3848G_PLATFORM)_DEP_FILES  := $(DEP_FILES)
+diff --git a/platform/marvell-larch-sim/platform-larch.mk b/platform/marvell-larch-sim/platform-larch.mk
+new file mode 100644
+index 000000000..5c584d413
+--- /dev/null
++++ b/platform/marvell-larch-sim/platform-larch.mk
+@@ -0,0 +1,9 @@
++export LARCH_PLATFORM
++
++export LARCHVM_PLATFORM_MODULE_VERSION = 1.0
++
++LARCHVM_PLATFORM = sonic-platform-larchvm_$(LARCHVM_PLATFORM_MODULE_VERSION)_$(CONFIGURED_ARCH).deb
++$(LARCHVM_PLATFORM)_SRC_PATH = $(PLATFORM_PATH)/sonic-platform-larch
++$(LARCHVM_PLATFORM)_PLATFORM = amd64-larch_larchvm
++SONIC_DPKG_DEBS += $(LARCHVM_PLATFORM)
++LARCH_PLATFORM += $(LARCHVM_PLATFORM)
+diff --git a/platform/marvell-larch-sim/platform.conf b/platform/marvell-larch-sim/platform.conf
+new file mode 100644
+index 000000000..e69de29bb
+diff --git a/platform/marvell-larch-sim/rules.dep b/platform/marvell-larch-sim/rules.dep
+new file mode 100644
+index 000000000..86702486a
+--- /dev/null
++++ b/platform/marvell-larch-sim/rules.dep
+@@ -0,0 +1,5 @@
++include $(PLATFORM_PATH)/sai.dep
++include $(PLATFORM_PATH)/docker-syncd-mrvl-prestera.dep
++include $(PLATFORM_PATH)/docker-syncd-mrvl-prestera-rpc.dep
++include $(PLATFORM_PATH)/libsaithrift-dev.dep
++include $(PLATFORM_PATH)/platform-larch.dep
+diff --git a/platform/marvell-larch-sim/rules.mk b/platform/marvell-larch-sim/rules.mk
+new file mode 100644
+index 000000000..df1293385
+--- /dev/null
++++ b/platform/marvell-larch-sim/rules.mk
+@@ -0,0 +1,26 @@
++include $(PLATFORM_PATH)/sai.mk
++include $(PLATFORM_PATH)/docker-syncd-mrvl-prestera.mk
++include $(PLATFORM_PATH)/docker-syncd-mrvl-prestera-rpc.mk
++#include $(PLATFORM_PATH)/docker-saiserver-mrvl-prestera.mk
++include $(PLATFORM_PATH)/libsaithrift-dev.mk
++include $(PLATFORM_PATH)/one-image.mk
++include $(PLATFORM_PATH)/onie.mk
++include $(PLATFORM_PATH)/kvm-image.mk
++include $(PLATFORM_PATH)/platform-larch.mk
++
++SONIC_ALL += $(SONIC_ONE_IMAGE) \
++             $(DOCKER_FPM) \
++             $(DOCKER_SYNCD_MRVL_RPC) \
++             $(SONIC_KVM_IMAGE)
++
++# Inject mrvl-prestera sai into syncd
++$(SYNCD)_DEPENDS += $(MRVL_SAI)
++$(SYNCD)_UNINSTALLS += $(MRVL_SAI)
++
++ifeq ($(ENABLE_SYNCD_RPC),y)
++$(SYNCD)_DEPENDS := $(filter-out $(LIBTHRIFT_DEV),$($(SYNCD)_DEPENDS))
++$(SYNCD)_DEPENDS += $(LIBSAITHRIFT_DEV)
++endif
++
++# Runtime dependency on mrvl-prestera sai is set only for syncd
++$(SYNCD)_RDEPENDS += $(MRVL_SAI)
+diff --git a/platform/marvell-larch-sim/sai.dep b/platform/marvell-larch-sim/sai.dep
+new file mode 100644
+index 000000000..54305d5cb
+--- /dev/null
++++ b/platform/marvell-larch-sim/sai.dep
+@@ -0,0 +1,7 @@
++DEP_FILES   := $(SONIC_COMMON_FILES_LIST) $(PLATFORM_PATH)/sai.mk $(PLATFORM_PATH)/sai.dep
++DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
++
++$(MRVL_SAI)_CACHE_MODE  := GIT_CONTENT_SHA
++$(MRVL_SAI)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
++$(MRVL_SAI)_DEP_FILES   := $(DEP_FILES)
++
+diff --git a/platform/marvell-larch-sim/sai.mk b/platform/marvell-larch-sim/sai.mk
+new file mode 100644
+index 000000000..a8e304e96
+--- /dev/null
++++ b/platform/marvell-larch-sim/sai.mk
+@@ -0,0 +1,12 @@
++# Marvell SAI
++
++BRANCH = 202511
++MRVL_SAI_VERSION = 1.17.4-1
++
++MRVL_SAI_URL_PREFIX = https://github.com/larch-sonic/sonic-larch-binaries/raw/main/$(CONFIGURED_ARCH)/sai-plugin/$(BRANCH)/
++MRVL_SAI = mrvlvslibsai_$(MRVL_SAI_VERSION)_$(PLATFORM_ARCH).deb
++$(MRVL_SAI)_URL = $(MRVL_SAI_URL_PREFIX)/$(MRVL_SAI)
++
++SONIC_ONLINE_DEBS += $(MRVL_SAI)
++$(MRVL_SAI)_SKIP_VERSION=y
++$(eval $(call add_conflict_package,$(MRVL_SAI),$(LIBSAIVS)))
+diff --git a/platform/marvell-larch-sim/sonic-platform-larch/debian/changelog b/platform/marvell-larch-sim/sonic-platform-larch/debian/changelog
+new file mode 100644
+index 000000000..701fcae26
+--- /dev/null
++++ b/platform/marvell-larch-sim/sonic-platform-larch/debian/changelog
+@@ -0,0 +1,4 @@
++sonic-platform-larch (1.0) unstable; urgency=medium
++
++  * Initial release
++
+diff --git a/platform/marvell-larch-sim/sonic-platform-larch/debian/compat b/platform/marvell-larch-sim/sonic-platform-larch/debian/compat
+new file mode 100644
+index 000000000..f599e28b8
+--- /dev/null
++++ b/platform/marvell-larch-sim/sonic-platform-larch/debian/compat
+@@ -0,0 +1 @@
++10
+diff --git a/platform/marvell-larch-sim/sonic-platform-larch/debian/control b/platform/marvell-larch-sim/sonic-platform-larch/debian/control
+new file mode 100644
+index 000000000..1f01f07ff
+--- /dev/null
++++ b/platform/marvell-larch-sim/sonic-platform-larch/debian/control
+@@ -0,0 +1,12 @@
++Source: sonic-platform-larch
++Version: 1.0
++Section: unknown
++Priority: optional
++Maintainer: Larch
++Build-Depends: debhelper (>= 10), python3-all, python3-setuptools
++Standards-Version: 4.1.2
++
++Package: sonic-platform-larchvm
++Architecture: any
++Depends: ${shlibs:Depends}, ${misc:Depends}, ${python3:Depends}
++Description: Platform files for marvell qemu simulation
+diff --git a/platform/marvell-larch-sim/sonic-platform-larch/debian/rules b/platform/marvell-larch-sim/sonic-platform-larch/debian/rules
+new file mode 100755
+index 000000000..deab1f5a8
+--- /dev/null
++++ b/platform/marvell-larch-sim/sonic-platform-larch/debian/rules
+@@ -0,0 +1,38 @@
++#!/usr/bin/make -f
++
++export DH_VERBOSE = 1
++
++PACKAGE_NAME=$(shell awk '/^Package:/ {print $$2}' debian/control | sed -n '1p')
++PACKAGE_VERSION=$(shell awk '/^Version:/ {print $$2}' debian/control)
++PACKAGE=${PACKAGE_NAME}_${PACKAGE_VERSION}_${DEB_TARGET_ARCH}.deb
++MOD_SRC_DIR:= $(shell pwd)
++
++%:
++	dh $@
++
++override_dh_usrlocal:
++
++binary:
++	mkdir -p debian/${PACKAGE_NAME}/etc/
++	cp -rv files/etc/ debian/${PACKAGE_NAME}/
++	
++	# Build and install sonic_platform Python module
++	cd $(MOD_SRC_DIR)/larchvm; \
++	python3 setup.py install --root=$(MOD_SRC_DIR)/debian/${PACKAGE_NAME} --install-layout=deb
++
++	# Resuming debhelper scripts
++	dh_testroot
++	dh_install
++	dh_installchangelogs
++	dh_installdocs
++	dh_systemd_enable
++	dh_installinit
++	dh_systemd_start
++	dh_link
++	dh_fixperms
++	dh_compress
++	dh_strip
++	dh_installdeb
++	dh_gencontrol
++	dh_md5sums
++	dh_builddeb
+diff --git a/platform/marvell-larch-sim/sonic-platform-larch/debian/sonic-platform-larchvm.install b/platform/marvell-larch-sim/sonic-platform-larch/debian/sonic-platform-larchvm.install
+new file mode 100644
+index 000000000..3f7dbf746
+--- /dev/null
++++ b/platform/marvell-larch-sim/sonic-platform-larch/debian/sonic-platform-larchvm.install
+@@ -0,0 +1,3 @@
++files/etc/* /etc/
++files/scripts/larchvm-init.sh /usr/local/bin
++files/service/larchvm-init.service /etc/systemd/system
+\ No newline at end of file
+diff --git a/platform/marvell-larch-sim/sonic-platform-larch/debian/sonic-platform-larchvm.postinst b/platform/marvell-larch-sim/sonic-platform-larch/debian/sonic-platform-larchvm.postinst
+new file mode 100644
+index 000000000..734706985
+--- /dev/null
++++ b/platform/marvell-larch-sim/sonic-platform-larch/debian/sonic-platform-larchvm.postinst
+@@ -0,0 +1,20 @@
++#!/bin/sh
++# postinst script for sonic-platform-larchvm
++#
++# see: dh_installdeb(1)
++
++chmod a+x /usr/local/bin/larchvm-init.sh
++depmod -a
++systemctl restart kmod
++systemctl enable larchvm-init.service
++systemctl start larchvm-init.service
++
++# Install platform-specific monit configuration with reduced start delay
++# This overwrites the default monitrc from the monit package
++if [ -f /etc/monitrc.vm ]; then
++    cp /etc/monitrc.vm /etc/monit/monitrc
++    # Restart monit to apply new configuration
++    systemctl restart monit 2>/dev/null || true
++fi
++
++exit 0
+diff --git a/platform/marvell-larch-sim/sonic-platform-larch/files/etc/modules-load.d/mpls.conf b/platform/marvell-larch-sim/sonic-platform-larch/files/etc/modules-load.d/mpls.conf
+new file mode 100644
+index 000000000..dce41059a
+--- /dev/null
++++ b/platform/marvell-larch-sim/sonic-platform-larch/files/etc/modules-load.d/mpls.conf
+@@ -0,0 +1,2 @@
++mpls_router
++mpls_iptunnel
+diff --git a/platform/marvell-larch-sim/sonic-platform-larch/files/etc/sonic/telemetry/cert.cer b/platform/marvell-larch-sim/sonic-platform-larch/files/etc/sonic/telemetry/cert.cer
+new file mode 100644
+index 000000000..521bb6849
+--- /dev/null
++++ b/platform/marvell-larch-sim/sonic-platform-larch/files/etc/sonic/telemetry/cert.cer
+@@ -0,0 +1,35 @@
++-----BEGIN CERTIFICATE-----
++MIIGJDCCBAygAwIBAgIULeFiEn/M8IsTjMqleYzSFoz6jVIwDQYJKoZIhvcNAQEL
++BQAwgaIxCzAJBgNVBAYTAlVBMRQwEgYDVQQIDAtLeWl2IE9ibGFzdDENMAsGA1UE
++BwwES3lpdjEbMBkGA1UECgwSTGFyY2ggTmV0d29ya3MgTHRkMREwDwYDVQQLDAhT
++b2Z0d2FyZTEVMBMGA1UEAwwMaXNzdWVyLmxhcmNoMScwJQYJKoZIhvcNAQkBFhhh
++ZG1pbkBsYXJjaC1uZXR3b3Jrcy5jb20wHhcNMjQwNTIxMTU1NDU1WhcNMzQwNTE5
++MTU1NDU1WjCBnzELMAkGA1UEBhMCVUExFDASBgNVBAgMC0t5aXYgT2JsYXN0MQ0w
++CwYDVQQHDARLeWl2MRswGQYDVQQKDBJMYXJjaCBOZXR3b3JrcyBMdGQxETAPBgNV
++BAsMCFNvZnR3YXJlMRIwEAYDVQQDDAkxMjcuMC4wLjExJzAlBgkqhkiG9w0BCQEW
++GGFkbWluQGxhcmNoLW5ldHdvcmtzLmNvbTCCAiIwDQYJKoZIhvcNAQEBBQADggIP
++ADCCAgoCggIBAMHm5kIVDr/QY//k2229qz4IFlM9ucWg2wT7ZJRk+sywiT+ThnFO
++ddhGAGPHliNhfX0X+ROUr5Z6G4IwVcaI6e0fPG8JFiwusXkI0NoFDtyX0ImFneq4
++pKrujZ6CM4YE9XtJrglU7/+Jdr9pZTzjys+Kels5lM3kYyUOD4p6qOLarMpveIZp
++5DkRzRpEtG1a3D09+ie3yu8TxZywBrPimx7vnp8iWcndfZwlHaIHNJQpX/EV7kwT
++BXWvYBd3sQYqRsrt/vUHstGbknqs/7CnIu0gYPGUZhjiFXxqfJhlsYhyCm30RqeL
++ct2wIzoQEQ20rR+8iyOVKPWpPy1rVzKLihsp+BYEk2za9q5TABKR+ZyqpJVEKO4U
+++yx0NdaE9oxRNLp2fhfu5tUdwr23gqElKtLBM8fHmGpJk1VABtFaoHGjongXyl4A
++/XAJYvyhwO5ySXJgAVSqlIBqjGNR3dHOsWcdOqOeqysMzyepxF4zjSkPDVKGlEnJ
++CbK1P6AsMrbsbs7fkSrX6jlJRnopDAUtNYX8dsAVeeJKpg+OOjDazfDwNdy1CFzt
++Ff0oOS2KHVnHz48p1hYv2jWIZKRGAO3zbFXiOlxX3MCwtSZpGHA3gaZM+EAFg+N7
++vhl/liEW4jIHZjSO8Lzq0GjJPBMIgRJ6rybsHKZHTgkHgdRKTchYb7U3AgMBAAGj
++UzBRMA8GA1UdEQQIMAaHBH8AAAEwHQYDVR0OBBYEFIqsHPjKBWlywV5RHIr58Bme
++1x5VMB8GA1UdIwQYMBaAFLtMph5svM7f7b+FYNZmUJdXtWPgMA0GCSqGSIb3DQEB
++CwUAA4ICAQB70cRjx8Jvz+hLS6tZ9ZDPenL9Kr0BYWzWuEAm5aWgPoSCAwy2K1gf
++zQhuPXxSJDNY4xRjEjF2yW3DsOAfUROakB0B8aISV73qG/IRBT39ZAPUhVJzznA2
++uu0AJh+68fiOrZ299Rcw9AktoYcrWU6kaqZzsYlIuSCRf8zodnrsDS2jVcMywfYO
++K1j96dfO79We/xgZ9JW3VxzxV1hlVXZMQ+YbFFbXs1WC9qSqY3bnHz8LxzHT1wtF
++kd5l5NMwIT06BY+nbTQCb07v6zCPTu0GrQQJE9ItOYXFz2XBScQ8zXdZSSsHZQhW
++cO4JmJAPtvon8V8KNH6uNWoFsQuOspl2o2s4RhCRJUNaxlwZfIe40caVeKqR0Jh+
++JpkiOGw6pxo4bvwf+6equQ0nN2yqW4dBl5nE4SQfwHiktdWEJdrQ2UGX+3fCF5qE
++p7YJlE0GJhfsmRVfH5Kba/HjeykLtM9q/9jsBeOPrvOgnF1MDjvoYlHJ0lX2RfJy
++d+2vVr1+HUzgDFUuaQnhKbVNZtQxuNdXvDFX3gxxnGQdnm7q6/hgReT453CMRv/7
++RjbUiU8bkqZsleSRPZcktnaruP84xv8laGQBazezHgMWrktmnBCgD7v4wvELZp9W
++pcgNio1repImbrTg4+6/oyNXqOwxNe8epUP5HrQYK3CG/vepRjjzfw==
++-----END CERTIFICATE-----
+diff --git a/platform/marvell-larch-sim/sonic-platform-larch/files/etc/sonic/telemetry/key.key b/platform/marvell-larch-sim/sonic-platform-larch/files/etc/sonic/telemetry/key.key
+new file mode 100644
+index 000000000..381ef29f2
+--- /dev/null
++++ b/platform/marvell-larch-sim/sonic-platform-larch/files/etc/sonic/telemetry/key.key
+@@ -0,0 +1,52 @@
++-----BEGIN PRIVATE KEY-----
++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
++spMLHhOarjRQj3wrnkrPoGV3gOo=
++-----END PRIVATE KEY-----
+diff --git a/platform/marvell-larch-sim/sonic-platform-larch/files/etc/sysctl.d/90-mpls.conf b/platform/marvell-larch-sim/sonic-platform-larch/files/etc/sysctl.d/90-mpls.conf
+new file mode 100644
+index 000000000..a81a2ca69
+--- /dev/null
++++ b/platform/marvell-larch-sim/sonic-platform-larch/files/etc/sysctl.d/90-mpls.conf
+@@ -0,0 +1 @@
++net.mpls.platform_labels = 100000
+diff --git a/platform/marvell-larch-sim/sonic-platform-larch/files/scripts/larchvm-init.sh b/platform/marvell-larch-sim/sonic-platform-larch/files/scripts/larchvm-init.sh
+new file mode 100644
+index 000000000..7ca346cf7
+--- /dev/null
++++ b/platform/marvell-larch-sim/sonic-platform-larch/files/scripts/larchvm-init.sh
+@@ -0,0 +1,43 @@
++#!/bin/bash
++
++# Platform init script
++larchvm_profile()
++{
++    # Try to read PLATFORM from QEMU fw_cfg first
++    if [ -f /sys/firmware/qemu_fw_cfg/by_name/opt/sonic_platform/raw ]; then
++        PLATFORM=$(cat /sys/firmware/qemu_fw_cfg/by_name/opt/sonic_platform/raw 2>/dev/null | tr -d '\0' | tr -d '\n')
++    fi
++
++    # Fall back to hardcoded default if not provided
++    if [ -z "$PLATFORM" ]; then
++        PLATFORM="ln3848g"
++    fi
++
++    # Store the short platform name (what user passes, e.g., "ln3848g", "gemini")
++    PLATFORM_SHORT="$PLATFORM"
++
++    # Determine the full platform directory name
++    if [ -d "/usr/share/sonic/device/arm64-larch_$PLATFORM" ]; then
++        PLATFORM_FULL="arm64-larch_$PLATFORM"
++    elif [ -d "/usr/share/sonic/device/x86_64-larch_$PLATFORM" ]; then
++        PLATFORM_FULL="x86_64-larch_$PLATFORM"
++    else
++        echo "Error: Platform directory /usr/share/sonic/device/arm64-larch_$PLATFORM or /usr/share/sonic/device/x86_64-larch_$PLATFORM not found" >&2
++        exit 1
++    fi
++
++    echo "$PLATFORM_SHORT t1" > /usr/share/sonic/device/x86_64-kvm_x86_64-r0/default_sku
++
++    # Copy platform files: source uses full name, destination uses short name
++    mkdir -p /usr/share/sonic/device/x86_64-kvm_x86_64-r0/$PLATFORM_SHORT
++    if [ -d "/usr/share/sonic/device/$PLATFORM_FULL/$PLATFORM_SHORT" ]; then
++        cp -r /usr/share/sonic/device/$PLATFORM_FULL/$PLATFORM_SHORT/* /usr/share/sonic/device/x86_64-kvm_x86_64-r0/$PLATFORM_SHORT/
++    else
++        echo "Error: Platform directory /usr/share/sonic/device/$PLATFORM_FULL/$PLATFORM_SHORT not found" >&2
++        exit 1
++    fi
++}
++
++larchvm_profile
++
++exit 0
+\ No newline at end of file
+diff --git a/platform/marvell-larch-sim/sonic-platform-larch/files/service/larchvm-init.service b/platform/marvell-larch-sim/sonic-platform-larch/files/service/larchvm-init.service
+new file mode 100644
+index 000000000..01b631141
+--- /dev/null
++++ b/platform/marvell-larch-sim/sonic-platform-larch/files/service/larchvm-init.service
+@@ -0,0 +1,11 @@
++[Unit]
++Description=Platform larchvm Service
++After=sysinit.target
++Before=pmon.service
++
++[Service]
++ExecStart=/usr/local/bin/larchvm-init.sh
++StandardOutput=tty
++
++[Install]
++WantedBy=multi-user.target
+diff --git a/platform/marvell-larch-sim/sonic-platform-larch/larchvm/setup.py b/platform/marvell-larch-sim/sonic-platform-larch/larchvm/setup.py
+new file mode 100644
+index 000000000..c2bf81eb4
+--- /dev/null
++++ b/platform/marvell-larch-sim/sonic-platform-larch/larchvm/setup.py
+@@ -0,0 +1,13 @@
++#!/usr/bin/env python
++
++import os
++from setuptools import setup
++os.listdir
++
++setup(
++   name='sonic_platform',
++   version='1.0',
++   description='Module to initialize Larch VM platform',
++
++   packages=['sonic_platform'],
++)
+diff --git a/platform/marvell-larch-sim/sonic-platform-larch/larchvm/sonic_platform/__init__.py b/platform/marvell-larch-sim/sonic-platform-larch/larchvm/sonic_platform/__init__.py
+new file mode 100644
+index 000000000..d82f37493
+--- /dev/null
++++ b/platform/marvell-larch-sim/sonic-platform-larch/larchvm/sonic_platform/__init__.py
+@@ -0,0 +1,2 @@
++__all__ = ["platform", "chassis"]
++from sonic_platform import *
+diff --git a/platform/marvell-larch-sim/sonic-platform-larch/larchvm/sonic_platform/chassis.py b/platform/marvell-larch-sim/sonic-platform-larch/larchvm/sonic_platform/chassis.py
+new file mode 100644
+index 000000000..6bf3e57b4
+--- /dev/null
++++ b/platform/marvell-larch-sim/sonic-platform-larch/larchvm/sonic_platform/chassis.py
+@@ -0,0 +1,134 @@
++#!/usr/bin/env python
++##################################################################
++# Module contains an implementation of SONiC Platform Base API and
++# provides the platform information for Larch VM
++##################################################################
++
++try:
++    from sonic_platform_base.chassis_base import ChassisBase
++except ImportError as e:
++    raise ImportError(str(e) + "- required module not found")
++
++
++class Chassis(ChassisBase):
++    """
++    Larch VM Platform-specific Chassis class
++    """
++
++    def __init__(self):
++        ChassisBase.__init__(self)
++
++    def get_name(self):
++        """
++        Retrieves the name of the chassis
++        Returns:
++            string: The name of the chassis
++        """
++        return "LarchVM"
++
++    def get_presence(self):
++        """
++        Retrieves the presence of the chassis
++        Returns:
++            bool: True if chassis is present, False if not
++        """
++        return True
++
++    def get_model(self):
++        """
++        Retrieves the model number (or part number) of the chassis
++        Returns:
++            string: Model/part number of chassis
++        """
++        return "LarchVM"
++
++    def get_serial(self):
++        """
++        Retrieves the serial number of the chassis
++        Returns:
++            string: Serial number of chassis
++        """
++        return "N/A"
++
++    def get_status(self):
++        """
++        Retrieves the operational status of the chassis
++        Returns:
++            bool: True if chassis is operating properly, False if not
++        """
++        return True
++
++    def get_base_mac(self):
++        """
++        Retrieves the base MAC address for the chassis
++
++        Returns:
++            A string containing the MAC address in the format
++            'XX:XX:XX:XX:XX:XX'
++        """
++        return "00:00:00:00:00:00"
++
++    def get_serial_number(self):
++        """
++        Retrieves the hardware serial number for the chassis
++
++        Returns:
++            A string containing the hardware serial number for this chassis.
++        """
++        return "N/A"
++
++    def get_system_eeprom_info(self):
++        """
++        Retrieves the full content of system EEPROM information for the chassis
++
++        Returns:
++            A dictionary where keys are the type code defined in
++            OCP ONIE TlvInfo EEPROM format and values are their
++            corresponding values.
++        """
++        return {}
++
++    def is_modular_chassis(self):
++        """
++        Retrieves whether the sonic instance is part of modular chassis
++
++        Returns:
++            A bool value, should return False by default or for fixed-platforms.
++        """
++        return False
++
++    def get_reboot_cause(self):
++        """
++        Retrieves the cause of the previous reboot
++        Returns:
++            A tuple (string, string) where the first element is a string
++            containing the cause of the previous reboot.
++        """
++        return (ChassisBase.REBOOT_CAUSE_NON_HARDWARE, None)
++
++    def initizalize_system_led(self):
++        """
++        Stub function for system LED initialization
++        """
++        pass
++
++    def set_status_led(self, color):
++        """
++        Sets the state of the system LED
++
++        Args:
++            color: A string representing the color
++
++        Returns:
++            bool: True if system LED state is set successfully, False if not
++        """
++        return True
++
++    def get_status_led(self):
++        """
++        Gets the state of the system LED
++
++        Returns:
++            A string, one of the valid LED color strings
++        """
++        return self.STATUS_LED_COLOR_OFF
+diff --git a/platform/marvell-larch-sim/sonic-platform-larch/larchvm/sonic_platform/platform.py b/platform/marvell-larch-sim/sonic-platform-larch/larchvm/sonic_platform/platform.py
+new file mode 100644
+index 000000000..76a75aa0e
+--- /dev/null
++++ b/platform/marvell-larch-sim/sonic-platform-larch/larchvm/sonic_platform/platform.py
+@@ -0,0 +1,25 @@
++# Name: platform.py, version: 1.0
++#
++# Description: Module contains the definitions of SONiC platform APIs
++# which provide the platform specific details
++#
++# Copyright (c) 2024, Larch
++# All rights reserved.
++#
++
++try:
++    from sonic_platform_base.platform_base import PlatformBase
++except ImportError as e:
++    raise ImportError("%s - required module not found" % e)
++
++
++class Platform(PlatformBase):
++    def __init__(self):
++        try:
++            from sonic_platform.chassis import Chassis
++        except ImportError as e:
++            raise ImportError("%s - required module not found" % e)
++        self._chassis = Chassis()
++
++    def get_chassis(self):
++        return self._chassis
+diff --git a/platform/marvell-larch-sim/sonic-platform-larch/larchvm/sysctl/zz-dqs5000-nmi.conf b/platform/marvell-larch-sim/sonic-platform-larch/larchvm/sysctl/zz-dqs5000-nmi.conf
+new file mode 100644
+index 000000000..14347c1fa
+--- /dev/null
++++ b/platform/marvell-larch-sim/sonic-platform-larch/larchvm/sysctl/zz-dqs5000-nmi.conf
+@@ -0,0 +1,7 @@
++# Disable panic on unrecovered/unknown NMI for the DQS-5000 platform.
++# During shutdown the PCH generates an NMI (reason 0x28/0x38) before the
++# hardware reset. Without this override the kernel panics unnecessarily.
++# Must be named zz-* to apply AFTER vmcore-sysctl.conf (v < z alphabetically).
++kernel.unknown_nmi_panic=0
++kernel.panic_on_unrecovered_nmi=0
++kernel.panic_on_io_nmi=0
+diff --git a/platform/marvell-larch-sim/utils/run_qemu.sh b/platform/marvell-larch-sim/utils/run_qemu.sh
+new file mode 100755
+index 000000000..0f9b22b55
+--- /dev/null
++++ b/platform/marvell-larch-sim/utils/run_qemu.sh
+@@ -0,0 +1,90 @@
++#!/bin/bash
++# Usage: ./run_qemu.sh <DISK> [PLATFORM]
++#   DISK: Path to the disk image
++#   PLATFORM: Optional platform name (e.g., ln1524g4mg-6xgf)
++#             If not provided, the VM will use the default hardcoded platform
++DISK=$1
++PLATFORM=$2  # Platform parameter (optional)
++MGMT_MAC="00:60:2f:0c:bf:45"
++MGMT_BR_IP="" # Set ip for management bridge
++MGMT_VM_IP="" # Set ip for vm (must be in the same subnet with MGMT_BR_IP)
++MGMT_MASK="30"
++
++[[ -z $MGMT_BR_IP ]] && { echo "MGMT_BR_IP is not set"; exit; }
++[[ -z $MGMT_VM_IP ]] && { echo "MGMT_VM_IP is not set"; exit; }
++
++USER_ID=$(echo ${SUDO_USER} | cut -c 1-4)
++if [ -z ${USER_ID} ]; then
++  USER_ID=$(id -un | cut -c 1-4)
++fi
++
++get_mac()
++{
++    printf '00:60:2F:%02X:%02X:%02X\n' $[RANDOM%256] $[RANDOM%256] $[RANDOM%256]
++}
++
++set_mgmt() {
++  cat <<EOF > /tmp/${USER}_dhcp.conf
++strict-order
++except-interface=lo
++pid-file=/tmp/${USER}_dhcp.pid
++interface=${USER_ID}_tap0
++dhcp-range=${MGMT_VM_IP},${MGMT_VM_IP},${MGMT_MASK}
++dhcp-no-override
++dhcp-authoritative
++dhcp-lease-max=127
++EOF
++  ip -br a | grep $MGMT_BR_IP && { echo "IP ip address already in use"; exit; }
++  sleep 5
++  sudo ip a add ${MGMT_BR_IP}/${MGMT_MASK} dev ${USER_ID}_tap0
++  sudo ip l set up ${USER_ID}_tap0
++  sudo dnsmasq -z --conf-file=/tmp/${USER}_dhcp.conf
++}
++
++set_mgmt &
++
++echo $USER_ID
++
++# Build QEMU command arguments
++QEMU_ARGS=(
++    -machine q35
++    -m 4096
++    -smp 4
++    -cpu host
++    -accel kvm
++    -drive "file=$DISK,media=disk,if=virtio,index=0"
++    -snapshot
++    -nographic
++)
++
++# Add PLATFORM parameter via fw_cfg if provided
++if [ -n "$PLATFORM" ]; then
++    QEMU_ARGS+=(-fw_cfg "name=opt/sonic_platform,string=$PLATFORM")
++fi
++
++# Add network interfaces
++QEMU_ARGS+=(
++    -netdev "type=tap,script=no,downscript=no,id=net0,ifname=${USER_ID}_tap0"
++    -device "virtio-net-pci,netdev=net0,mac=$MGMT_MAC"
++    -netdev "type=tap,script=no,downscript=no,id=net1,ifname=${USER_ID}_tap1"
++    -device "virtio-net-pci,netdev=net1,mac=$(get_mac)"
++    -netdev "type=tap,script=no,downscript=no,id=net2,ifname=${USER_ID}_tap2"
++    -device "virtio-net-pci,netdev=net2,mac=$(get_mac)"
++    -netdev "type=tap,script=no,downscript=no,id=net3,ifname=${USER_ID}_tap3"
++    -device "virtio-net-pci,netdev=net3,mac=$(get_mac)"
++    -netdev "type=tap,script=no,downscript=no,id=net4,ifname=${USER_ID}_tap4"
++    -device "virtio-net-pci,netdev=net4,mac=$(get_mac)"
++    -netdev "type=tap,script=no,downscript=no,id=net5,ifname=${USER_ID}_tap5"
++    -device "virtio-net-pci,netdev=net5,mac=$(get_mac)"
++    -netdev "type=tap,script=no,downscript=no,id=net6,ifname=${USER_ID}_tap6"
++    -device "virtio-net-pci,netdev=net6,mac=$(get_mac)"
++    -netdev "type=tap,script=no,downscript=no,id=net7,ifname=${USER_ID}_tap7"
++    -device "virtio-net-pci,netdev=net7,mac=$(get_mac)"
++    -netdev "type=tap,script=no,downscript=no,id=net8,ifname=${USER_ID}_tap8"
++    -device "virtio-net-pci,netdev=net8,mac=$(get_mac)"
++)
++
++# Execute QEMU command
++sudo qemu-system-x86_64 "${QEMU_ARGS[@]}"
++
++sudo kill $(cat /tmp/${USER}_dhcp.pid)
+-- 
+2.34.1
+
