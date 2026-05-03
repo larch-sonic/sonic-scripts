@@ -301,6 +301,77 @@ EOF
 		git commit -m "Switch sai.mk to Larch prebuilt SAI v1.17.4-1"
 	fi
 
+	# Ensure libi2c-dev is available for platform package build.
+	# The sonic slave docker pulled from registry may not have it.
+	# Remove libi2c-dev from Build-Depends (so dpkg-buildpackage doesn't
+	# fail on dep check) and install it in override_dh_auto_build instead.
+	# Use apt-get download + dpkg -i because apt install is broken (libnl conflict).
+	if [ -f platform/marvell-prestera/sonic-platform-larch/debian/rules ]; then
+		RULES_FILE=platform/marvell-prestera/sonic-platform-larch/debian/rules
+		CONTROL_FILE=platform/marvell-prestera/sonic-platform-larch/debian/control
+		if ! grep -q 'apt-get download.*libi2c' "$RULES_FILE"; then
+			log "Fix libi2c-dev: remove from Build-Depends, install in rules via dpkg"
+			# Remove libi2c-dev from Build-Depends in debian/control
+			if [ -f "$CONTROL_FILE" ]; then
+				sed -i 's/Build-Depends:\(.*\), libi2c-dev/Build-Depends:\1/' "$CONTROL_FILE"
+				sed -i 's/Build-Depends: libi2c-dev, /Build-Depends: /' "$CONTROL_FILE"
+				sed -i 's/Build-Depends: libi2c-dev$/Build-Depends:/' "$CONTROL_FILE"
+				git add "$CONTROL_FILE"
+			fi
+			# Install libi2c-dev via download+dpkg (bypasses broken apt state)
+			sed -i '/^override_dh_auto_build:/a\\tsudo apt-get update -o Acquire::AllowInsecureRepositories=true -o Acquire::AllowDowngradeToInsecureRepositories=true 2>/dev/null || true\n\tapt-get download libi2c-dev libi2c0 2>/dev/null && sudo dpkg -i --force-depends ./libi2c*.deb 2>/dev/null && rm -f ./libi2c*.deb || true' "$RULES_FILE"
+			git add "$RULES_FILE"
+			git commit -m "Fix libi2c-dev: remove from Build-Depends, install in rules via dpkg"
+		fi
+	fi
+
+	# Fix libnl version conflict in the BUILD SLAVE (trixie):
+	# During package builds, sonic libnl (3.7.0-0.2+b1sonic1) gets installed
+	# into the slave via the -install mechanism, replacing stock libnl-3-dev.
+	# This breaks stock libnl-genl-3-dev and libnl-route-3-dev which depend
+	# on libnl-3-dev (= 3.7.0-2).  Any subsequent apt operation on the slave
+	# then fails with "Unmet dependencies".
+	# Fix: Change the kbuild install from apt (which checks global dep state)
+	# to dpkg -i --force-depends (which only installs the package).
+	if [ -f build_debian.sh ]; then
+		if ! grep -q 'dpkg -i --force-depends.*linux-kbuild' build_debian.sh; then
+			log "Patch build_debian.sh to fix libnl conflict in slave"
+			sed -i 's|sudo LANG=C DEBIAN_FRONTEND=noninteractive apt -y --allow-downgrades install \./\$debs_path/linux-kbuild-\${LINUX_KERNEL_VERSION}\*_\${CONFIGURED_ARCH}\.deb|sudo dpkg -i --force-depends ./$debs_path/linux-kbuild-${LINUX_KERNEL_VERSION}*_${CONFIGURED_ARCH}.deb|' build_debian.sh
+			git add build_debian.sh
+			git commit -m "Fix libnl version conflict in build slave"
+		fi
+	fi
+
+	# Fix libnl version conflict in the TARGET ROOTFS:
+	# Stock libnl -dev packages (3.7.0-2) get installed by apt as deps
+	# during rootfs assembly. Then sonic's install_deb_package replaces
+	# runtime libs with its own build (3.7.0-0.2+b1sonic1), breaking the
+	# -dev deps.  Later apt-get commands detect broken state and exit
+	# non-zero, killing the set -e script.
+	# Fix: force-install all sonic libnl debs and hold them so
+	# apt-get install -f cannot downgrade them back to stock.
+	EXTENSION_J2=files/build_templates/sonic_debian_extension.j2
+	if [ -f "$EXTENSION_J2" ]; then
+		log "Patch sonic_debian_extension.j2 to fix libnl version conflict"
+		sed -i '/^install_deb_package {{installer_debs.strip()}}/i \
+# Fix libnl version conflict: force-install all sonic libnl debs and hold them\
+# Must run BEFORE install_deb_package which triggers apt-get install -f\
+LIBNL_SONIC_DEBS=$(ls $debs_path/libnl-3-200_*sonic*.deb $debs_path/libnl-3-dev_*sonic*.deb $debs_path/libnl-genl-3-200_*sonic*.deb $debs_path/libnl-genl-3-dev_*sonic*.deb $debs_path/libnl-route-3-200_*sonic*.deb $debs_path/libnl-route-3-dev_*sonic*.deb $debs_path/libnl-nf-3-200_*sonic*.deb $debs_path/libnl-nf-3-dev_*sonic*.deb $debs_path/libnl-cli-3-200_*sonic*.deb $debs_path/libnl-cli-3-dev_*sonic*.deb 2>/dev/null)\
+if [ -n "$LIBNL_SONIC_DEBS" ]; then\
+    sudo cp $LIBNL_SONIC_DEBS $FILESYSTEM_ROOT/\
+    LIBNL_BASENAMES=$(basename -a $LIBNL_SONIC_DEBS)\
+    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT dpkg --force-depends --force-overwrite -i $LIBNL_BASENAMES 2>/dev/null || true\
+    ( cd $FILESYSTEM_ROOT; sudo rm -f $LIBNL_BASENAMES )\
+    # Hold all libnl packages to prevent apt-get install -f from downgrading\
+    for hlpkg in libnl-3-200 libnl-3-dev libnl-genl-3-200 libnl-genl-3-dev libnl-route-3-200 libnl-route-3-dev libnl-nf-3-200 libnl-nf-3-dev libnl-cli-3-200 libnl-cli-3-dev; do\
+        sudo LANG=C chroot $FILESYSTEM_ROOT apt-mark hold $hlpkg 2>/dev/null || true\
+    done\
+fi\
+' "$EXTENSION_J2"
+		git add "$EXTENSION_J2"
+		git commit -m "Fix libnl version conflict in rootfs assembly"
+	fi
+
 	echo "make init" >> build_cmd.txt
 	make init
 	git submodule sync --recursive
