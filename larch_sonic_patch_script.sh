@@ -280,27 +280,6 @@ main()
 		git commit -m "Remove host-base-image version pins to use plain debootstrap"
 	fi
 
-	# Overwrite sai.mk to use Larch prebuilt SAI .deb (prestera only)
-	if [ -d platform/marvell-prestera ]; then
-		log "Overwrite platform/marvell-prestera/sai.mk (prebuilt SAI v1.17.4-1)"
-		cat > platform/marvell-prestera/sai.mk << 'EOF'
-# Marvell SAI
-
-BRANCH = 202511
-MRVL_SAI_VERSION = 1.17.4-1
-
-MRVL_SAI_URL_PREFIX = https://github.com/larch-sonic/sonic-larch-binaries/raw/main/$(CONFIGURED_ARCH)/sai-plugin/$(BRANCH)/
-MRVL_SAI = mrvllibsai_$(MRVL_SAI_VERSION)_$(PLATFORM_ARCH).deb
-$(MRVL_SAI)_URL = $(MRVL_SAI_URL_PREFIX)/$(MRVL_SAI)
-
-SONIC_ONLINE_DEBS += $(MRVL_SAI)
-$(MRVL_SAI)_SKIP_VERSION=y
-$(eval $(call add_conflict_package,$(MRVL_SAI),$(LIBSAIVS_DEV)))
-EOF
-		git add platform/marvell-prestera/sai.mk
-		git commit -m "Switch sai.mk to Larch prebuilt SAI v1.17.4-1"
-	fi
-
 	echo "make init" >> build_cmd.txt
 	make init
 	git submodule sync --recursive
