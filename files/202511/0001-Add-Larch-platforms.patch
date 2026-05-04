@@ -879,7 +879,6 @@ Subject: [PATCH] Add Larch platforms
  .../linuxNoKernelModule/drivers/mvpci.c       |   93 +
  .../linuxNoKernelModule/drivers/saiMod.c      |  729 +++
  .../linuxNoKernelModule/drivers/srcversion.h  |    2 +
- .../etc/bash_completion.d/sonic_cli_proxy     |   27 +
  .../files/etc/modules-load.d/marvell.conf     |    3 +
  .../files/etc/modules-load.d/mpls.conf        |    2 +
  .../files/etc/sonic/telemetry/cert.cer        |   35 +
@@ -887,13 +886,6 @@ Subject: [PATCH] Add Larch platforms
  .../files/etc/sysctl.d/90-mpls.conf           |    1 +
  .../files/etc/sysctl.d/98-sysctl.conf         |    6 +
  .../files/etc/sysctl.d/z-sysctl.conf          |    1 +
- .../system/sonic-utilities-proxy.service      |   14 +
- .../files/usr/local/bin/cli_proxy             |   54 +
- .../files/usr/local/bin/config                |   59 +
- .../files/usr/local/bin/config_fallback       |    8 +
- .../files/usr/local/bin/server.py             |  276 +
- .../files/usr/local/bin/show                  |   93 +
- .../files/usr/local/bin/show_fallback         |    8 +
  .../gemini/modprobe/optoe.conf                |    1 +
  .../gemini/modules/Makefile                   |    2 +
  .../gemini/modules/hwmon_cpld.c               |    1 +
@@ -2180,7 +2172,6 @@ Subject: [PATCH] Add Larch platforms
  create mode 100644 platform/marvell-prestera/sonic-platform-larch/drivers/generic/cpssEnabler/linuxNoKernelModule/drivers/mvpci.c
  create mode 100644 platform/marvell-prestera/sonic-platform-larch/drivers/generic/cpssEnabler/linuxNoKernelModule/drivers/saiMod.c
  create mode 100644 platform/marvell-prestera/sonic-platform-larch/drivers/generic/cpssEnabler/linuxNoKernelModule/drivers/srcversion.h
- create mode 100644 platform/marvell-prestera/sonic-platform-larch/files/etc/bash_completion.d/sonic_cli_proxy
  create mode 100644 platform/marvell-prestera/sonic-platform-larch/files/etc/modules-load.d/marvell.conf
  create mode 100644 platform/marvell-prestera/sonic-platform-larch/files/etc/modules-load.d/mpls.conf
  create mode 100644 platform/marvell-prestera/sonic-platform-larch/files/etc/sonic/telemetry/cert.cer
@@ -2188,13 +2179,6 @@ Subject: [PATCH] Add Larch platforms
  create mode 100644 platform/marvell-prestera/sonic-platform-larch/files/etc/sysctl.d/90-mpls.conf
  create mode 100644 platform/marvell-prestera/sonic-platform-larch/files/etc/sysctl.d/98-sysctl.conf
  create mode 120000 platform/marvell-prestera/sonic-platform-larch/files/etc/sysctl.d/z-sysctl.conf
- create mode 100644 platform/marvell-prestera/sonic-platform-larch/files/etc/systemd/system/sonic-utilities-proxy.service
- create mode 100644 platform/marvell-prestera/sonic-platform-larch/files/usr/local/bin/cli_proxy
- create mode 100644 platform/marvell-prestera/sonic-platform-larch/files/usr/local/bin/config
- create mode 100644 platform/marvell-prestera/sonic-platform-larch/files/usr/local/bin/config_fallback
- create mode 100644 platform/marvell-prestera/sonic-platform-larch/files/usr/local/bin/server.py
- create mode 100644 platform/marvell-prestera/sonic-platform-larch/files/usr/local/bin/show
- create mode 100644 platform/marvell-prestera/sonic-platform-larch/files/usr/local/bin/show_fallback
  create mode 100644 platform/marvell-prestera/sonic-platform-larch/gemini/modprobe/optoe.conf
  create mode 100644 platform/marvell-prestera/sonic-platform-larch/gemini/modules/Makefile
  create mode 120000 platform/marvell-prestera/sonic-platform-larch/gemini/modules/hwmon_cpld.c
@@ -175412,26 +175396,19 @@ new file mode 100644
 index 000000000..9d01e15f7
 --- /dev/null
 +++ b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-canisminor.postinst
-@@ -0,0 +1,20 @@
+@@ -0,0 +1,13 @@
 +#!/bin/sh
 +# postinst script for sonic-platform-ln3824g
 +#
 +# see: dh_installdeb(1)
 +
 +chmod a+x /usr/local/bin/canisminor-init.sh
-+chmod +x /usr/local/bin/show
-+chmod +x /usr/local/bin/cli_proxy
-+chmod +x /usr/local/bin/config
-+chmod +x /usr/local/bin/show_fallback
-+chmod +x /usr/local/bin/config_fallback
 +depmod -a
 +systemctl restart kmod
 +# Apply MPLS sysctl after kmod loads mpls modules on first boot
 +sysctl -p /etc/sysctl.d/90-mpls.conf || true
 +systemctl enable canisminor-init.service
 +systemctl start canisminor-init.service
-+systemctl enable sonic-utilities-proxy.service
-+systemctl start sonic-utilities-proxy.service
 +exit 0
 diff --git a/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-cn9130-dm8218f.install b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-cn9130-dm8218f.install
 new file mode 100644
@@ -175450,26 +175427,19 @@ new file mode 100644
 index 000000000..4c50a5b23
 --- /dev/null
 +++ b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-cn9130-dm8218f.postinst
-@@ -0,0 +1,20 @@
+@@ -0,0 +1,13 @@
 +#!/bin/sh
 +# postinst script for sonic-platform-cn9130-dm8218f
 +#
 +# see: dh_installdeb(1)
 +
 +chmod a+x /usr/local/bin/cn9130-dm8218f-init.sh
-+chmod +x /usr/local/bin/show
-+chmod +x /usr/local/bin/cli_proxy
-+chmod +x /usr/local/bin/config
-+chmod +x /usr/local/bin/show_fallback
-+chmod +x /usr/local/bin/config_fallback
 +depmod -a
 +systemctl restart kmod
 +# Apply MPLS sysctl after kmod loads mpls modules on first boot
 +sysctl -p /etc/sysctl.d/90-mpls.conf || true
 +systemctl enable cn9130-dm8218f-init.service
 +systemctl start cn9130-dm8218f-init.service
-+systemctl enable sonic-utilities-proxy.service
-+systemctl start sonic-utilities-proxy.service
 +exit 0
 diff --git a/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-cn9130-eps6800.install b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-cn9130-eps6800.install
 new file mode 100644
@@ -175487,26 +175457,19 @@ new file mode 100644
 index 000000000..2476228f5
 --- /dev/null
 +++ b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-cn9130-eps6800.postinst
-@@ -0,0 +1,20 @@
+@@ -0,0 +1,13 @@
 +#!/bin/sh
 +# postinst script for sonic-platform-cn9130-eps6800
 +#
 +# see: dh_installdeb(1)
 +
 +chmod a+x /usr/local/bin/cn9130-eps6800-init.sh
-+chmod +x /usr/local/bin/show
-+chmod +x /usr/local/bin/cli_proxy
-+chmod +x /usr/local/bin/config
-+chmod +x /usr/local/bin/show_fallback
-+chmod +x /usr/local/bin/config_fallback
 +depmod -a
 +systemctl restart kmod
 +# Apply MPLS sysctl after kmod loads mpls modules on first boot
 +sysctl -p /etc/sysctl.d/90-mpls.conf || true
 +systemctl enable cn9130-eps6800-init.service
 +systemctl start cn9130-eps6800-init.service
-+systemctl enable sonic-utilities-proxy.service
-+systemctl start sonic-utilities-proxy.service
 +exit 0
 diff --git a/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-cn9131-ext-98cx.install b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-cn9131-ext-98cx.install
 new file mode 100644
@@ -175524,26 +175487,19 @@ new file mode 100644
 index 000000000..a384bdb77
 --- /dev/null
 +++ b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-cn9131-ext-98cx.postinst
-@@ -0,0 +1,20 @@
+@@ -0,0 +1,13 @@
 +#!/bin/sh
 +# postinst script for sonic-platform-cn9131-ext-98cx
 +#
 +# see: dh_installdeb(1)
 +
 +chmod a+x /usr/local/bin/cn9131-ext-98cx-init.sh
-+chmod +x /usr/local/bin/show
-+chmod +x /usr/local/bin/cli_proxy
-+chmod +x /usr/local/bin/config
-+chmod +x /usr/local/bin/show_fallback
-+chmod +x /usr/local/bin/config_fallback
 +depmod -a
 +systemctl restart kmod
 +# Apply MPLS sysctl after kmod loads mpls modules on first boot
 +sysctl -p /etc/sysctl.d/90-mpls.conf || true
 +systemctl enable cn9131-ext-98cx-init.service
 +systemctl start cn9131-ext-98cx-init.service
-+systemctl enable sonic-utilities-proxy.service
-+systemctl start sonic-utilities-proxy.service
 +exit 0
 diff --git a/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-dqs-5000.install b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-dqs-5000.install
 new file mode 100644
@@ -175562,15 +175518,8 @@ new file mode 100644
 index 000000000..fade6980d
 --- /dev/null
 +++ b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-dqs-5000.postinst
-@@ -0,0 +1,19 @@
+@@ -0,0 +1,12 @@
 +#!/bin/sh
-+chmod +x /usr/local/bin/show
-+chmod +x /usr/local/bin/cli_proxy
-+chmod +x /usr/local/bin/config
-+chmod +x /usr/local/bin/show_fallback
-+chmod +x /usr/local/bin/config_fallback
-+systemctl enable sonic-utilities-proxy.service
-+systemctl start sonic-utilities-proxy.service
 +set -e
 +/usr/local/bin/platform_api_mgnt.sh install
 +# Apply sysctl overrides immediately after platform deb install.
@@ -175605,14 +175554,8 @@ new file mode 100644
 index 000000000..5746383d8
 --- /dev/null
 +++ b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-gemini-2t.postinst
-@@ -0,0 +1,14 @@
+@@ -0,0 +1,8 @@
 +#!/bin/sh
-+chmod +x /usr/local/bin/show
-+chmod +x /usr/local/bin/config
-+chmod +x /usr/local/bin/show_fallback
-+chmod +x /usr/local/bin/config_fallback
-+systemctl enable sonic-utilities-proxy.service
-+systemctl start sonic-utilities-proxy.service
 +set -e
 +/usr/local/bin/platform_api_mgnt.sh install
 +# Apply sysctl overrides immediately after platform deb install.
@@ -175637,15 +175580,8 @@ new file mode 100644
 index 000000000..d6bd5eac6
 --- /dev/null
 +++ b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-gemini.postinst
-@@ -0,0 +1,19 @@
+@@ -0,0 +1,12 @@
 +#!/bin/sh
-+chmod +x /usr/local/bin/show
-+chmod +x /usr/local/bin/cli_proxy
-+chmod +x /usr/local/bin/config
-+chmod +x /usr/local/bin/show_fallback
-+chmod +x /usr/local/bin/config_fallback
-+systemctl enable sonic-utilities-proxy.service
-+systemctl start sonic-utilities-proxy.service
 +set -e
 +/usr/local/bin/platform_api_mgnt.sh install
 +# Apply sysctl overrides immediately after platform deb install.
@@ -175674,26 +175610,19 @@ new file mode 100644
 index 000000000..abfe2c76d
 --- /dev/null
 +++ b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-ln1524g-4xgf-v6.postinst
-@@ -0,0 +1,20 @@
+@@ -0,0 +1,13 @@
 +#!/bin/sh
 +# postinst script for sonic-platform-ln1524g-4xgf-v6
 +#
 +# see: dh_installdeb(1)
 +
 +chmod a+x /usr/local/bin/ln1524g-4xgf-v6-init.sh
-+chmod +x /usr/local/bin/show
-+chmod +x /usr/local/bin/cli_proxy
-+chmod +x /usr/local/bin/config
-+chmod +x /usr/local/bin/show_fallback
-+chmod +x /usr/local/bin/config_fallback
 +depmod -a
 +systemctl restart kmod
 +# Apply MPLS sysctl after kmod loads mpls modules on first boot
 +sysctl -p /etc/sysctl.d/90-mpls.conf || true
 +systemctl enable ln1524g-4xgf-v6-init.service
 +systemctl start ln1524g-4xgf-v6-init.service
-+systemctl enable sonic-utilities-proxy.service
-+systemctl start sonic-utilities-proxy.service
 +exit 0
 diff --git a/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-ln1524g4mg-6xgf.install b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-ln1524g4mg-6xgf.install
 new file mode 100644
@@ -175712,26 +175641,19 @@ new file mode 100644
 index 000000000..b65da1867
 --- /dev/null
 +++ b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-ln1524g4mg-6xgf.postinst
-@@ -0,0 +1,20 @@
+@@ -0,0 +1,13 @@
 +#!/bin/sh
 +# postinst script for sonic-platform-ln1524g4mg-6xgf
 +#
 +# see: dh_installdeb(1)
 +
 +chmod a+x /usr/local/bin/ln1524g4mg-6xgf-init.sh
-+chmod +x /usr/local/bin/show
-+chmod +x /usr/local/bin/cli_proxy
-+chmod +x /usr/local/bin/config
-+chmod +x /usr/local/bin/show_fallback
-+chmod +x /usr/local/bin/config_fallback
 +depmod -a
 +systemctl restart kmod
 +# Apply MPLS sysctl after kmod loads mpls modules on first boot
 +sysctl -p /etc/sysctl.d/90-mpls.conf || true
 +systemctl enable ln1524g4mg-6xgf-init.service
 +systemctl start ln1524g4mg-6xgf-init.service
-+systemctl enable sonic-utilities-proxy.service
-+systemctl start sonic-utilities-proxy.service
 +exit 0
 diff --git a/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-ln3516xgf-4z.install b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-ln3516xgf-4z.install
 new file mode 100644
@@ -175749,26 +175671,19 @@ new file mode 100644
 index 000000000..08d441067
 --- /dev/null
 +++ b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-ln3516xgf-4z.postinst
-@@ -0,0 +1,20 @@
+@@ -0,0 +1,13 @@
 +#!/bin/sh
 +# postinst script for sonic-platform-ln3516xgf-4z
 +#
 +# see: dh_installdeb(1)
 +
 +chmod a+x /usr/local/bin/ln3516xgf-4z-init.sh
-+chmod +x /usr/local/bin/show
-+chmod +x /usr/local/bin/cli_proxy
-+chmod +x /usr/local/bin/config
-+chmod +x /usr/local/bin/show_fallback
-+chmod +x /usr/local/bin/config_fallback
 +depmod -a
 +systemctl restart kmod
 +# Apply MPLS sysctl after kmod loads mpls modules on first boot
 +sysctl -p /etc/sysctl.d/90-mpls.conf || true
 +systemctl enable ln3516xgf-4z-init.service
 +systemctl start ln3516xgf-4z-init.service
-+systemctl enable sonic-utilities-proxy.service
-+systemctl start sonic-utilities-proxy.service
 +exit 0
 diff --git a/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-ln3548xgf-6z-v5.install b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-ln3548xgf-6z-v5.install
 new file mode 100644
@@ -175786,26 +175701,19 @@ new file mode 100644
 index 000000000..7ff549a32
 --- /dev/null
 +++ b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-ln3548xgf-6z-v5.postinst
-@@ -0,0 +1,20 @@
+@@ -0,0 +1,13 @@
 +#!/bin/sh
 +# postinst script for sonic-platform-ln3548xgf-6z-v5
 +#
 +# see: dh_installdeb(1)
 +
 +chmod a+x /usr/local/bin/ln3548xgf-6z-v5-init.sh
-+chmod +x /usr/local/bin/show
-+chmod +x /usr/local/bin/cli_proxy
-+chmod +x /usr/local/bin/config
-+chmod +x /usr/local/bin/show_fallback
-+chmod +x /usr/local/bin/config_fallback
 +depmod -a
 +systemctl restart kmod
 +# Apply MPLS sysctl after kmod loads mpls modules on first boot
 +sysctl -p /etc/sysctl.d/90-mpls.conf || true
 +systemctl enable ln3548xgf-6z-v5-init.service
 +systemctl start ln3548xgf-6z-v5-init.service
-+systemctl enable sonic-utilities-proxy.service
-+systemctl start sonic-utilities-proxy.service
 +exit 0
 diff --git a/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-ln3604g.install b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-ln3604g.install
 new file mode 100644
@@ -175824,26 +175732,19 @@ new file mode 100644
 index 000000000..5cd00f114
 --- /dev/null
 +++ b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-ln3604g.postinst
-@@ -0,0 +1,20 @@
+@@ -0,0 +1,13 @@
 +#!/bin/sh
 +# postinst script for sonic-platform-ln3604g
 +#
 +# see: dh_installdeb(1)
 +
 +chmod a+x /usr/local/bin/ln3604g-init.sh
-+chmod +x /usr/local/bin/show
-+chmod +x /usr/local/bin/cli_proxy
-+chmod +x /usr/local/bin/config
-+chmod +x /usr/local/bin/show_fallback
-+chmod +x /usr/local/bin/config_fallback
 +depmod -a
 +systemctl restart kmod
 +# Apply MPLS sysctl after kmod loads mpls modules on first boot
 +sysctl -p /etc/sysctl.d/90-mpls.conf || true
 +systemctl enable ln3604g-init.service
 +systemctl start ln3604g-init.service
-+systemctl enable sonic-utilities-proxy.service
-+systemctl start sonic-utilities-proxy.service
 +exit 0
 diff --git a/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-ln3612y2zt.install b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-ln3612y2zt.install
 new file mode 100644
@@ -175863,7 +175764,7 @@ new file mode 100644
 index 000000000..5bcf757e6
 --- /dev/null
 +++ b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-ln3612y2zt.postinst
-@@ -0,0 +1,22 @@
+@@ -0,0 +1,15 @@
 +#!/bin/sh
 +# postinst script for sonic-platform-cn9131-ext-98cx
 +#
@@ -175871,11 +175772,6 @@ index 000000000..5bcf757e6
 +
 +chmod a+x /usr/local/bin/ln3612y2zt-init.sh
 +chmod a+x /usr/local/bin/reset_button_handler.py
-+chmod +x /usr/local/bin/show
-+chmod +x /usr/local/bin/cli_proxy
-+chmod +x /usr/local/bin/config
-+chmod +x /usr/local/bin/show_fallback
-+chmod +x /usr/local/bin/config_fallback
 +depmod -a
 +systemctl restart kmod
 +# Apply MPLS sysctl after kmod loads mpls modules on first boot
@@ -175883,8 +175779,6 @@ index 000000000..5bcf757e6
 +systemctl enable ln3612y2zt-init.service
 +systemctl start ln3612y2zt-init.service
 +systemctl enable --now reset_button.service
-+systemctl enable sonic-utilities-proxy.service
-+systemctl start sonic-utilities-proxy.service
 +exit 0
 diff --git a/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-ln3804gf-4xgf.install b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-ln3804gf-4xgf.install
 new file mode 100644
@@ -175903,26 +175797,19 @@ new file mode 100644
 index 000000000..d3d458cbb
 --- /dev/null
 +++ b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-ln3804gf-4xgf.postinst
-@@ -0,0 +1,20 @@
+@@ -0,0 +1,13 @@
 +#!/bin/sh
 +# postinst script for sonic-platform-ln3804gf-4xgf
 +#
 +# see: dh_installdeb(1)
 +
 +chmod a+x /usr/local/bin/ln3804gf-4xgf-init.sh
-+chmod +x /usr/local/bin/show
-+chmod +x /usr/local/bin/cli_proxy
-+chmod +x /usr/local/bin/config
-+chmod +x /usr/local/bin/show_fallback
-+chmod +x /usr/local/bin/config_fallback
 +depmod -a
 +systemctl restart kmod
 +# Apply MPLS sysctl after kmod loads mpls modules on first boot
 +sysctl -p /etc/sysctl.d/90-mpls.conf || true
 +systemctl enable ln3804gf-4xgf-init.service
 +systemctl start ln3804gf-4xgf-init.service
-+systemctl enable sonic-utilities-proxy.service
-+systemctl start sonic-utilities-proxy.service
 +exit 0
 diff --git a/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-ln3804gf-8xgf.install b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-ln3804gf-8xgf.install
 new file mode 100644
@@ -175941,28 +175828,19 @@ new file mode 100644
 index 000000000..54ed6cd7b
 --- /dev/null
 +++ b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-ln3804gf-8xgf.postinst
-@@ -0,0 +1,22 @@
+@@ -0,0 +1,13 @@
 +#!/bin/sh
 +# postinst script for sonic-platform-ln3804gf-8xgf
 +#
 +# see: dh_installdeb(1)
 +
 +chmod a+x /usr/local/bin/ln3804gf-8xgf-init.sh
-+chmod +x /usr/local/bin/show
-+chmod +x /usr/local/bin/cli_proxy
-+chmod +x /usr/local/bin/config
-+chmod +x /usr/local/bin/show_fallback
-+chmod +x /usr/local/bin/config_fallback
 +depmod -a
 +systemctl restart kmod
 +# Apply MPLS sysctl after kmod loads mpls modules on first boot
 +sysctl -p /etc/sysctl.d/90-mpls.conf || true
 +systemctl enable ln3804gf-8xgf-init.service
 +systemctl start ln3804gf-8xgf-init.service
-+systemctl enable sonic-utilities-proxy.service
-+systemctl start sonic-utilities-proxy.service
-+systemctl enable sonic-utilities-proxy.service
-+systemctl start sonic-utilities-proxy.service
 +exit 0
 diff --git a/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-ln3824g.install b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-ln3824g.install
 new file mode 100644
@@ -175981,26 +175859,19 @@ new file mode 100644
 index 000000000..4b70ae947
 --- /dev/null
 +++ b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-ln3824g.postinst
-@@ -0,0 +1,20 @@
+@@ -0,0 +1,13 @@
 +#!/bin/sh
 +# postinst script for sonic-platform-ln3824g
 +#
 +# see: dh_installdeb(1)
 +
 +chmod a+x /usr/local/bin/ln3824g-init.sh
-+chmod +x /usr/local/bin/show
-+chmod +x /usr/local/bin/cli_proxy
-+chmod +x /usr/local/bin/config
-+chmod +x /usr/local/bin/show_fallback
-+chmod +x /usr/local/bin/config_fallback
 +depmod -a
 +systemctl restart kmod
 +# Apply MPLS sysctl after kmod loads mpls modules on first boot
 +sysctl -p /etc/sysctl.d/90-mpls.conf || true
 +systemctl enable ln3824g-init.service
 +systemctl start ln3824g-init.service
-+systemctl enable sonic-utilities-proxy.service
-+systemctl start sonic-utilities-proxy.service
 +exit 0
 diff --git a/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-ln3848g.install b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-ln3848g.install
 new file mode 100644
@@ -176019,26 +175890,19 @@ new file mode 100644
 index 000000000..4e9a32da7
 --- /dev/null
 +++ b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-ln3848g.postinst
-@@ -0,0 +1,20 @@
+@@ -0,0 +1,13 @@
 +#!/bin/sh
 +# postinst script for sonic-platform-ln3848g
 +#
 +# see: dh_installdeb(1)
 +
 +chmod a+x /usr/local/bin/ln3848g-init.sh
-+chmod +x /usr/local/bin/show
-+chmod +x /usr/local/bin/cli_proxy
-+chmod +x /usr/local/bin/config
-+chmod +x /usr/local/bin/show_fallback
-+chmod +x /usr/local/bin/config_fallback
 +depmod -a
 +systemctl restart kmod
 +# Apply MPLS sysctl after kmod loads mpls modules on first boot
 +sysctl -p /etc/sysctl.d/90-mpls.conf || true
 +systemctl enable ln3848g-init.service
 +systemctl start ln3848g-init.service
-+systemctl enable sonic-utilities-proxy.service
-+systemctl start sonic-utilities-proxy.service
 +exit 0
 diff --git a/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-pegatron-fm6256-f.install b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-pegatron-fm6256-f.install
 new file mode 100644
@@ -176057,15 +175921,8 @@ new file mode 100644
 index 000000000..d6bd5eac6
 --- /dev/null
 +++ b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-pegatron-fm6256-f.postinst
-@@ -0,0 +1,19 @@
+@@ -0,0 +1,12 @@
 +#!/bin/sh
-+chmod +x /usr/local/bin/show
-+chmod +x /usr/local/bin/cli_proxy
-+chmod +x /usr/local/bin/config
-+chmod +x /usr/local/bin/show_fallback
-+chmod +x /usr/local/bin/config_fallback
-+systemctl enable sonic-utilities-proxy.service
-+systemctl start sonic-utilities-proxy.service
 +set -e
 +/usr/local/bin/platform_api_mgnt.sh install
 +# Apply sysctl overrides immediately after platform deb install.
@@ -176094,26 +175951,19 @@ new file mode 100644
 index 000000000..5bfab3c71
 --- /dev/null
 +++ b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-qn-sr-100.postinst
-@@ -0,0 +1,20 @@
+@@ -0,0 +1,13 @@
 +#!/bin/sh
 +# postinst script for sonic-platform-qn-sr-100
 +#
 +# see: dh_installdeb(1)
 +
 +chmod a+x /usr/local/bin/qn-sr-100-init.sh
-+chmod +x /usr/local/bin/show
-+chmod +x /usr/local/bin/cli_proxy
-+chmod +x /usr/local/bin/config
-+chmod +x /usr/local/bin/show_fallback
-+chmod +x /usr/local/bin/config_fallback
 +depmod -a
 +systemctl restart kmod
 +# Apply MPLS sysctl after kmod loads mpls modules on first boot
 +sysctl -p /etc/sysctl.d/90-mpls.conf || true
 +systemctl enable qn-sr-100-init.service
 +systemctl start qn-sr-100-init.service
-+systemctl enable sonic-utilities-proxy.service
-+systemctl start sonic-utilities-proxy.service
 +exit 0
 diff --git a/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-qn-sr-200.install b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-qn-sr-200.install
 new file mode 100644
@@ -176133,7 +175983,7 @@ new file mode 100644
 index 000000000..e8a6d07f5
 --- /dev/null
 +++ b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-qn-sr-200.postinst
-@@ -0,0 +1,22 @@
+@@ -0,0 +1,15 @@
 +#!/bin/sh
 +# postinst script for sonic-platform-cn9131-ext-98cx
 +#
@@ -176141,11 +175991,6 @@ index 000000000..e8a6d07f5
 +
 +chmod a+x /usr/local/bin/qn-sr-200-init.sh
 +chmod a+x /usr/local/bin/reset_button_handler.py
-+chmod +x /usr/local/bin/show
-+chmod +x /usr/local/bin/cli_proxy
-+chmod +x /usr/local/bin/config
-+chmod +x /usr/local/bin/show_fallback
-+chmod +x /usr/local/bin/config_fallback
 +depmod -a
 +systemctl restart kmod
 +# Apply MPLS sysctl after kmod loads mpls modules on first boot
@@ -176153,8 +175998,6 @@ index 000000000..e8a6d07f5
 +systemctl enable qn-sr-200-init.service
 +systemctl start qn-sr-200-init.service
 +systemctl enable --now reset_button.service
-+systemctl enable sonic-utilities-proxy.service
-+systemctl start sonic-utilities-proxy.service
 +exit 0
 diff --git a/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-qn-sr-400.install b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-qn-sr-400.install
 new file mode 100644
@@ -176172,26 +176015,19 @@ new file mode 100644
 index 000000000..79fe5057c
 --- /dev/null
 +++ b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-qn-sr-400.postinst
-@@ -0,0 +1,20 @@
+@@ -0,0 +1,13 @@
 +#!/bin/sh
 +# postinst script for sonic-platform-qn-sr-400
 +#
 +# see: dh_installdeb(1)
 +
 +chmod a+x /usr/local/bin/qn-sr-400-init.sh
-+chmod +x /usr/local/bin/show
-+chmod +x /usr/local/bin/cli_proxy
-+chmod +x /usr/local/bin/config
-+chmod +x /usr/local/bin/show_fallback
-+chmod +x /usr/local/bin/config_fallback
 +depmod -a
 +systemctl restart kmod
 +# Apply MPLS sysctl after kmod loads mpls modules on first boot
 +sysctl -p /etc/sysctl.d/90-mpls.conf || true
 +systemctl enable qn-sr-400-init.service
 +systemctl start qn-sr-400-init.service
-+systemctl enable sonic-utilities-proxy.service
-+systemctl start sonic-utilities-proxy.service
 +exit 0
 diff --git a/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-qn-sr-50.install b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-qn-sr-50.install
 new file mode 100644
@@ -176209,26 +176045,19 @@ new file mode 100644
 index 000000000..9a39bd94d
 --- /dev/null
 +++ b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-qn-sr-50.postinst
-@@ -0,0 +1,20 @@
+@@ -0,0 +1,13 @@
 +#!/bin/sh
 +# postinst script for sonic-platform-qn-sr-50
 +#
 +# see: dh_installdeb(1)
 +
 +chmod a+x /usr/local/bin/qn-sr-50-init.sh
-+chmod +x /usr/local/bin/show
-+chmod +x /usr/local/bin/cli_proxy
-+chmod +x /usr/local/bin/config
-+chmod +x /usr/local/bin/show_fallback
-+chmod +x /usr/local/bin/config_fallback
 +depmod -a
 +systemctl restart kmod
 +# Apply MPLS sysctl after kmod loads mpls modules on first boot
 +sysctl -p /etc/sysctl.d/90-mpls.conf || true
 +systemctl enable qn-sr-50-init.service
 +systemctl start qn-sr-50-init.service
-+systemctl enable sonic-utilities-proxy.service
-+systemctl start sonic-utilities-proxy.service
 +exit 0
 diff --git a/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-wnc-rsem-w1-32.install b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-wnc-rsem-w1-32.install
 new file mode 100644
@@ -176246,15 +176075,8 @@ new file mode 100644
 index 000000000..015d92071
 --- /dev/null
 +++ b/platform/marvell-prestera/sonic-platform-larch/debian/sonic-platform-wnc-rsem-w1-32.postinst
-@@ -0,0 +1,19 @@
+@@ -0,0 +1,12 @@
 +#!/bin/sh
-+chmod +x /usr/local/bin/show
-+chmod +x /usr/local/bin/cli_proxy
-+chmod +x /usr/local/bin/config
-+chmod +x /usr/local/bin/show_fallback
-+chmod +x /usr/local/bin/config_fallback
-+systemctl enable sonic-utilities-proxy.service
-+systemctl start sonic-utilities-proxy.service
 +set -e
 +/usr/local/bin/platform_api_mgnt.sh install
 +# Load MPLS modules and apply sysctl on first boot
@@ -195522,40 +195344,6 @@ index 000000000..93efbc2e1
 @@ -0,0 +1,2 @@
 +#define BUILD_SOURCE "@node09:/home/kburavchenko/sai-marvell-api/cpss"
 +#define GIT_HASH "N/A"
-diff --git a/platform/marvell-prestera/sonic-platform-larch/files/etc/bash_completion.d/sonic_cli_proxy b/platform/marvell-prestera/sonic-platform-larch/files/etc/bash_completion.d/sonic_cli_proxy
-new file mode 100644
-index 000000000..7c5926463
---- /dev/null
-+++ b/platform/marvell-prestera/sonic-platform-larch/files/etc/bash_completion.d/sonic_cli_proxy
-@@ -0,0 +1,27 @@
-+# show completion via proxy
-+_show_proxy_complete() {
-+  local cword=${COMP_CWORD}
-+  local words=("${COMP_WORDS[@]}")
-+  local cur="${COMP_WORDS[COMP_CWORD]}"
-+
-+  # прокидаємо у shim: __complete__ <cword> <words...>
-+  local out
-+  out=$(show __complete__ "$cword" "${words[@]}" 2>/dev/null)
-+
-+  COMPREPLY=( $(compgen -W "$out" -- "$cur") )
-+  return 0
-+}
-+complete -o bashdefault -o default -F _show_proxy_complete show
-+
-+# config completion via proxy
-+_config_proxy_complete() {
-+  local cword=${COMP_CWORD}
-+  local words=("${COMP_WORDS[@]}")
-+  local cur="${COMP_WORDS[COMP_CWORD]}"
-+
-+  local out
-+  out=$(config __complete__ "$cword" "${words[@]}" 2>/dev/null)
-+  COMPREPLY=( $(compgen -W "$out" -- "$cur") )
-+  return 0
-+}
-+complete -o bashdefault -o default -F _config_proxy_complete config
-\ No newline at end of file
 diff --git a/platform/marvell-prestera/sonic-platform-larch/files/etc/modules-load.d/marvell.conf b/platform/marvell-prestera/sonic-platform-larch/files/etc/modules-load.d/marvell.conf
 new file mode 100644
 index 000000000..eec44bb96
@@ -195698,563 +195486,6 @@ index 000000000..01787b557
 +++ b/platform/marvell-prestera/sonic-platform-larch/files/etc/sysctl.d/z-sysctl.conf
 @@ -0,0 +1 @@
 +98-sysctl.conf
-\ No newline at end of file
-diff --git a/platform/marvell-prestera/sonic-platform-larch/files/etc/systemd/system/sonic-utilities-proxy.service b/platform/marvell-prestera/sonic-platform-larch/files/etc/systemd/system/sonic-utilities-proxy.service
-new file mode 100644
-index 000000000..0f7480c6f
---- /dev/null
-+++ b/platform/marvell-prestera/sonic-platform-larch/files/etc/systemd/system/sonic-utilities-proxy.service
-@@ -0,0 +1,14 @@
-+# /etc/systemd/system/sonic-utilities-proxy.service
-+[Unit]
-+Description=SONiC CLI proxy (show/config)
-+After=network.target
-+
-+[Service]
-+User=root
-+Environment=PYTHONUNBUFFERED=1
-+ExecStart=/usr/local/bin/uvicorn server:app --host 127.0.0.1 --port 8787 --workers 1
-+Restart=always
-+RestartSec=1
-+
-+[Install]
-+WantedBy=multi-user.target
-\ No newline at end of file
-diff --git a/platform/marvell-prestera/sonic-platform-larch/files/usr/local/bin/cli_proxy b/platform/marvell-prestera/sonic-platform-larch/files/usr/local/bin/cli_proxy
-new file mode 100644
-index 000000000..40c36bb96
---- /dev/null
-+++ b/platform/marvell-prestera/sonic-platform-larch/files/usr/local/bin/cli_proxy
-@@ -0,0 +1,54 @@
-+#!/bin/bash
-+# cli_proxy - enable or disable the SONiC CLI proxy service
-+#
-+# Usage: cli_proxy enable|disable|status
-+#
-+# When disabled, 'show' and 'config' commands bypass the proxy and run
-+# the real sonic-utilities commands directly. This is useful for community
-+# SONiC test suites that require a stable CLI without proxy-related errors.
-+#
-+# By default, the CLI proxy is enabled.
-+
-+set -euo pipefail
-+
-+CLI_PROXY_DISABLED_FLAG="/etc/sonic/.cli_proxy_disabled"
-+PROXY_SERVICE="sonic-utilities-proxy.service"
-+
-+usage() {
-+    echo "Usage: $0 {enable|disable|status}"
-+    echo ""
-+    echo "  enable   - Enable the CLI proxy (default behavior)"
-+    echo "  disable  - Disable the CLI proxy; show/config run directly"
-+    echo "  status   - Show current CLI proxy state"
-+    exit 1
-+}
-+
-+if [[ $# -ne 1 ]]; then
-+    usage
-+fi
-+
-+case "$1" in
-+    enable)
-+        rm -f "$CLI_PROXY_DISABLED_FLAG"
-+        systemctl start "$PROXY_SERVICE" 2>/dev/null || true
-+        echo "CLI proxy enabled."
-+        ;;
-+    disable)
-+        touch "$CLI_PROXY_DISABLED_FLAG"
-+        echo "CLI proxy disabled. 'show' and 'config' will run directly."
-+        ;;
-+    status)
-+        if [[ -f "$CLI_PROXY_DISABLED_FLAG" ]]; then
-+            echo "CLI proxy: disabled"
-+        else
-+            if systemctl is-active --quiet "$PROXY_SERVICE" 2>/dev/null; then
-+                echo "CLI proxy: enabled (service running)"
-+            else
-+                echo "CLI proxy: enabled (service not running)"
-+            fi
-+        fi
-+        ;;
-+    *)
-+        usage
-+        ;;
-+esac
-diff --git a/platform/marvell-prestera/sonic-platform-larch/files/usr/local/bin/config b/platform/marvell-prestera/sonic-platform-larch/files/usr/local/bin/config
-new file mode 100644
-index 000000000..e65b02765
---- /dev/null
-+++ b/platform/marvell-prestera/sonic-platform-larch/files/usr/local/bin/config
-@@ -0,0 +1,59 @@
-+#!/bin/bash
-+set -euo pipefail
-+PROXY_URL="http://127.0.0.1:8787"
-+CLI_PROXY_DISABLED_FLAG="/etc/sonic/.cli_proxy_disabled"
-+
-+# Get the current user running this command
-+CURRENT_USER=$(id -un)
-+
-+# If CLI proxy is disabled, run the real command directly
-+if [[ -f "$CLI_PROXY_DISABLED_FLAG" ]]; then
-+  exec /usr/local/bin/config_fallback "$@"
-+fi
-+
-+# Commands that are better run directly (TTY/streaming/long-running)
-+LONG_BYPASS=("reload" "load_minigraph" "load" "save" "spanning-tree")
-+
-+if [[ "${1-}" == "__complete__" ]]; then
-+  cword="$2"; shift 2
-+  payload=$(jq -cn --argjson c "$cword" --argjson w "$(printf '%s\n' "$@" | jq -R . | jq -s .)" \
-+    '{prog:"config", cword:$c, words:$w}')
-+  curl -sS -H 'Content-Type: application/json' -d "$payload" "$PROXY_URL/complete" \
-+    | jq -r '.candidates[]?' || true
-+  exit 0
-+fi
-+
-+if (( $# >= 1 )); then
-+  sub="$1"
-+  for x in "${LONG_BYPASS[@]}"; do
-+    if [[ "$sub" == "$x" ]]; then
-+      exec /usr/local/bin/config_fallback "$@"
-+    fi
-+  done
-+fi
-+
-+# Resolve any file-path arguments to absolute paths before sending to the proxy.
-+# The proxy server runs with CWD '/', so relative paths must be resolved here
-+# while the user's working directory is still active.
-+normalized=()
-+for arg in "$@"; do
-+  if [[ -e "$arg" ]]; then
-+    normalized+=("$(realpath -- "$arg")")
-+  else
-+    normalized+=("$arg")
-+  fi
-+done
-+
-+# Otherwise — through the proxy (fast/common commands) - pass user to proxy
-+payload=$(jq -cn --arg u "$CURRENT_USER" --argjson a "$(printf '%s\n' "${normalized[@]}" | jq -R . | jq -s .)" '{prog:"config", args:$a, user:$u}')
-+resp=$(curl -sS -w '\n%{http_code}' -H 'Content-Type: application/json' -d "$payload" "$PROXY_URL/run") || {
-+  echo "config-proxy error: transport failed" >&2; exit 127; }
-+body=$(printf '%s' "$resp" | sed '$d'); code=$(printf '%s' "$resp" | tail -n1)
-+if [[ "$code" -ge 200 && "$code" -lt 300 ]]; then
-+  printf '%s' "$body" | jq -j '.stdout // empty'
-+  printf '%s' "$body" | jq -j '.stderr // empty' >&2
-+  exit "$(printf '%s' "$body" | jq -r '.exit_code')"
-+fi
-+echo "config-proxy error: HTTP $code" >&2
-+printf '%s\n' "$body" | jq -r '.stderr // empty' >&2 || true
-+exit 1
-\ No newline at end of file
-diff --git a/platform/marvell-prestera/sonic-platform-larch/files/usr/local/bin/config_fallback b/platform/marvell-prestera/sonic-platform-larch/files/usr/local/bin/config_fallback
-new file mode 100644
-index 000000000..82f0a8785
---- /dev/null
-+++ b/platform/marvell-prestera/sonic-platform-larch/files/usr/local/bin/config_fallback
-@@ -0,0 +1,8 @@
-+#!/usr/bin/python3
-+# -*- coding: utf-8 -*-
-+import re
-+import sys
-+from config.main import config
-+if __name__ == '__main__':
-+    sys.argv[0] = re.sub(r'(-script\.pyw|\.exe)?$', '', sys.argv[0])
-+    sys.exit(config())
-diff --git a/platform/marvell-prestera/sonic-platform-larch/files/usr/local/bin/server.py b/platform/marvell-prestera/sonic-platform-larch/files/usr/local/bin/server.py
-new file mode 100644
-index 000000000..515384cf3
---- /dev/null
-+++ b/platform/marvell-prestera/sonic-platform-larch/files/usr/local/bin/server.py
-@@ -0,0 +1,276 @@
-+#!/usr/bin/env python3
-+# -*- coding: utf-8 -*-
-+
-+import os
-+import sys
-+import json
-+import asyncio
-+import subprocess
-+import threading
-+import importlib
-+import importlib.util
-+from typing import List, Optional
-+
-+from fastapi import FastAPI, HTTPException
-+from starlette.responses import JSONResponse, PlainTextResponse
-+from pydantic import BaseModel
-+
-+# -------------------------------
-+# Thread-local storage for run-as-user
-+# -------------------------------
-+_thread_local = threading.local()
-+
-+def get_run_as_user() -> Optional[str]:
-+    """Get the user to run subprocesses as (thread-local)."""
-+    return getattr(_thread_local, 'run_as_user', None)
-+
-+def set_run_as_user(user: Optional[str]) -> None:
-+    """Set the user to run subprocesses as (thread-local)."""
-+    _thread_local.run_as_user = user
-+
-+# -------------------------------
-+# Monkey-patch subprocess.Popen to run as specified user
-+# -------------------------------
-+_OriginalPopen = subprocess.Popen
-+
-+class _UserAwarePopen(_OriginalPopen):
-+    """Popen wrapper that prepends sudo -u <user> when run_as_user is set."""
-+
-+    def __init__(self, args, *pargs, **kwargs):
-+        user = get_run_as_user()
-+        if user:
-+            if isinstance(args, list):
-+                args = ['sudo', '-u', user] + list(args)
-+            elif isinstance(args, str):
-+                args = f'sudo -u {user} {args}'
-+        super().__init__(args, *pargs, **kwargs)
-+
-+# Apply the monkey-patch
-+subprocess.Popen = _UserAwarePopen
-+
-+# -------------------------------
-+# Import warmup (to pay cost once)
-+# -------------------------------
-+def warmup_imports() -> None:
-+    try:
-+        # heavy base imports from sonic-utilities
-+        import sonic_py_common.device_info  # noqa: F401
-+        import utilities_common.db          # noqa: F401
-+        import swsscommon                   # noqa: F401
-+        import yaml, netaddr, natsort, tabulate, sonic_platform
-+        import utilities_common.platform_sfputil_helper as pf  # noqa
-+    except Exception as e:
-+        print(f"[warmup] warning: {e}", file=sys.stderr)
-+
-+warmup_imports()
-+
-+# -------------------------------
-+# Load Click CLIs (show/config)
-+# -------------------------------
-+import click
-+from click.testing import CliRunner
-+
-+
-+from show.main import cli as show_cli  # type: ignore
-+from config.main import config as config_cli
-+
-+def _get_cli(prog: str):
-+    if prog == "show":
-+        return show_cli
-+    if prog == "config":
-+        return config_cli
-+    raise HTTPException(status_code=400, detail=f"unknown prog={prog!r}")
-+
-+# -------------------------------
-+# FastAPI app
-+# -------------------------------
-+app = FastAPI(title="SONiC CLI proxy", version="1.2")
-+
-+runner = CliRunner(mix_stderr=True)
-+SEM = asyncio.Semaphore(int(os.getenv("SHOW_PROXY_MAX_CONCURRENCY", "4")))
-+
-+# -------------------------------
-+# Models
-+# -------------------------------
-+class RunRequest(BaseModel):
-+    # prog is optional for backward compatibility: default "show"
-+    prog: Optional[str] = "show"
-+    args: List[str]
-+    timeout: Optional[float] = 60.0
-+    # user to run subprocesses as (for cache isolation)
-+    user: Optional[str] = None
-+
-+class CompleteRequest(BaseModel):
-+    prog: str                 # "show" | "config"
-+    words: List[str]          # ["show","interfaces","st"]...
-+    cword: int                # index of the word under the cursor
-+
-+# -------------------------------
-+# Helpers
-+# -------------------------------
-+def _invoke_click(cli_obj, args: List[str], user: Optional[str] = None):
-+    """Run the actual Click command in an already warmed-up process.
-+
-+    Args:
-+        cli_obj: The Click CLI object to invoke
-+        args: Command arguments
-+        user: Optional user to run subprocesses as
-+    """
-+    # Set the run-as-user for subprocess calls (thread-local)
-+    set_run_as_user(user)
-+    try:
-+        # CliRunner only intercepts Python-level sys.stderr. Subprocesses
-+        # (e.g. portconfig) write directly to fd 2 and bypass CliRunner,
-+        # causing stderr to disappear into uvicorn's syslog instead of being
-+        # returned to the client. Redirect the OS-level fd 2 to a pipe and
-+        # drain it in a background thread to capture that output.
-+        fd2_backup = os.dup(2)
-+        r_fd, w_fd = os.pipe()
-+        os.dup2(w_fd, 2)
-+        os.close(w_fd)
-+
-+        captured_stderr: List[bytes] = []
-+
-+        def _drain_pipe():
-+            while True:
-+                try:
-+                    chunk = os.read(r_fd, 4096)
-+                    if not chunk:
-+                        break
-+                    captured_stderr.append(chunk)
-+                except OSError:
-+                    break
-+
-+        drain_thread = threading.Thread(target=_drain_pipe, daemon=True)
-+        drain_thread.start()
-+
-+        try:
-+            res = runner.invoke(cli_obj, args, catch_exceptions=True)
-+        finally:
-+            # Restoring fd 2 closes the write end of the pipe, signalling
-+            # EOF to the drain thread.
-+            os.dup2(fd2_backup, 2)
-+            os.close(fd2_backup)
-+
-+        drain_thread.join(timeout=2.0)
-+        os.close(r_fd)
-+        subprocess_stderr = b''.join(captured_stderr).decode(errors='replace')
-+
-+        payload = {
-+            "stdout": res.output or "",
-+            "stderr": subprocess_stderr,
-+            "exit_code": int(res.exit_code),
-+        }
-+        # Only append unexpected exceptions (not SystemExit — those just carry
-+        # the exit code, and formatting them would print the numeric code as text).
-+        if res.exception and not isinstance(res.exception, SystemExit):
-+            err_line = f"{type(res.exception).__name__}: {res.exception}"
-+            payload["stderr"] = (payload["stderr"] + "\n" + err_line).lstrip("\n")
-+            payload["exit_code"] = payload["exit_code"] or 1
-+        return payload
-+    finally:
-+        # Clear the run-as-user
-+        set_run_as_user(None)
-+
-+def _collect_candidates_for_command(cmd: click.BaseCommand) -> List[str]:
-+    """Return a list of subcommands and options for the current command."""
-+    cands: List[str] = []
-+
-+    # subcommands, if this is a group / multi-command
-+    if isinstance(cmd, click.MultiCommand):
-+        try:
-+            subs = cmd.list_commands(click.Context(cmd, resilient_parsing=True)) or []
-+        except Exception:
-+            subs = list(getattr(cmd, "commands", {}).keys() or [])
-+        cands.extend(subs)
-+
-+    # options (short/long)
-+    try:
-+        for p in getattr(cmd, "params", []):
-+            if isinstance(p, click.Option):
-+                for o in p.opts + p.secondary_opts:
-+                    if o:
-+                        cands.append(o)
-+    except Exception:
-+        pass
-+
-+    # deduplicate while preserving order
-+    seen = set()
-+    out: List[str] = []
-+    for c in cands:
-+        if c and c not in seen:
-+            out.append(c)
-+            seen.add(c)
-+    return out
-+
-+def _descend_command(cli_obj, tokens: List[str]) -> click.BaseCommand:
-+    """
-+    Descend the command tree according to completed tokens (exact matches).
-+    Return the "current" command (group or leaf).
-+    """
-+    cmd: click.BaseCommand = cli_obj
-+    for t in tokens:
-+        if isinstance(cmd, click.MultiCommand):
-+            sub = cmd.get_command(click.Context(cmd, resilient_parsing=True), t)
-+            if sub is None:
-+                break
-+            cmd = sub
-+        else:
-+            break
-+    return cmd
-+
-+# -------------------------------
-+# Endpoints
-+# -------------------------------
-+@app.get("/healthz")
-+async def healthz():
-+    return PlainTextResponse("ok")
-+
-+@app.get("/version")
-+async def version():
-+    return JSONResponse({"version": app.version})
-+
-+@app.post("/run")
-+async def run_cmd(req: RunRequest):
-+    prog = (req.prog or "show").strip().lower()
-+    cli_obj = _get_cli(prog)
-+    if not req.args:
-+        raise HTTPException(status_code=400, detail="args must be non-empty")
-+
-+    async with SEM:
-+        loop = asyncio.get_running_loop()
-+        # Pass user to _invoke_click so subprocesses run as the calling user
-+        payload = await loop.run_in_executor(
-+            None,
-+            lambda: _invoke_click(cli_obj, req.args, req.user)
-+        )
-+        # always 200; client (shim) exits with exit_code
-+        return JSONResponse(payload, status_code=200)
-+
-+@app.post("/complete")
-+async def complete(req: CompleteRequest):
-+    cli_obj = _get_cli(req.prog.strip().lower())
-+
-+    words = list(req.words)
-+    cword = int(req.cword)
-+
-+    # if the first token is the program name, drop it
-+    if words and words[0] == req.prog:
-+        words = words[1:]
-+        cword = max(0, cword - 1)   # <<< IMPORTANT: decrement the index!
-+
-+    # determine incomplete token and the "trail" to the current command
-+    if cword >= len(words):
-+        incomplete = ""
-+        trail = words[:]            # everything completed, cursor after word/space
-+    else:
-+        incomplete = words[cword]
-+        trail = words[:cword]
-+
-+    cmd = _descend_command(cli_obj, trail)
-+    cands = _collect_candidates_for_command(cmd)
-+
-+    if incomplete:
-+        cands = [c for c in cands if c.startswith(incomplete)]
-+
-+    return JSONResponse({"candidates": cands})
-diff --git a/platform/marvell-prestera/sonic-platform-larch/files/usr/local/bin/show b/platform/marvell-prestera/sonic-platform-larch/files/usr/local/bin/show
-new file mode 100644
-index 000000000..3d11c01ee
---- /dev/null
-+++ b/platform/marvell-prestera/sonic-platform-larch/files/usr/local/bin/show
-@@ -0,0 +1,93 @@
-+#!/usr/bin/env python3
-+import os, sys, json, pwd, urllib.request, urllib.error
-+
-+PROXY = os.environ.get("SONIC_CLI_PROXY", "http://127.0.0.1:8787")
-+
-+REAL_SHOW = "/usr/local/bin/show_fallback"
-+
-+CLI_PROXY_DISABLED_FLAG = "/etc/sonic/.cli_proxy_disabled"
-+
-+LONG_BYPASS_PREFIXES = [
-+    ("spanning-tree",),
-+    ("ip", "bgp"),
-+    ("ipv6", "bgp"),
-+]
-+
-+def get_current_user():
-+    """Get the username of the calling user."""
-+    return pwd.getpwuid(os.getuid()).pw_name
-+
-+def post(path, obj):
-+    data = json.dumps(obj).encode("utf-8")
-+    req = urllib.request.Request(PROXY + path, data=data, headers={"Content-Type":"application/json"})
-+    with urllib.request.urlopen(req, timeout=120) as r:
-+        return json.loads(r.read().decode("utf-8"))
-+
-+def starts_with(words, prefix):
-+    return len(words) >= len(prefix) and tuple(words[:len(prefix)]) == tuple(prefix)
-+
-+def should_bypass(args):
-+    if not args:
-+        return False
-+    for pfx in LONG_BYPASS_PREFIXES:
-+        if starts_with(args, pfx):
-+            return True
-+    return False
-+
-+def exec_real_show(args):
-+    if os.path.exists(REAL_SHOW):
-+        os.execv(REAL_SHOW, [REAL_SHOW] + args)
-+    raise FileNotFoundError(REAL_SHOW)
-+
-+def main(argv):
-+    user = get_current_user()
-+
-+    # If CLI proxy is disabled, always run the real command directly
-+    if os.path.exists(CLI_PROXY_DISABLED_FLAG):
-+        exec_real_show(argv[1:])
-+
-+    # special hidden mode for completion
-+    if len(argv) >= 2 and argv[1] == "__complete__":
-+        # args: __complete__ <cword> <words...>
-+        try:
-+            cword = int(argv[2])
-+            words = argv[3:]
-+        except Exception:
-+            print("", end="")
-+            return 0
-+        try:
-+            resp = post("/complete", {"prog":"show","words":words,"cword":cword})
-+            for c in resp.get("candidates", []):
-+                if c:
-+                    print(c)
-+            return 0
-+        except Exception:
-+            # no completion if proxy down
-+            return 0
-+        
-+    args = argv[1:]
-+
-+    # bypass for long/tty-sensitive commands
-+    if should_bypass(args):
-+        exec_real_show(args)
-+
-+    # normal execution - pass user to proxy
-+    try:
-+        resp = post("/run", {"prog":"show", "args":argv[1:], "user":user})
-+        stdout = resp.get("stdout","")
-+        stderr = resp.get("stderr","")
-+        if stdout:
-+            sys.stdout.write(stdout)
-+        if stderr:
-+            sys.stderr.write(stderr)
-+        return int(resp.get("exit_code", 0))
-+    except Exception as e:
-+        # Fallback: call real binary if proxy not available
-+        real = "/usr/local/bin/show_fallback"
-+        if os.path.exists(real):
-+            os.execv(real, [real] + argv[1:])
-+        print(f"show-proxy error: {e}", file=sys.stderr)
-+        return 1
-+
-+if __name__ == "__main__":
-+    sys.exit(main(sys.argv))
-diff --git a/platform/marvell-prestera/sonic-platform-larch/files/usr/local/bin/show_fallback b/platform/marvell-prestera/sonic-platform-larch/files/usr/local/bin/show_fallback
-new file mode 100644
-index 000000000..455c6b1da
---- /dev/null
-+++ b/platform/marvell-prestera/sonic-platform-larch/files/usr/local/bin/show_fallback
-@@ -0,0 +1,8 @@
-+#!/usr/bin/python3
-+# -*- coding: utf-8 -*-
-+import re
-+import sys
-+from show.main import cli
-+if __name__ == '__main__':
-+    sys.argv[0] = re.sub(r'(-script\.pyw|\.exe)?$', '', sys.argv[0])
-+    sys.exit(cli())
 \ No newline at end of file
 diff --git a/platform/marvell-prestera/sonic-platform-larch/gemini/modprobe/optoe.conf b/platform/marvell-prestera/sonic-platform-larch/gemini/modprobe/optoe.conf
 new file mode 100644
