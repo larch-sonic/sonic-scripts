@@ -248212,7 +248212,7 @@ index 59f10dbfc..fc034d020 100644
 -            type = "ramdisk";
 +        fdt_ln3848g {
 +            description = "Flattened Device Tree blob";
-+            data = /incbin/("/usr/lib/linux-image-6.12.41+deb13-sonic-arm64/marvell/ac5x-ln3848g.dtb");
++            data = /incbin/("/boot/ac5x-ln38xx.dtb");
 +            type = "flat_dt";
              arch = "arm64";
 -            os = "linux";
@@ -248230,7 +248230,7 @@ index 59f10dbfc..fc034d020 100644
 -            type = "ramdisk";
 +        fdt_ln3824g {
 +            description = "Flattened Device Tree blob";
-+            data = /incbin/("/usr/lib/linux-image-6.12.41+deb13-sonic-arm64/marvell/ac5x-ln3848g.dtb");
++            data = /incbin/("/boot/ac5x-ln38xx.dtb");
 +            type = "flat_dt";
              arch = "arm64";
 -            os = "linux";
@@ -248248,7 +248248,7 @@ index 59f10dbfc..fc034d020 100644
 -            type = "ramdisk";
 +        fdt_ln3804gf-4xgf {
 +            description = "Flattened Device Tree blob";
-+            data = /incbin/("/usr/lib/linux-image-6.12.41+deb13-sonic-arm64/marvell/ac5x-ln3848g.dtb");
++            data = /incbin/("/boot/ac5x-ln38xx.dtb");
 +            type = "flat_dt";
              arch = "arm64";
 -            os = "linux";
@@ -248267,7 +248267,7 @@ index 59f10dbfc..fc034d020 100644
 -            data = /incbin/("/usr/lib/linux-image-6.12.41+deb13-sonic-arm64/marvell/ac5-98dx35xx-rd.dtb");
 +        fdt_ln3804gf-8xgf {
 +            description = "Flattened Device Tree blob";
-+            data = /incbin/("/usr/lib/linux-image-6.12.41+deb13-sonic-arm64/marvell/ac5x-ln3848g.dtb");
++            data = /incbin/("/boot/ac5x-ln38xx.dtb");
              type = "flat_dt";
              arch = "arm64";
              compression = "none";
