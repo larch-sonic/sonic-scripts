@@ -1,0 +1,33 @@
+From d901fd2dd3572f2f3a8363beef968eebcf381cf0 Mon Sep 17 00:00:00 2001
+From: Alex Sakun <asakun@larch-networks.com>
+Date: Mon, 4 May 2026 00:33:29 +0300
+Subject: [PATCH] Fix libnl version conflict in build slave
+
+During package builds, sonic libnl (3.7.0-0.2+b1sonic1) gets installed
+into the trixie slave via the -install mechanism, replacing stock
+libnl-3-dev (3.7.0-2). This breaks stock libnl-genl-3-dev and
+libnl-route-3-dev which depend on libnl-3-dev (= 3.7.0-2). Any
+subsequent apt operation on the slave then fails with unmet dependencies.
+
+Fix: Change the kbuild install from apt (which checks global dependency
+state) to dpkg -i --force-depends (which only installs the package).
+---
+ build_debian.sh | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/build_debian.sh b/build_debian.sh
+index 6af128f8e..d844e254c 100755
+--- a/build_debian.sh
++++ b/build_debian.sh
+@@ -166,7 +166,7 @@ fi
+ cat files/initramfs-tools/modules | sudo tee -a $FILESYSTEM_ROOT/etc/initramfs-tools/modules > /dev/null
+ 
+ ## Install kbuild for sign-file into docker image (not fsroot)
+-sudo LANG=C DEBIAN_FRONTEND=noninteractive apt -y --allow-downgrades install ./$debs_path/linux-kbuild-${LINUX_KERNEL_VERSION}*_${CONFIGURED_ARCH}.deb
++sudo dpkg -i --force-depends ./$debs_path/linux-kbuild-${LINUX_KERNEL_VERSION}*_${CONFIGURED_ARCH}.deb
+ 
+ ## Hook into initramfs: change fs type from vfat to ext4 on arista switches
+ sudo mkdir -p $FILESYSTEM_ROOT/etc/initramfs-tools/scripts/init-premount/
+-- 
+2.34.1
+

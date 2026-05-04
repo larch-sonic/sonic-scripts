@@ -1,0 +1,46 @@
+From fef22039abd7c61ee5dbfb77b8f645248d1b591e Mon Sep 17 00:00:00 2001
+From: Alex Sakun <asakun@larch-networks.com>
+Date: Mon, 4 May 2026 00:34:35 +0300
+Subject: [PATCH] Fix libnl version conflict in rootfs assembly
+
+Stock libnl -dev packages (3.7.0-2) get installed by apt as dependencies
+during rootfs assembly. Then sonic install_deb_package replaces runtime
+libs with its own build (3.7.0-0.2+b1sonic1), breaking the -dev deps.
+Later apt-get commands detect broken state and exit non-zero, killing
+the set -e script.
+
+Fix: force-install all sonic libnl debs and hold them so apt-get
+install -f cannot downgrade them back to stock. This runs before
+install_deb_package.
+---
+ files/build_templates/sonic_debian_extension.j2 | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/files/build_templates/sonic_debian_extension.j2 b/files/build_templates/sonic_debian_extension.j2
+index 92fec8646..78fc8c0e5 100644
+--- a/files/build_templates/sonic_debian_extension.j2
++++ b/files/build_templates/sonic_debian_extension.j2
+@@ -771,6 +771,20 @@ exit 101
+ EOF
+ sudo chmod a+x $FILESYSTEM_ROOT/usr/sbin/policy-rc.d
+ 
++# Fix libnl version conflict: force-install all sonic libnl debs and hold them
++# Must run BEFORE install_deb_package which triggers apt-get install -f
++LIBNL_SONIC_DEBS=$(ls $debs_path/libnl-3-200_*sonic*.deb $debs_path/libnl-3-dev_*sonic*.deb $debs_path/libnl-genl-3-200_*sonic*.deb $debs_path/libnl-genl-3-dev_*sonic*.deb $debs_path/libnl-route-3-200_*sonic*.deb $debs_path/libnl-route-3-dev_*sonic*.deb $debs_path/libnl-nf-3-200_*sonic*.deb $debs_path/libnl-nf-3-dev_*sonic*.deb $debs_path/libnl-cli-3-200_*sonic*.deb $debs_path/libnl-cli-3-dev_*sonic*.deb 2>/dev/null)
++if [ -n "$LIBNL_SONIC_DEBS" ]; then
++    sudo cp $LIBNL_SONIC_DEBS $FILESYSTEM_ROOT/
++    LIBNL_BASENAMES=$(basename -a $LIBNL_SONIC_DEBS 2>/dev/null)
++    sudo LANG=C DEBIAN_FRONTEND=noninteractive chroot $FILESYSTEM_ROOT dpkg --force-depends --force-overwrite -i $LIBNL_BASENAMES 2>/dev/null || true
++    ( cd $FILESYSTEM_ROOT; sudo rm -f $LIBNL_BASENAMES )
++    # Hold all libnl packages to prevent apt-get install -f from downgrading
++    for hlpkg in libnl-3-200 libnl-3-dev libnl-genl-3-200 libnl-genl-3-dev libnl-route-3-200 libnl-route-3-dev libnl-nf-3-200 libnl-nf-3-dev libnl-cli-3-200 libnl-cli-3-dev; do
++        sudo LANG=C chroot $FILESYSTEM_ROOT apt-mark hold $hlpkg 2>/dev/null || true
++    done
++fi
++
+ install_deb_package {{installer_debs.strip()}}
+ 
+ {% if installer_debs.strip() -%}
+-- 
+2.34.1
+

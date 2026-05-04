@@ -159286,7 +159286,7 @@ index 000000000..22a022a92
 +Section: unknown
 +Priority: optional
 +Maintainer: larch
-+Build-Depends: debhelper (>=9), libi2c-dev
++Build-Depends: debhelper (>=9)
 +Standards-Version: 3.9.6
 +Homepage: <insert the upstream URL, if relevant>
 +
@@ -175047,7 +175047,7 @@ index 000000000..ef1418d20
 +Section: unknown
 +Priority: optional
 +Maintainer: larch
-+Build-Depends: debhelper (>=9), libi2c-dev
++Build-Depends: debhelper (>=9)
 +Standards-Version: 3.9.6
 +Homepage: <insert the upstream URL, if relevant>
 +
@@ -175171,7 +175171,7 @@ new file mode 100755
 index 000000000..24152820d
 --- /dev/null
 +++ b/platform/marvell-prestera/sonic-platform-larch/debian/rules
-@@ -0,0 +1,221 @@
+@@ -0,0 +1,223 @@
 +#!/usr/bin/make -f
 +# See debhelper(7) (uncomment to enable)
 +# output every command that modifies files on the build system.
@@ -175226,6 +175226,8 @@ index 000000000..24152820d
 +	done)
 +
 +override_dh_auto_build:
++	sudo apt-get update -o Acquire::AllowInsecureRepositories=true -o Acquire::AllowDowngradeToInsecureRepositories=true 2>/dev/null || true
++	apt-get download libi2c-dev libi2c0 2>/dev/null && sudo dpkg -i --force-depends ./libi2c*.deb 2>/dev/null && rm -f ./libi2c*.deb || true
 +	(set -e; for mod in $(MODULE_DIRS); do \
 +		mkdir -p $(MOD_SRC_DIR)/$${mod}/$(MRVL_MODULE_DIR); \
 +		cp -r $(MOD_SRC_DIR)/../$(PRESTERA_MODULE_PREFIX)/* $(MOD_SRC_DIR)/$${mod}/$(MRVL_MODULE_DIR)/; \

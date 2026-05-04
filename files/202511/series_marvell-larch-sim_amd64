@@ -1,5 +1,7 @@
 0001-Add-Larch-platforms.patch|sonic-buildimage
 0002-Add-marvell-larch-sim-platform.patch|sonic-buildimage
 0008-Enable-ospf-and-isis-traps-by-default.patch|sonic-buildimage
+0009-Fix-libnl-version-conflict-in-build-slave.patch|sonic-buildimage
+0010-Fix-libnl-version-conflict-in-rootfs.patch|sonic-buildimage
 0001-Add-larch-platfrom-support-sairedis.patch|src/sonic-sairedis
 0001-Add-Larch-sim-platform-support-swss.patch|src/sonic-swss
