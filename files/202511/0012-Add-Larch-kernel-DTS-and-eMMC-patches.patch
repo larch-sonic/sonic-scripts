@@ -1,0 +1,872 @@
+From ce70bb5f7c900cda480fedb6e967cc0d3b5015d5 Mon Sep 17 00:00:00 2001
+From: Kostiantyn Buravchenko <kburavchenko@larch-networks.com>
+Date: Fri, 7 Feb 2025 22:52:30 +0200
+Subject: [PATCH] Add Larch kernel DTS and eMMC patches
+
+Add DTS for ln3848g board, board fixes (memory node, sdma_drv),
+canis minor DTS, and remove dma-coherent from eMMC bus to fix
+eMMC detection on AC5X Larch boards.
+
+Also enable SPI_ARMADA_3700 module for marvell-prestera-arm64.
+
+---
+ patch/kconfig-inclusions                           |   1 +
+ patches-sonic/0001-Add-ac5x-ln3848g-dts.patch      | 115 ++++++
+ patches-sonic/0002-ac5x-larch-boards-fix.patch     |  43 +++
+ patches-sonic/0003-Add-canis-minor-dts-dtsi.patch  | 609 +++++++++++++++++++++
+ ...-dts-ln3824-remove-dma-coherent-from-emmc.patch |  26 +
+ patches-sonic/series                               |   6 +
+ 6 files changed, 800 insertions(+)
+ create mode 100644 patches-sonic/0001-Add-ac5x-ln3848g-dts.patch
+ create mode 100644 patches-sonic/0002-ac5x-larch-boards-fix.patch
+ create mode 100644 patches-sonic/0003-Add-canis-minor-dts-dtsi.patch
+ create mode 100644 patches-sonic/0004-arm64-dts-ln3824-remove-dma-coherent-from-emmc.patch
+
+diff --git a/patch/kconfig-inclusions b/patch/kconfig-inclusions
+index a95b859..ba29a22 100644
+--- a/patch/kconfig-inclusions
++++ b/patch/kconfig-inclusions
+@@ -211,6 +211,7 @@ CONFIG_RING_BUFFER_ALLOW_SWAP=y
+ CONFIG_KEXEC_FILE=y
+ 
+ [marvell-prestera-arm64]
++CONFIG_SPI_ARMADA_3700=m
+ 
+ [pensando]
+ CONFIG_ARCH_PENSANDO=y
+diff --git a/patches-sonic/0001-Add-ac5x-ln3848g-dts.patch b/patches-sonic/0001-Add-ac5x-ln3848g-dts.patch
+new file mode 100644
+index 0000000..56ca8cd
+--- /dev/null
++++ b/patches-sonic/0001-Add-ac5x-ln3848g-dts.patch
+@@ -0,0 +1,115 @@
++From cf36c47e60bdf12ce992a80d49ecb969104a853b Mon Sep 17 00:00:00 2001
++From: Kostiantyn Buravchenko <kburavchenko@larch-networks.com>
++Date: Fri, 7 Feb 2025 22:46:23 +0200
++Subject: [PATCH] Add ac5x-ln3848g.dts
++
++---
++ arch/arm64/boot/dts/marvell/Makefile         |  1 +
++ arch/arm64/boot/dts/marvell/ac5x-ln3848g.dts | 86 ++++++++++++++++++++
++ 2 files changed, 87 insertions(+)
++ create mode 100644 arch/arm64/boot/dts/marvell/ac5x-ln3848g.dts
++
++diff --git a/arch/arm64/boot/dts/marvell/Makefile b/arch/arm64/boot/dts/marvell/Makefile
++index 5fa9dbf4e..c2167686c 100644
++--- a/arch/arm64/boot/dts/marvell/Makefile
+++++ b/arch/arm64/boot/dts/marvell/Makefile
++@@ -30,3 +30,4 @@ dtb-$(CONFIG_ARCH_MVEBU) += armada-7020-comexpress.dtb
++ dtb-$(CONFIG_ARCH_MVEBU) += 7215-ixs-a1.dtb
++ dtb-$(CONFIG_ARCH_MVEBU) += smc_sse-g3748.dtb
++ dtb-$(CONFIG_ARCH_MVEBU) += es1227-54ts.dtb
+++dtb-$(CONFIG_ARCH_MVEBU) += ac5x-ln3848g.dtb
++diff --git a/arch/arm64/boot/dts/marvell/ac5x-ln3848g.dts b/arch/arm64/boot/dts/marvell/ac5x-ln3848g.dts
++new file mode 100644
++index 000000000..4d5edae8b
++--- /dev/null
+++++ b/arch/arm64/boot/dts/marvell/ac5x-ln3848g.dts
++@@ -0,0 +1,86 @@
+++
+++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+++/*
+++ * Device Tree For RD-AC5X.
+++ *
+++ * Copyright (C) 2021 Marvell
+++ * Copyright (C) 2022 Allied Telesis Labs
+++ */
+++/*
+++ * Device Tree file for Marvell Alleycat 5X development board
+++ * This board file supports the B configuration of the board
+++ */
+++
+++/dts-v1/;
+++
+++#include "ac5-98dx35xx.dtsi"
+++
+++/ {
+++      model = "Marvell RD-AC5X Board";
+++      compatible = "marvell,rd-ac5x", "marvell,ac5x", "marvell,ac5";
+++
+++      aliases {
+++              serial0 = &uart0;
+++              spiflash0 = &spiflash0;
+++              gpio0 = &gpio0;
+++              gpio1 = &gpio1;
+++              ethernet0 = &eth0;
+++              ethernet1 = &eth1;
+++      };
+++
+++};
+++
+++&mdio {
+++      phy0: ethernet-phy@0 {
+++              reg = <0>;
+++      };
+++};
+++
+++
+++&i2c0 {
+++      status = "okay";
+++};
+++
+++&i2c1 {
+++      status = "disabled";
+++};
+++
+++&eth0 {
+++      status = "okay";
+++      phy = <&phy0>;
+++};
+++
+++/* USB0 is a host USB */
+++&usb0 {
+++      status = "okay";
+++};
+++
+++/* USB1 is a peripheral USB */
+++&usb1 {
+++      status = "disabled";
+++};
+++
+++&nand {
+++      status = "disabled";
+++};
+++
+++&spi0 {
+++      status = "okay";
+++
+++      spiflash0: flash@0 {
+++              partition@0 {
+++              label = "uboot-env";
+++              reg = <0x0 0x400000>;
+++      };
+++
+++      /delete-node/ parition@1;
+++      /delete-node/ parition@2;
+++      };
+++};
+++
+++&sdhci {
+++      status = "okay";
+++    /delete-property/ mmc-ddr-1_8v;
+++      /delete-property/ mmc-hs200-1_8v;
+++      /delete-property/ mmc-hs400-1_8v;
+++};
++-- 
++2.25.1
++
+diff --git a/patches-sonic/0002-ac5x-larch-boards-fix.patch b/patches-sonic/0002-ac5x-larch-boards-fix.patch
+new file mode 100644
+index 0000000..78ce1ca
+--- /dev/null
++++ b/patches-sonic/0002-ac5x-larch-boards-fix.patch
+@@ -0,0 +1,43 @@
++From f3b5d6527412b9c92357563f42268af4fbddc8b2 Mon Sep 17 00:00:00 2001
++From: kburavchenko <kburavchenko@contoso.com>
++Date: Wed, 12 Feb 2025 17:01:57 +0000
++Subject: [PATCH] ac5x larch boards fix
++
++---
++ arch/arm64/boot/dts/marvell/ac5x-ln3848g.dts | 14 ++++++++++++++
++ 1 file changed, 14 insertions(+)
++
++diff --git a/arch/arm64/boot/dts/marvell/ac5x-ln3848g.dts b/arch/arm64/boot/dts/marvell/ac5x-ln3848g.dts
++index 4d5edae8b..025d0b53c 100644
++--- a/arch/arm64/boot/dts/marvell/ac5x-ln3848g.dts
+++++ b/arch/arm64/boot/dts/marvell/ac5x-ln3848g.dts
++@@ -28,8 +28,14 @@ aliases {
++               ethernet1 = &eth1;
++       };
++ 
+++      memory@0 {
+++              device_type = "memory";
+++              reg = <0x2 0x00000000 0x1 0x00000000>;
+++      };
+++
++ };
++ 
+++
++ &mdio {
++       phy0: ethernet-phy@0 {
++               reg = <0>;
++@@ -84,3 +90,11 @@ &sdhci {
++       /delete-property/ mmc-hs200-1_8v;
++       /delete-property/ mmc-hs400-1_8v;
++ };
+++
+++/{
+++      sdma_drv {
+++              compatible = "marvell,mvppnd";
+++              interrupts = <GIC_SPI 0x23 IRQ_TYPE_LEVEL_HIGH>;
+++              status = "okay";
+++      };
+++};
++-- 
++2.39.5
++
+diff --git a/patches-sonic/0003-Add-canis-minor-dts-dtsi.patch b/patches-sonic/0003-Add-canis-minor-dts-dtsi.patch
+new file mode 100644
+index 0000000..5e391e5
+--- /dev/null
++++ b/patches-sonic/0003-Add-canis-minor-dts-dtsi.patch
+@@ -0,0 +1,609 @@
++From 53432b06f9098bf3a200874c79484d78627ea3b2 Mon Sep 17 00:00:00 2001
++From: Kostiantyn Buravchenko <kburavchenko@larch-networks.com>
++Date: Tue, 18 Mar 2025 21:58:22 +0200
++Subject: [PATCH] Add canis minor dts, dtsi
++
++---
++ arch/arm64/boot/dts/marvell/canis.dts  | 126 +++++++
++ arch/arm64/boot/dts/marvell/canis.dtsi | 456 +++++++++++++++++++++++++
++ 2 files changed, 582 insertions(+)
++ create mode 100644 arch/arm64/boot/dts/marvell/canis.dts
++ create mode 100644 arch/arm64/boot/dts/marvell/canis.dtsi
++
++diff --git a/arch/arm64/boot/dts/marvell/canis.dts b/arch/arm64/boot/dts/marvell/canis.dts
++new file mode 100644
++index 000000000..8d5914fba
++--- /dev/null
+++++ b/arch/arm64/boot/dts/marvell/canis.dts
++@@ -0,0 +1,126 @@
+++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+++/*
+++ * Device Tree For AC5X 4G DB.
+++ *
+++ * Copyright (C) 2021 Marvell
+++ *
+++ */
+++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+++/*
+++ * Device Tree file for Marvell Alleycat 5X 4G development board
+++ * This board file supports the B configuration of the board
+++ */
+++
+++#include "canis.dtsi"
+++
+++/ {
+++      model = "Marvell AC5X 4G DB board";
+++};
+++
+++&uart0 {
+++       status = "okay";
+++};
+++
+++&uart1 {
+++       status = "okay";
+++};
+++
+++&uart2 {
+++       status = "okay";
+++};
+++
+++&uart3 {
+++       status = "okay";
+++};
+++
+++&i2c0{
+++          status = "okay";
+++        clock-frequency = <100000>;
+++        #address-cells = <1>;
+++        #size-cells = <0>;
+++
+++              cpld@33{
+++                compatible = "pegatron,canis_cpld";
+++                reg = <0x33>;
+++        };
+++        
+++
+++        hwmon@2e{
+++                compatible = "adi,adt7476";
+++                reg = <0x2e>;
+++        };
+++
+++              eeprom@52{
+++                            compatible = "at24,24c04";
+++                            reg = <0x52>;
+++              };
+++
+++        i2c-mux@70 {
+++                compatible = "nxp,pca9548";
+++                #address-cells = <1>;
+++                #size-cells = <0>;
+++                reg = <0x70>;
+++        };
+++};
+++
+++&i2c1 {
+++              status = "okay";
+++              clock-frequency = <100000>;
+++              #address-cells = <1>;
+++              #size-cells = <0>;
+++};
+++
+++&usb0 {
+++    status = "okay";
+++              compatible = "marvell,orion-ehci";
+++};
+++
+++&usb1 {
+++    status = "okay";
+++              compatible = "marvell,orion-ehci";
+++};
+++
+++&spi0 {
+++      status = "okay";
+++};
+++
+++
+++&spi1 {
+++    #address-cells = <1>;
+++    #size-cells = <0>;
+++    spi-delay-us = <0>;
+++    status = "okay";
+++
+++    tpm0: slb9670@0 {
+++        compatible = "infineon,slb9670", "tis,tpm2-spi", "tcg,tpm_tis-spi";
+++        reg = <0>;
+++        spi-max-frequency = <38000000>;
+++        status = "okay";
+++    };
+++};
+++
+++
+++
+++&mdio {
+++      status = "okay";
+++};
+++
+++&eth0 {
+++      status = "okay";
+++      phy = <&phy0>;
+++};
+++
+++&eth1 {
+++       status = "disabled";
+++};
+++
+++&pcie0 {
+++      status = "disabled";
+++};
+++
+++&gpio0 {
+++        compatible = "marvell,ac5-gpio";
+++        status="okay";
+++};
+++
+++
++diff --git a/arch/arm64/boot/dts/marvell/canis.dtsi b/arch/arm64/boot/dts/marvell/canis.dtsi
++new file mode 100644
++index 000000000..7cf157f1d
++--- /dev/null
+++++ b/arch/arm64/boot/dts/marvell/canis.dtsi
++@@ -0,0 +1,456 @@
+++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+++/*
+++ * Device Tree For AC5.
+++ *
+++ * Copyright (C) 2021 Marvell
+++ *
+++ */
+++
+++/dts-v1/;
+++
+++#include <dt-bindings/gpio/gpio.h>
+++#include <dt-bindings/interrupt-controller/arm-gic.h>
+++/*#include <dt-bindings/phy/phy-utmi-mvebu.h>*/
+++
+++/ {
+++      model = "Marvell AC5x board";
+++      compatible = "marvell,armada3700";
+++      interrupt-parent = <&gic>;
+++      #address-cells = <2>;
+++      #size-cells = <2>;
+++
+++      aliases {
+++              serial0 = &uart0;
+++              spiflash0 = &spiflash0;
+++              gpio0 = &gpio0;
+++      };
+++
+++      psci {
+++              compatible = "arm,psci-0.2";
+++              method = "smc";
+++      };
+++
+++      timer {
+++              compatible = "arm,armv8-timer";
+++              interrupts = <GIC_PPI 9 IRQ_TYPE_LEVEL_HIGH>,
+++                               <GIC_PPI 8 IRQ_TYPE_LEVEL_HIGH>,
+++                               <GIC_PPI 10 IRQ_TYPE_LEVEL_HIGH>,
+++                               <GIC_PPI 7 IRQ_TYPE_LEVEL_HIGH>;
+++              //clock-frequency = <10020>;
+++              //clock-frequency = <110400>;
+++              //clock-frequency = <110020>;
+++              clock-frequency = <25000000>;
+++      };
+++
+++      pmu {
+++              compatible = "arm,armv8-pmuv3";
+++              interrupts = <GIC_PPI 12 IRQ_TYPE_LEVEL_HIGH>;
+++      };
+++
+++    user_io@0 {
+++            compatible = "generic-uio";
+++            status = "okay";
+++            interrupt-controller;
+++            interrupt-parent = <&gic>;
+++            interrupts = <GIC_SPI 77 IRQ_TYPE_EDGE_RISING>;
+++    };
+++
+++    user_io@1 {
+++            compatible = "generic-uio";
+++            status = "okay";
+++            interrupt-controller;
+++            interrupt-parent = <&gic>;
+++            interrupts = <GIC_SPI 78 IRQ_TYPE_EDGE_RISING>;
+++    };
+++
+++      user_io@2 {
+++            compatible = "generic-uio";
+++            status = "okay";
+++            interrupt-controller;
+++            interrupt-parent = <&gic>;
+++            interrupts = <GIC_SPI 79 IRQ_TYPE_EDGE_RISING>;
+++    };
+++
+++      soc {
+++              compatible = "simple-bus";
+++              #address-cells = <2>;
+++              #size-cells = <2>;
+++              ranges;
+++
+++              internal-regs@7f000000 {
+++                      #address-cells = <1>;
+++                      #size-cells = <1>;
+++                      compatible = "simple-bus";
+++                      /* 16M internal register @ 0x7f00_0000 */
+++                      ranges = <0x0 0x0 0x7f000000 0x1000000>;
+++                      dma-coherent;
+++
+++                      uart0: serial@12000 {
+++                              compatible = "snps,dw-apb-uart";
+++                              reg = <0x12000 0x100>;
+++                              reg-shift = <2>;
+++                              interrupts = <GIC_SPI 83 IRQ_TYPE_LEVEL_HIGH>;
+++                              reg-io-width = <1>;
+++                              clock-frequency = <328000000>;
+++                              status = "okay";
+++                      };
+++
+++                      uart1: serial@12100 {
+++                              compatible = "snps,dw-apb-uart";
+++                              reg = <0x12100 0x100>;
+++                              reg-shift = <2>;
+++                              interrupts = <GIC_SPI 84 IRQ_TYPE_LEVEL_HIGH>;
+++                              reg-io-width = <1>;
+++                              clock-frequency = <328000000>;
+++                              status = "okay";
+++                      };
+++
+++                      uart2: serial@12200 {
+++                              compatible = "snps,dw-apb-uart";
+++                              reg = <0x12200 0x100>;
+++                              reg-shift = <2>;
+++                              interrupts = <GIC_SPI 85 IRQ_TYPE_LEVEL_HIGH>;
+++                              reg-io-width = <1>;
+++                              clock-frequency = <328000000>;
+++                              status = "okay";
+++                      };
+++
+++                      uart3: serial@12300 {
+++                              compatible = "snps,dw-apb-uart";
+++                              reg = <0x12300 0x100>;
+++                              reg-shift = <2>;
+++                              interrupts = <GIC_SPI 86 IRQ_TYPE_LEVEL_HIGH>;
+++                              reg-io-width = <1>;
+++                              clock-frequency = <328000000>;
+++                              status = "okay";
+++                      };
+++
+++                      mdio: mdio@20000 {
+++                              #address-cells = <1>;
+++                              #size-cells = <0>;
+++                              compatible = "marvell,orion-mdio";
+++                              reg = <0x22004 0x4>;
+++                              clocks = <&cnm_clock>;
+++                              phy0: ethernet-phy@0 {
+++                                      reg = < 0x1 >;
+++                              };
+++                      };
+++
+++                      i2c0: i2c@11000{
+++                              compatible = "marvell,mv78230-i2c";
+++                              reg = <0x11000 0x20>;
+++
+++                              clocks = <&cnm_clock>;
+++                              clock-names = "core";
+++                              interrupts = <GIC_SPI 87 IRQ_TYPE_LEVEL_HIGH>;
+++                              clock-frequency=<100000>;
+++                              status = "disabled";
+++                      };
+++
+++                      i2c1: i2c@11100{
+++                              compatible = "marvell,mv78230-i2c";
+++                              reg = <0x11100 0x20>;
+++
+++                              clocks = <&cnm_clock>;
+++                              clock-names = "core";
+++                              interrupts = <GIC_SPI 88 IRQ_TYPE_LEVEL_HIGH>;
+++                              clock-frequency=<100000>;
+++                              status = "disabled";
+++                      };
+++
+++                      gpio0: gpio@18100 {
+++                              compatible = "marvell,ac5-gpio";
+++                              #gpio-cells = <2>;
+++                              gpio-controller;
+++                              reg = <0x18100 0x200>;
+++                              // gpio-ranges = <&pinctrl0 0 0 46>;
+++                              ngpios = <46>;
+++                      };
+++              };
+++
+++              mmc_dma: bus@80500000 {
+++                              compatible = "simple-bus";
+++                              ranges;
+++                              #address-cells = <0x2>;
+++                              #size-cells = <0x2>;
+++                              reg = <0x0 0x80500000 0x0 0x100000>;
+++                              dma-ranges = <0x0 0x0 0x2 0x0 0x0 0x80000000>;
+++                              dma-coherent;
+++
+++                              sdhci: mmc@805c0000 {
+++                                      compatible = "marvell,ac5-sdhci",
+++                                                   "marvell,armada-ap806-sdhci";
+++                                      reg = <0x0 0x805c0000 0x0 0x1000>;
+++                                      interrupts = <GIC_SPI 92 IRQ_TYPE_LEVEL_HIGH>;
+++                                      clocks = <&emmc_clock>, <&cnm_clock>;
+++                                      clock-names = "core", "axi";
+++                                      bus-width = <8>;
+++                                      non-removable;
+++                                      mmc-ddr-1_8v;
+++                                      mmc-hs200-1_8v;
+++                                      mmc-hs400-1_8v;
+++                              };
+++              };
+++
+++              /* Dedicated section for devices behind 32bit controllers so we
+++                 can configure specific DMA mapping for them */
+++              behind-32bit-controller@7f000000 {
+++                      compatible = "simple-bus";
+++                      #address-cells = <0x2>;
+++                      #size-cells = <0x2>;
+++                      ranges = <0x0 0x0 0x0 0x7f000000 0x0 0x1000000>;
+++                      /* Host phy ram starts at 0x200M */
+++                      dma-ranges = <0x0 0x0 0x2 0x0 0x1 0x0>;
+++                      dma-coherent;
+++
+++                      eth0: ethernet@20000 {
+++                              compatible = "marvell,armada-ac5-neta";
+++                              reg = <0x0 0x20000 0x0 0x4000>;
+++                              interrupts = <GIC_SPI 45 IRQ_TYPE_LEVEL_HIGH>;
+++                              clocks = <&cnm_clock>;
+++                              status = "disabled";
+++                              phy-mode = "sgmii";
+++                      };
+++
+++                      eth1: ethernet@24000 {
+++                              compatible = "marvell,armada-ac5-neta";
+++                              reg = <0x0 0x24000 0x0 0x4000>;
+++                              interrupts = <GIC_SPI 55 IRQ_TYPE_LEVEL_HIGH>;
+++                              clocks = <&cnm_clock>;
+++                              status = "disabled";
+++                              phy-mode = "sgmii";
+++                      };
+++
+++                      /* A dummy entry used for chipidea phy init */
+++                      usb1phy: usbphy {
+++                              compatible = "usb-nop-xceiv";
+++                              #phy-cells = <0>;
+++                      };
+++
+++                      /* USB0 is a host USB */
+++                      usb0: usb@80000 {
+++                              compatible = "marvell,ac5-ehci", "marvell,orion-ehci";
+++                              reg = <0x0 0x80000 0x0 0x500>;
+++                              interrupts = <GIC_SPI 67 IRQ_TYPE_LEVEL_HIGH>;
+++                              status = "okay";
+++                      };
+++
+++                      /* USB1 is a peripheral USB */
+++                      usb1: usb@A0000 {
+++                              reg = <0x0 0xA0000 0x0 0x500>;
+++                              interrupts = <GIC_SPI 69 IRQ_TYPE_LEVEL_HIGH>;
+++                              status = "okay";
+++                      };
+++              };
+++
+++              pinctrl0: pinctrl@80020100 {
+++                      compatible = "marvell,ac5-pinctrl",
+++                                   "syscon", "simple-mfd";
+++                      reg = <0 0x80020100 0 0x20>;
+++
+++                      i2c_mpps: i2c-mpps {
+++                              marvell,pins = "mpp26", "mpp27";
+++                              marvell,function = "i2c0-opt";
+++                      };
+++
+++                      i2c_gpio: i2c-gpio {
+++                              marvell,pins = "mpp26", "mpp27";
+++                              marvell,function = "gpio";
+++                      };
+++              };
+++
+++              pcie0: pcie@800a0000 {
+++                      compatible = "marvell,ac5-pcie", "snps,dw-pcie";
+++                      reg = <0 0x800a0000 0 0x20000>, <0 0x3fff0000 0 0x10000>;
+++                      reg-names = "ctrl", "config";
+++                      #address-cells = <3>;
+++                      #size-cells = <2>;
+++                      #interrupt-cells = <1>;
+++                      device_type = "pci";
+++                      dma-coherent;
+++                      bus-range = <0 0xff>;
+++                      /* ranges for the PCI memory and I/O regions */
+++                      ranges = <0x82000000 0 0x30000000 0 0x30000000 0 0xfff0000>;
+++
+++                      interrupt-map-mask = <0 0 0 1>;
+++                      interrupt-map = <0 0 0 1 &gic GIC_SPI 99 IRQ_TYPE_LEVEL_HIGH>;
+++
+++                      interrupts = <GIC_SPI 99 IRQ_TYPE_LEVEL_HIGH>;
+++
+++                      num-lanes = <1>;
+++                      status = "disabled";
+++
+++                      clocks = <&cnm_clock>;
+++              };
+++
+++              cnm_clock: cnm_clock@0 {
+++                      compatible = "fixed-clock";
+++                      #clock-cells = <0>;
+++                      clock-frequency = <325000000>;
+++              };
+++
+++              spi_clock: spi_clock@0 {
+++                      compatible = "fixed-clock";
+++                      #clock-cells = <0>;
+++                      clock-frequency = <200000000>;
+++              };
+++
+++              nand_clock: nand_clock@0 {
+++                      compatible = "fixed-clock";
+++                      #clock-cells = <0>;
+++                      clock-frequency = <400000000>;
+++              };
+++
+++              emmc_clock: emmc_clock@0 {
+++                      compatible = "fixed-clock";
+++                      #clock-cells = <0>;
+++                      clock-frequency = <400000000>;
+++              };
+++
+++              spi0: spi@805a0000 {
+++                      compatible = "marvell,armada-3700-spi";
+++                      reg = <0x0 0x805a0000 0x0 0x50>;
+++                      #address-cells = <0x1>;
+++                      #size-cells = <0x0>;
+++                      clocks = <&spi_clock>;
+++                      interrupts = <GIC_SPI 90 IRQ_TYPE_LEVEL_HIGH>;
+++                      num-cs = <1>;
+++                              status = "disabled";
+++
+++                      spiflash0: spi-flash@0 {
+++                              /* compatible = "jedec,spi-nor";*/
+++                              compatible = "spi-nor";
+++                              spi-max-frequency = <50000000>;
+++                              spi-tx-bus-width = <4>; /* 1-single, 2-dual, 4-quad */
+++                              spi-rx-bus-width = <4>; /* 1-single, 2-dual, 4-quad */
+++                              reg = <0>;
+++
+++                              #address-cells = <1>;
+++                              #size-cells = <1>;
+++
+++                              partition@0 {
+++                        label = "uboot";
+++                        reg = <0x0 0x200000>;
+++                      };
+++
+++                      parition@1 {
+++                        label = "env";
+++                        reg = <0x200000 0x100000>;
+++                      };
+++
+++                      parition@2 {
+++                        label = "micro code";
+++                        reg = <0x300000 0x100000>;
+++                      };
+++
+++                      parition@3 {
+++                        label = "unused";
+++                        reg = <0x400000 0x400000>;
+++                      };
+++                      };
+++              };
+++
+++              spi1: spi@805a8000 {
+++                      compatible = "marvell,armada-3700-spi";
+++                      reg = <0x0 0x805a8000 0x0 0x50>;
+++                      #address-cells = <0x1>;
+++                      #size-cells = <0x0>;
+++                      clocks = <&spi_clock>;
+++                      interrupts = <GIC_SPI 91 IRQ_TYPE_LEVEL_HIGH>;
+++                      num-cs = <1>;
+++                      status = "disabled";
+++              };
+++
+++              nand: nand@805b00 {
+++                      compatible = "marvell,ac5-nand-controller";
+++                      reg =  <0x0 0x805b0000 0x0 0x00000054
+++                              0x0 0x840F8204 0x0 0x00000004
+++                              0x0 0x80013010 0x0 0x00000020>;
+++                      #address-cells = <0x1>;
+++                      #size-cells = <0x0>;
+++                      interrupts = <GIC_SPI 89 IRQ_TYPE_LEVEL_HIGH>;
+++                      clocks = <&nand_clock>;
+++                      /*marvell,system-controller = <0x15>*/
+++                      status = "disabled";
+++
+++                      nand@0 {
+++                              reg = <0x0>;
+++                              label = "main-storage";
+++                              nand-rb = <0>;
+++                              nand-ecc-mode = "hw";
+++                              nand-ecc-strength = <12>;
+++                              nand-ecc-step-size = <512>;
+++                      };
+++              };
+++
+++              prestera {
+++                      compatible = "marvell,armada-ac5-switch";
+++                      interrupts = <GIC_SPI 0x23 IRQ_TYPE_LEVEL_HIGH>;
+++                      status = "disabled";
+++              };
+++
+++      };
+++
+++      gic: interrupt-controller@80600000 {
+++              compatible = "arm,gic-v3";
+++              #interrupt-cells = <3>;
+++              interrupt-controller;
+++              /*#redistributor-regions = <1>;*/
+++              redistributor-stride = <0x0 0x20000>;   // 128kB stride
+++              reg = <0x0 0x80600000 0x0 0x10000>, /* GICD */
+++                        <0x0 0x80660000 0x0 0x40000>; /* GICR */
+++              interrupts = <GIC_PPI 6 IRQ_TYPE_LEVEL_HIGH>;
+++      };
+++
+++      cpus {
+++              #address-cells = <2>;
+++              #size-cells = <0>;
+++
+++              cpu-map {
+++                      cluster0 {
+++                              core0 {
+++                                      cpu = <&CPU0>;
+++                              };
+++                              core1 {
+++                                      cpu = <&CPU1>;
+++                              };
+++                      };
+++              };
+++
+++              CPU0:cpu@0 {
+++                      device_type = "cpu";
+++                      compatible = "arm,armv8";
+++                      reg = <0x0 0x0>;
+++                      enable-method = "psci";
+++                      next-level-cache = <&L2_0>;
+++              };
+++
+++              CPU1:cpu@1 {
+++                      device_type = "cpu";
+++                      compatible = "arm,armv8";
+++                      reg = <0x0 0x100>;
+++                      enable-method = "psci";
+++                      next-level-cache = <&L2_0>;
+++              };
+++
+++              L2_0: l2-cache0 {
+++                      compatible = "cache";
+++              };
+++      };
+++
+++      memory@0 {
+++
+++          /* gary20240927 for DRAM 2GB settings
+++              device_type = "memory";
+++              reg = <0x2 0x00000000 0x0 0x80000000>;
+++              linux,usable-memory = <0x2 0x00000000 0x0 0x80000000>;
+++          */
+++
+++              /* gary20240927 for DRAM 4GB settings */
+++              device_type = "memory";
+++              reg = <0x2 0x00000000 0x1 0x00000000>;
+++              linux,usable-memory = <0x2 0x00000000 0x1 0x00000000>;
+++
+++      };
+++
+++};
++-- 
++2.25.1
++
+diff --git a/patches-sonic/0004-arm64-dts-ln3824-remove-dma-coherent-from-emmc.patch b/patches-sonic/0004-arm64-dts-ln3824-remove-dma-coherent-from-emmc.patch
+new file mode 100644
+index 0000000..fb16d68
+--- /dev/null
++++ b/patches-sonic/0004-arm64-dts-ln3824-remove-dma-coherent-from-emmc.patch
+@@ -0,0 +1,26 @@
++From 49e12de6b84765083f368c0c45663bd6afc7c2b3 Mon Sep 17 00:00:00 2001
++From: Maksym Hryshanov <mhryshanov@larch-networks.com>
++Date: Fri, 6 Mar 2026 13:07:00 +0200
++Subject: [PATCH] arm64: dts: ln3824: remove dma-coherent from emmc
++
++Remove 'dma-coherent' property from emmc bus.
++
++---
++ arch/arm64/boot/dts/marvell/ac5x-ln3848g.dts | 4 ++++
++ 1 file changed, 4 insertions(+)
++
++diff --git a/arch/arm64/boot/dts/marvell/ac5x-ln3848g.dts b/arch/arm64/boot/dts/marvell/ac5x-ln3848g.dts
++index 025d0b53c..526f08ef3 100644
++--- a/arch/arm64/boot/dts/marvell/ac5x-ln3848g.dts
+++++ b/arch/arm64/boot/dts/marvell/ac5x-ln3848g.dts
++@@ -98,3 +98,7 @@ sdma_drv {
++               status = "okay";
++       };
++ };
+++
+++&mmc_dma {
+++      /delete-property/ dma-coherent;
+++};
++-- 
++2.34.1
++
+diff --git a/patches-sonic/series b/patches-sonic/series
+index d2f6e92..8ffa943 100644
+--- a/patches-sonic/series
++++ b/patches-sonic/series
+@@ -205,6 +205,12 @@ cisco-npu-disable-other-bars.patch
+ # https://github.com/sonic-net/sonic-buildimage/issues/20901
+ #PCI-ASPM-Fix-link-state-exit-during-switch-upstream.patch # Upstreamed
+ 
++# Larch patches
++0001-Add-ac5x-ln3848g-dts.patch
++0002-ac5x-larch-boards-fix.patch
++0003-Add-canis-minor-dts-dtsi.patch
++0004-arm64-dts-ln3824-remove-dma-coherent-from-emmc.patch
++
+ #
+ #
+ ############################################################
+-- 
+2.34.1
