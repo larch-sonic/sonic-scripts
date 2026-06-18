@@ -3,4 +3,4 @@
 0009-Fix-libnl-version-conflict-in-build-slave.patch|sonic-buildimage
 0010-Fix-libnl-version-conflict-in-rootfs.patch|sonic-buildimage
 0011-Switch-sai.mk-to-Larch-prebuilt-SAI.patch|sonic-buildimage
-
+0002-Add-ingress-filtering-to-bridge-port-creation-swss.patch|src/sonic-swss
