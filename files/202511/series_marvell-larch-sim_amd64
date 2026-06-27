@@ -5,3 +5,4 @@
 0010-Fix-libnl-version-conflict-in-rootfs.patch|sonic-buildimage
 0001-Add-larch-platfrom-support-sairedis.patch|src/sonic-sairedis
 0001-Add-Larch-sim-platform-support-swss.patch|src/sonic-swss
+0002-Add-ingress-filtering-to-bridge-port-creation-swss.patch|src/sonic-swss
