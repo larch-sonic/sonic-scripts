@@ -1,14 +1,9 @@
 0001-Add-Larch-Networks-platforms-and-Larch-SAI.patch|sonic-buildimage
 0002-Add-missed-files-for-WNC-board.patch|sonic-buildimage
-0003-Update-libexpat1.patch|sonic-buildimage
 0004-Fix-device-tree-issue.patch|sonic-buildimage
-0005-Update-packages-in-host-image.patch|sonic-buildimage
 0006-Add-marvell-larch-sim-platfrom.patch|sonic-buildimage
 0007-Enable-ospf-and-isis-traps-by-default.patch|sonic-buildimage
-0008-Specified-correct-libsnmp-package-version-for-Debian.patch|sonic-buildimage
 0009-build-Fix-grpcio-1.15.1-install-failure-in-arm64-env.patch|sonic-buildimage
-0010-Remove-nodesource-nodejs-sources-for-Bookworm-arm-co.patch|sonic-buildimage
-0011-fix-build-issue-with-libsnmp.patch|sonic-buildimage
 0012-sync-eps6800-platform.patch|sonic-buildimage
 0013-update-openssh-src-deb-package.patch|sonic-buildimage
 0014-sync-arm64-sonic.fit.patch|sonic-buildimage
