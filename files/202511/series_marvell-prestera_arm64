@@ -6,3 +6,4 @@
 0014-Add-Larch-arm64-larch_ln4332z1-l-platform-files-and-.patch|sonic-buildimage
 0002-Add-ingress-filtering-to-bridge-port-creation-swss.patch|src/sonic-swss
 0012-Add-Larch-kernel-DTS-and-eMMC-patches.patch|src/sonic-linux-kernel
+0015-eps6800-add-40G-support-on-the-100G-ports.patch|sonic-buildimage

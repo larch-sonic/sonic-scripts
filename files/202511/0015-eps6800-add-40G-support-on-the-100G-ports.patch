@@ -1,0 +1,138 @@
+From d7fdd800323adfed60b5a9246cfd40aadc2e8dea Mon Sep 17 00:00:00 2001
+From: Kostiantyn Buravchenko <kburavchenko@larch-networks.com>
+Date: Thu, 1 Oct 2026 11:47:12 +0300
+Subject: [PATCH] eps6800: add 40G support on the 100G ports (Ethernet49..54)
+
+The 100GR4 interface mode in the ECS5550 (cn9130-eps6800) L1 profiles
+listed only 100G entries, so the SAI advertised supported_speeds=100000
+and SONiC rejected 'config interface speed ... 40000' on the six 100G
+ports. Append 40G entries to the 100GR4 mode list of both hwskus:
+fixed CR4/KR4/SR_LR4 at 40G (FEC disabled) and autoneg CR4/KR4 at 40G
+(BASE-R FEC supported, not requested) - RS-FEC is not valid at 40G.
+100G remains first in the list and stays the boot default. The .md5
+profile signatures are regenerated.
+
+Verified on an ECS5550-54X: supported_speeds becomes 100000,40000 on
+Ethernet49..54 (10G ports unchanged), a DAC loop between Ethernet49
+and Ethernet50 links up at 40G in about a second with clean counters,
+and switching back to 100G/rs works. Boot default is unchanged.
+
+Signed-off-by: Kostiantyn Buravchenko <kburavchenko@larch-networks.com>
+---
+ .../ASK-L1-ALD2_24x10G-6x100G.md5             |  2 +-
+ .../ASK-L1-ALD2_24x10G-6x100G.xml             | 27 +++++++++++++++++++
+ .../ASK-L1-ALD2_48x10G-6x100G.md5             |  2 +-
+ .../ASK-L1-ALD2_48x10G-6x100G.xml             | 27 +++++++++++++++++++
+ 4 files changed, 56 insertions(+), 2 deletions(-)
+
+diff --git a/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800-30x/ASK-L1-ALD2_24x10G-6x100G.md5 b/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800-30x/ASK-L1-ALD2_24x10G-6x100G.md5
+index 14c8c1b506..793d9a8375 100644
+--- a/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800-30x/ASK-L1-ALD2_24x10G-6x100G.md5
++++ b/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800-30x/ASK-L1-ALD2_24x10G-6x100G.md5
+@@ -1 +1 @@
+-fc350354315b56f7d0ac8a3aea6cb454
+\ No newline at end of file
++33b3af355e392b9cf0c50ab1380c3d57
+\ No newline at end of file
+diff --git a/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800-30x/ASK-L1-ALD2_24x10G-6x100G.xml b/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800-30x/ASK-L1-ALD2_24x10G-6x100G.xml
+index 63b49f5370..e8eacdeae1 100644
+--- a/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800-30x/ASK-L1-ALD2_24x10G-6x100G.xml
++++ b/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800-30x/ASK-L1-ALD2_24x10G-6x100G.xml
+@@ -830,6 +830,21 @@
+           <ASKL1plt:speed ASKL1plt:type="port-speed-type">100G</ASKL1plt:speed>
+           <ASKL1plt:fec ASKL1plt:type="fec-type">rs_enabled</ASKL1plt:fec>
+         </ASKL1plt:IfModeSpeedList-list>
++        <ASKL1plt:IfModeSpeedList-list>
++          <ASKL1plt:ifMode ASKL1plt:type="interface-mode-type">CR4</ASKL1plt:ifMode>
++          <ASKL1plt:speed ASKL1plt:type="port-speed-type">40G</ASKL1plt:speed>
++          <ASKL1plt:fec ASKL1plt:type="fec-type">disabled</ASKL1plt:fec>
++        </ASKL1plt:IfModeSpeedList-list>
++        <ASKL1plt:IfModeSpeedList-list>
++          <ASKL1plt:ifMode ASKL1plt:type="interface-mode-type">KR4</ASKL1plt:ifMode>
++          <ASKL1plt:speed ASKL1plt:type="port-speed-type">40G</ASKL1plt:speed>
++          <ASKL1plt:fec ASKL1plt:type="fec-type">disabled</ASKL1plt:fec>
++        </ASKL1plt:IfModeSpeedList-list>
++        <ASKL1plt:IfModeSpeedList-list>
++          <ASKL1plt:ifMode ASKL1plt:type="interface-mode-type">SR_LR4</ASKL1plt:ifMode>
++          <ASKL1plt:speed ASKL1plt:type="port-speed-type">40G</ASKL1plt:speed>
++          <ASKL1plt:fec ASKL1plt:type="fec-type">disabled</ASKL1plt:fec>
++        </ASKL1plt:IfModeSpeedList-list>
+         <ASKL1plt:APIfModeSpeedList-list>
+           <ASKL1plt:APifMode ASKL1plt:type="interface-mode-type">CR4</ASKL1plt:APifMode>
+           <ASKL1plt:APspeed ASKL1plt:type="port-speed-type">100G</ASKL1plt:APspeed>
+@@ -842,6 +857,18 @@
+           <ASKL1plt:APfecSupport ASKL1plt:type="fec-type">rs_enabled</ASKL1plt:APfecSupport>
+           <ASKL1plt:APfecRequest ASKL1plt:type="fec-type">rs_enabled</ASKL1plt:APfecRequest>
+         </ASKL1plt:APIfModeSpeedList-list>
++        <ASKL1plt:APIfModeSpeedList-list>
++          <ASKL1plt:APifMode ASKL1plt:type="interface-mode-type">CR4</ASKL1plt:APifMode>
++          <ASKL1plt:APspeed ASKL1plt:type="port-speed-type">40G</ASKL1plt:APspeed>
++          <ASKL1plt:APfecSupport ASKL1plt:type="fec-type">enabled</ASKL1plt:APfecSupport>
++          <ASKL1plt:APfecRequest ASKL1plt:type="fec-type">disabled</ASKL1plt:APfecRequest>
++        </ASKL1plt:APIfModeSpeedList-list>
++        <ASKL1plt:APIfModeSpeedList-list>
++          <ASKL1plt:APifMode ASKL1plt:type="interface-mode-type">KR4</ASKL1plt:APifMode>
++          <ASKL1plt:APspeed ASKL1plt:type="port-speed-type">40G</ASKL1plt:APspeed>
++          <ASKL1plt:APfecSupport ASKL1plt:type="fec-type">enabled</ASKL1plt:APfecSupport>
++          <ASKL1plt:APfecRequest ASKL1plt:type="fec-type">disabled</ASKL1plt:APfecRequest>
++        </ASKL1plt:APIfModeSpeedList-list>
+       </ASKL1plt:ifModeNameList>
+       <ASKL1plt:ifModeNameList>
+         <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
+diff --git a/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-L1-ALD2_48x10G-6x100G.md5 b/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-L1-ALD2_48x10G-6x100G.md5
+index a830f6a298..aca02c5aef 100644
+--- a/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-L1-ALD2_48x10G-6x100G.md5
++++ b/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-L1-ALD2_48x10G-6x100G.md5
+@@ -1 +1 @@
+-7f268d70492551e318dd25b788529beb
+\ No newline at end of file
++3c99d53c587f547f0995fd4726d7badf
+\ No newline at end of file
+diff --git a/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-L1-ALD2_48x10G-6x100G.xml b/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-L1-ALD2_48x10G-6x100G.xml
+index 4ad410e619..15ba962211 100644
+--- a/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-L1-ALD2_48x10G-6x100G.xml
++++ b/device/larch/arm64-larch_cn9130-eps6800-r0/cn9130-eps6800/ASK-L1-ALD2_48x10G-6x100G.xml
+@@ -830,6 +830,21 @@
+           <ASKL1plt:speed ASKL1plt:type="port-speed-type">100G</ASKL1plt:speed>
+           <ASKL1plt:fec ASKL1plt:type="fec-type">rs_enabled</ASKL1plt:fec>
+         </ASKL1plt:IfModeSpeedList-list>
++        <ASKL1plt:IfModeSpeedList-list>
++          <ASKL1plt:ifMode ASKL1plt:type="interface-mode-type">CR4</ASKL1plt:ifMode>
++          <ASKL1plt:speed ASKL1plt:type="port-speed-type">40G</ASKL1plt:speed>
++          <ASKL1plt:fec ASKL1plt:type="fec-type">disabled</ASKL1plt:fec>
++        </ASKL1plt:IfModeSpeedList-list>
++        <ASKL1plt:IfModeSpeedList-list>
++          <ASKL1plt:ifMode ASKL1plt:type="interface-mode-type">KR4</ASKL1plt:ifMode>
++          <ASKL1plt:speed ASKL1plt:type="port-speed-type">40G</ASKL1plt:speed>
++          <ASKL1plt:fec ASKL1plt:type="fec-type">disabled</ASKL1plt:fec>
++        </ASKL1plt:IfModeSpeedList-list>
++        <ASKL1plt:IfModeSpeedList-list>
++          <ASKL1plt:ifMode ASKL1plt:type="interface-mode-type">SR_LR4</ASKL1plt:ifMode>
++          <ASKL1plt:speed ASKL1plt:type="port-speed-type">40G</ASKL1plt:speed>
++          <ASKL1plt:fec ASKL1plt:type="fec-type">disabled</ASKL1plt:fec>
++        </ASKL1plt:IfModeSpeedList-list>
+         <ASKL1plt:APIfModeSpeedList-list>
+           <ASKL1plt:APifMode ASKL1plt:type="interface-mode-type">CR4</ASKL1plt:APifMode>
+           <ASKL1plt:APspeed ASKL1plt:type="port-speed-type">100G</ASKL1plt:APspeed>
+@@ -842,6 +857,18 @@
+           <ASKL1plt:APfecSupport ASKL1plt:type="fec-type">rs_enabled</ASKL1plt:APfecSupport>
+           <ASKL1plt:APfecRequest ASKL1plt:type="fec-type">rs_enabled</ASKL1plt:APfecRequest>
+         </ASKL1plt:APIfModeSpeedList-list>
++        <ASKL1plt:APIfModeSpeedList-list>
++          <ASKL1plt:APifMode ASKL1plt:type="interface-mode-type">CR4</ASKL1plt:APifMode>
++          <ASKL1plt:APspeed ASKL1plt:type="port-speed-type">40G</ASKL1plt:APspeed>
++          <ASKL1plt:APfecSupport ASKL1plt:type="fec-type">enabled</ASKL1plt:APfecSupport>
++          <ASKL1plt:APfecRequest ASKL1plt:type="fec-type">disabled</ASKL1plt:APfecRequest>
++        </ASKL1plt:APIfModeSpeedList-list>
++        <ASKL1plt:APIfModeSpeedList-list>
++          <ASKL1plt:APifMode ASKL1plt:type="interface-mode-type">KR4</ASKL1plt:APifMode>
++          <ASKL1plt:APspeed ASKL1plt:type="port-speed-type">40G</ASKL1plt:APspeed>
++          <ASKL1plt:APfecSupport ASKL1plt:type="fec-type">enabled</ASKL1plt:APfecSupport>
++          <ASKL1plt:APfecRequest ASKL1plt:type="fec-type">disabled</ASKL1plt:APfecRequest>
++        </ASKL1plt:APIfModeSpeedList-list>
+       </ASKL1plt:ifModeNameList>
+       <ASKL1plt:ifModeNameList>
+         <ASKL1plt:ifModeName ASKL1plt:type="string">10GR1Fix</ASKL1plt:ifModeName>
+-- 
+2.34.1
+
