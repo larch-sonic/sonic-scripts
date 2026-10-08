@@ -54,6 +54,20 @@ Build scripts for SONiC images targeting Larch Networks / Marvell Prestera platf
   --other_build_options "SONIC_BUILD_JOBS=8"
 ```
 
+**ARM64 hardware build, SONiC 202411 (Marvell Prestera):**
+
+The 202411 patch set lives on the `202411` branch of this repository; use the
+patch script from that branch together with the matching base commit:
+
+```bash
+./sonic_build_script.sh -b 202411 -p marvell -a arm64 \
+  -c ca25dc6d13365edca78f5008b7167aa7cd8e673c \
+  --patch_script https://github.com/larch-sonic/sonic-scripts/raw/202411/larch_sonic_patch_script.sh \
+  -r --other_build_options "SONIC_BUILD_JOBS=8"
+```
+
+See the `202411` branch README for details.
+
 **AMD64 simulation build (Larch SIM):**
 
 ```bash
