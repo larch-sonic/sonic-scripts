@@ -28,25 +28,32 @@ Usage:
     --clean_dockers: clean up build dockers
 
 Example command:
-./sonic_build_script.sh -b 202411 -p marvell -a arm64   --patch_script https://github.com/larch-sonic/sonic-scripts/raw/202411/larch_sonic_patch_script.sh -r -c b6a493b43d73831a7a40180ef428ef50185bc8ed --other_build_options "SONIC_BUILD_JOBS=8"
+./sonic_build_script.sh -b 202411 -p marvell -a arm64   --patch_script https://github.com/larch-sonic/sonic-scripts/raw/202411/larch_sonic_patch_script.sh -r -c ca25dc6d13365edca78f5008b7167aa7cd8e673c --other_build_options "SONIC_BUILD_JOBS=8"
 
 where: -b 202411 - original branch in the sonic-buildimage repository,
        -p marvell - switch ASIC type(marvell - as Marvell Prestera family), marvell-larch-sim - simulation qemu image
        -a arm64 - device/board CPU architecture (arm64 or amd64)
        --patch_script https://github.com/larch-sonic/sonic-scripts/raw/202411/larch_sonic_patch_script.sh - patch script that make changes to original repos,
        -r - ENABLE_SYNCD_RPC=y,
-       -c b6a493b43d73831a7a40180ef428ef50185bc8ed - checkout to static stable commit.
+       -c ca25dc6d13365edca78f5008b7167aa7cd8e673c - checkout to static stable commit
+          (sonic-net/sonic-buildimage 202411, 2026-09-10).
+
+Note: the base commit must match the patch set on this branch. Older base
+commits (e.g. b6a493b43d73831a7a40180ef428ef50185bc8ed) no longer build: their
+pinned Debian bookworm package versions (files/build/versions/host-base-image)
+do not match the Debian snapshot mirror they reference, and the rootfs step
+fails with "E: Version '...' for 'base-files' was not found".
 
 
 ./sonic_build_script.sh -b 202511 -p marvell-larch-sim -a amd64   --patch_script https://github.com/larch-sonic/sonic-scripts/raw/202511/larch_sonic_patch_script.sh --other_build_options "SONIC_BUILD_JOBS=8"
 
 # Build manually
 1. Clone sonic-buildimage repository
-git clone git@github.com:larch-sonic/sonic-buildimage.git -b 202411
+git clone https://github.com/sonic-net/sonic-buildimage.git -b 202411
 2. Go to the directory 
 cd sonic-buildimage
 3. Checkout to the stable commit
-git checkout b6a493b43d73831a7a40180ef428ef50185bc8ed
+git checkout ca25dc6d13365edca78f5008b7167aa7cd8e673c
 4. Get patch script
 wget --timeout=2 -c https://github.com/larch-sonic/sonic-scripts/raw/202411/larch_sonic_patch_script.sh
 5. Make the script executable

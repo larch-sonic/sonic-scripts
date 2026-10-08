@@ -1,0 +1,36 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Kostiantyn Buravchenko <kburavchenko@larch-networks.com>
+Date: Thu, 8 Oct 2026 17:42:41 +0300
+Subject: [PATCH] pyext: do not fail the build on -Wdisabled-optimization
+
+With the SAI v1.16.1 headers the SWIG-generated pysairedis_wrap.cpp
+grows past GCC's GCSE limits on arm64, and PyInit__pysairedis() fails
+with "const/copy propagation disabled ... increase '--param
+max-gcse-memory' [-Werror=disabled-optimization]".
+
+The warning only reports that GCC skipped an optimization pass on a huge
+generated function; keep it as a warning. Same change as upstream
+sonic-sairedis commit 53aa7c1532a6 (#2035).
+
+Signed-off-by: Kostiantyn Buravchenko <kburavchenko@larch-networks.com>
+---
+ pyext/py3/Makefile.am | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/pyext/py3/Makefile.am b/pyext/py3/Makefile.am
+index e3b93649..4e856d2a 100644
+--- a/pyext/py3/Makefile.am
++++ b/pyext/py3/Makefile.am
+@@ -10,7 +10,8 @@ BUILT_SOURCES = pysairedis_wrap.cpp
+ 
+ _pysairedis_la_SOURCES = pysairedis_wrap.cpp $(SOURCES)
+ _pysairedis_la_CXXFLAGS = $(PYTHON3_CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS_COMMON) \
+-						  -Wno-cast-qual -Wno-shadow -Wno-redundant-decls -Wno-conversion $(NO_CAST_FUNCTION_TYPE)
++						  -Wno-cast-qual -Wno-shadow -Wno-redundant-decls -Wno-conversion $(NO_CAST_FUNCTION_TYPE) \
++						  -Wno-error=disabled-optimization
+ 
+ _pysairedis_la_LDFLAGS = -module \
+ 		-lhiredis -lswsscommon -lpthread \
+-- 
+2.34.1
+
