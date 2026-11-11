@@ -1,4 +1,4 @@
-From ce70bb5f7c900cda480fedb6e967cc0d3b5015d5 Mon Sep 17 00:00:00 2001
+From 14b4ea357a9f29fb2bcc2d7e6faef294c47e1ccf Mon Sep 17 00:00:00 2001
 From: Kostiantyn Buravchenko <kburavchenko@larch-networks.com>
 Date: Fri, 7 Feb 2025 22:52:30 +0200
 Subject: [PATCH] Add Larch kernel DTS and eMMC patches
@@ -8,14 +8,13 @@ canis minor DTS, and remove dma-coherent from eMMC bus to fix
 eMMC detection on AC5X Larch boards.
 
 Also enable SPI_ARMADA_3700 module for marvell-prestera-arm64.
-
 ---
- patch/kconfig-inclusions                           |   1 +
- patches-sonic/0001-Add-ac5x-ln3848g-dts.patch      | 115 ++++++
- patches-sonic/0002-ac5x-larch-boards-fix.patch     |  43 +++
- patches-sonic/0003-Add-canis-minor-dts-dtsi.patch  | 609 +++++++++++++++++++++
- ...-dts-ln3824-remove-dma-coherent-from-emmc.patch |  26 +
- patches-sonic/series                               |   6 +
+ patch/kconfig-inclusions                      |   1 +
+ patches-sonic/0001-Add-ac5x-ln3848g-dts.patch | 115 ++++
+ .../0002-ac5x-larch-boards-fix.patch          |  43 ++
+ .../0003-Add-canis-minor-dts-dtsi.patch       | 609 ++++++++++++++++++
+ ...ln3824-remove-dma-coherent-from-emmc.patch |  26 +
+ patches-sonic/series                          |   6 +
  6 files changed, 800 insertions(+)
  create mode 100644 patches-sonic/0001-Add-ac5x-ln3848g-dts.patch
  create mode 100644 patches-sonic/0002-ac5x-larch-boards-fix.patch
@@ -36,7 +35,7 @@ index a95b859..ba29a22 100644
  CONFIG_ARCH_PENSANDO=y
 diff --git a/patches-sonic/0001-Add-ac5x-ln3848g-dts.patch b/patches-sonic/0001-Add-ac5x-ln3848g-dts.patch
 new file mode 100644
-index 0000000..56ca8cd
+index 0000000..3fb5b63
 --- /dev/null
 +++ b/patches-sonic/0001-Add-ac5x-ln3848g-dts.patch
 @@ -0,0 +1,115 @@
@@ -157,7 +156,7 @@ index 0000000..56ca8cd
 +
 diff --git a/patches-sonic/0002-ac5x-larch-boards-fix.patch b/patches-sonic/0002-ac5x-larch-boards-fix.patch
 new file mode 100644
-index 0000000..78ce1ca
+index 0000000..f528b40
 --- /dev/null
 +++ b/patches-sonic/0002-ac5x-larch-boards-fix.patch
 @@ -0,0 +1,43 @@
@@ -206,7 +205,7 @@ index 0000000..78ce1ca
 +
 diff --git a/patches-sonic/0003-Add-canis-minor-dts-dtsi.patch b/patches-sonic/0003-Add-canis-minor-dts-dtsi.patch
 new file mode 100644
-index 0000000..5e391e5
+index 0000000..09d04a9
 --- /dev/null
 +++ b/patches-sonic/0003-Add-canis-minor-dts-dtsi.patch
 @@ -0,0 +1,609 @@
@@ -821,7 +820,7 @@ index 0000000..5e391e5
 +
 diff --git a/patches-sonic/0004-arm64-dts-ln3824-remove-dma-coherent-from-emmc.patch b/patches-sonic/0004-arm64-dts-ln3824-remove-dma-coherent-from-emmc.patch
 new file mode 100644
-index 0000000..fb16d68
+index 0000000..ff80af0
 --- /dev/null
 +++ b/patches-sonic/0004-arm64-dts-ln3824-remove-dma-coherent-from-emmc.patch
 @@ -0,0 +1,26 @@
@@ -852,21 +851,19 @@ index 0000000..fb16d68
 +2.34.1
 +
 diff --git a/patches-sonic/series b/patches-sonic/series
-index d2f6e92..8ffa943 100644
+index 2ae50d2..742b099 100644
 --- a/patches-sonic/series
 +++ b/patches-sonic/series
-@@ -205,6 +205,12 @@ cisco-npu-disable-other-bars.patch
- # https://github.com/sonic-net/sonic-buildimage/issues/20901
- #PCI-ASPM-Fix-link-state-exit-during-switch-upstream.patch # Upstreamed
- 
+@@ -244,3 +244,9 @@ qsa-2026-apparmor/0011-apparmor-fix-race-between-freeing-data-and-fs-access.patc
+ # Do not add any public patch below this marker
+ #
+ ############################################################
++
 +# Larch patches
 +0001-Add-ac5x-ln3848g-dts.patch
 +0002-ac5x-larch-boards-fix.patch
 +0003-Add-canis-minor-dts-dtsi.patch
 +0004-arm64-dts-ln3824-remove-dma-coherent-from-emmc.patch
-+
- #
- #
- ############################################################
 -- 
 2.34.1
+

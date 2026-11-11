@@ -2,6 +2,13 @@
 
 Build scripts for SONiC images targeting Larch Networks / Marvell Prestera platforms.
 
+Upstream base for the 202511 patch set: sonic-net/sonic-buildimage `202511` @ `811b570cfd6692d1ae8ce2af9d806aae8afb5254` (2026-11-11).
+Marvell SAI: arm64 `mrvllibsai 1.17.4-3`, amd64 `mrvllibsai`/`mrvlvslibsai 1.17.4-2` (from larch-sonic/sonic-larch-binaries).
+
+Platforms covered (marvell-prestera): all `device/larch` boards of Hardened SONiC 202511_larch-dev except the Larch VS/Teralynx-sim ones
+(see `files/202511/series_*`). Teralynx Sera DCS-T3200K (`x86_64-larch_sera_dcs_t3200k-r0`, alias `x86_64-sera_rds2000-r0`) is in
+`series_marvell-teralynx_amd64`.
+
 ---
 
 ## 1. Build Using Script
@@ -49,8 +56,8 @@ Build scripts for SONiC images targeting Larch Networks / Marvell Prestera platf
 
 ```bash
 ./sonic_build_script.sh -b 202511 -p marvell-prestera -a arm64 \
-  -c d7aa7e9c120ff00d9838f9f3b706bee3b1bbe2bb \
-  --patch_script https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/main/larch_sonic_patch_script.sh \
+  -c 811b570cfd6692d1ae8ce2af9d806aae8afb5254 \
+  --patch_script https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/202511/larch_sonic_patch_script.sh \
   --other_build_options "SONIC_BUILD_JOBS=8"
 ```
 
@@ -58,7 +65,7 @@ Build scripts for SONiC images targeting Larch Networks / Marvell Prestera platf
 
 ```bash
 ./sonic_build_script.sh -b 202511 -p marvell-larch-sim -a amd64 \
-  --patch_script https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/main/larch_sonic_patch_script.sh \
+  --patch_script https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/202511/larch_sonic_patch_script.sh \
   --other_build_options "SONIC_BUILD_JOBS=8"
 ```
 
@@ -71,20 +78,20 @@ Build scripts for SONiC images targeting Larch Networks / Marvell Prestera platf
 1. Clone the sonic-buildimage repository:
 
    ```bash
-   git clone git@github.com:larch-sonic/sonic-buildimage.git -b 202511
+   git clone https://github.com/sonic-net/sonic-buildimage.git -b 202511
    cd sonic-buildimage
    ```
 
 2. Checkout the stable commit:
 
    ```bash
-   git checkout d7aa7e9c120ff00d9838f9f3b706bee3b1bbe2bb
+   git checkout 811b570cfd6692d1ae8ce2af9d806aae8afb5254
    ```
 
 3. Get the patch script:
 
    ```bash
-   wget --timeout=2 -c https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/main/larch_sonic_patch_script.sh
+   wget --timeout=2 -c https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/202511/larch_sonic_patch_script.sh
    chmod +x larch_sonic_patch_script.sh
    ```
 
@@ -93,8 +100,8 @@ Build scripts for SONiC images targeting Larch Networks / Marvell Prestera platf
 #### ARM64
 
 ```bash
-bash larch_sonic_patch_script.sh --branch 202511 --platform marvell --arch arm64 \
-  --url https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/main/
+bash larch_sonic_patch_script.sh --branch 202511 --platform marvell-prestera --arch arm64 \
+  --url https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/202511/
 
 make configure NOBUSTER=1 NOBULLSEYE=1 PLATFORM=marvell-prestera PLATFORM_ARCH=arm64
 
@@ -105,8 +112,8 @@ make SONIC_BUILD_JOBS=8 NOBUSTER=1 NOBULLSEYE=1 SONIC_DPKG_CACHE_METHOD=rwcache 
 #### AMD64
 
 ```bash
-bash larch_sonic_patch_script.sh --branch 202511 --platform marvell --arch amd64 \
-  --url https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/main/
+bash larch_sonic_patch_script.sh --branch 202511 --platform marvell-prestera --arch amd64 \
+  --url https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/202511/
 
 make configure NOBUSTER=1 NOBULLSEYE=1 PLATFORM=marvell-prestera PLATFORM_ARCH=amd64
 
@@ -118,7 +125,7 @@ make SONIC_BUILD_JOBS=8 NOBUSTER=1 NOBULLSEYE=1 SONIC_DPKG_CACHE_METHOD=rwcache 
 
 ```bash
 bash larch_sonic_patch_script.sh --branch 202511 --platform marvell-larch-sim --arch amd64 \
-  --url https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/main/
+  --url https://github.com/larch-sonic/sonic-scripts/raw/refs/heads/202511/
 
 make configure NOBUSTER=1 NOBULLSEYE=1 PLATFORM=marvell-larch-sim PLATFORM_ARCH=amd64
 

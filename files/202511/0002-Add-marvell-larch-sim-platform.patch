@@ -1,17 +1,184 @@
-From 1348019955c5b02f8a38ffa124fe2ed1ab600658 Mon Sep 17 00:00:00 2001
+From 038cdaba1569eea8cac9fda4f85f3454d8f85cdc Mon Sep 17 00:00:00 2001
 From: Kostiantyn Buravchenko <kburavchenko@larch-networks.com>
 Date: Fri, 1 May 2026 20:01:19 +0300
 Subject: [PATCH] Add marvell-larch-sim platform
 
 ---
----
+ .../larch/x86_64-larch-vs_larchvm/default_sku |    1 +
+ .../x86_64-larch-vs_larchvm/installer.conf    |    1 +
+ .../ln3824g/ASK-Board-ac5x-ln-24x1G-6x25G.md5 |    1 +
+ .../ln3824g/ASK-Board-ac5x-ln-24x1G-6x25G.xml | 1371 +++++++++++++
+ .../ln3824g/ASK-L1-AC5X-LN-24x1G-6x25G.md5    |    1 +
+ .../ln3824g/ASK-L1-AC5X-LN-24x1G-6x25G.xml    |  813 ++++++++
+ .../ln3824g/ASK-PP-AC5X-LN.md5                |    1 +
+ .../ln3824g/ASK-PP-AC5X-LN.xml                |  891 ++++++++
+ .../ln3824g/SAI-AC5X-LN-24x1G-6x25G.md5       |    1 +
+ .../ln3824g/SAI-AC5X-LN-24x1G-6x25G.xml       |  394 ++++
+ .../ln3824g/buffers.json.j2                   |    2 +
+ .../ln3824g/buffers_defaults_t0.j2            |   50 +
+ .../ln3824g/buffers_defaults_t1.j2            |   50 +
+ .../ln3824g/hwsku.json                        |  154 ++
+ .../ln3824g/pg_profile_lookup.ini             |   27 +
+ .../ln3824g/port_config.ini                   |   31 +
+ .../ln3824g/profile.ini                       |    1 +
+ .../ln3824g/qos.json.j2                       |    2 +
+ .../ln3824g/sai.profile                       |    5 +
+ .../ln3848g/ASK-Board-ac5x-ln-48x1G-6x25G.md5 |    1 +
+ .../ln3848g/ASK-Board-ac5x-ln-48x1G-6x25G.xml | 1803 +++++++++++++++++
+ .../ln3848g/ASK-L1-AC5X-LN-48x1G-6x25G.md5    |    1 +
+ .../ln3848g/ASK-L1-AC5X-LN-48x1G-6x25G.xml    |  981 +++++++++
+ .../ln3848g/ASK-PP-AC5X-LN.md5                |    1 +
+ .../ln3848g/ASK-PP-AC5X-LN.xml                |  891 ++++++++
+ .../ln3848g/SAI-AC5X-LN-48x1G-6x25G.md5       |    1 +
+ .../ln3848g/SAI-AC5X-LN-48x1G-6x25G.xml       |  514 +++++
+ .../ln3848g/buffers.json.j2                   |    2 +
+ .../ln3848g/buffers_defaults_t0.j2            |   50 +
+ .../ln3848g/buffers_defaults_t1.j2            |   50 +
+ .../ln3848g/hwsku.json                        |  274 +++
+ .../ln3848g/pg_profile_lookup.ini             |   27 +
+ .../ln3848g/port_config.ini                   |   55 +
+ .../ln3848g/profile.ini                       |    1 +
+ .../ln3848g/qos.json.j2                       |    2 +
+ .../ln3848g/sai.profile                       |    5 +
+ .../x86_64-larch-vs_larchvm/platform.json     |  490 +++++
+ .../x86_64-larch-vs_larchvm/platform_asic     |    1 +
+ .../x86_64-larch-vs_larchvm/plugins/eeprom.py |   40 +
+ .../pmon_daemon_control.json                  |    8 +
+ .../system_health_monitoring_config.json      |   12 +
+ .../docker-syncd-mrvl-prestera-rpc.dep        |    8 +
+ .../docker-syncd-mrvl-prestera-rpc.mk         |   27 +
+ .../99-syncd.conf                             |    2 +
+ .../Dockerfile.j2                             |   59 +
+ .../ptf_nn_agent.conf                         |   10 +
+ .../docker-syncd-mrvl-prestera.dep            |   10 +
+ .../docker-syncd-mrvl-prestera.mk             |   17 +
+ .../docker-syncd-mrvl-prestera/Dockerfile.j2  |   38 +
+ .../critical_processes                        |    2 +
+ .../docker-syncd-mrvl-prestera/slan.sh        |   26 +
+ .../supervisord.conf                          |   55 +
+ .../docker-syncd-mrvl-prestera/syncd.sh       |   12 +
+ .../docker-syncd-mrvl-prestera/syncd_start.sh |   10 +
+ platform/marvell-larch-sim/kvm-image.mk       |   15 +
+ .../marvell-larch-sim/libsaithrift-dev.dep    |   11 +
+ .../marvell-larch-sim/libsaithrift-dev.mk     |   25 +
+ platform/marvell-larch-sim/one-image.dep      |    1 +
+ platform/marvell-larch-sim/one-image.mk       |   13 +
+ platform/marvell-larch-sim/onie.mk            |   10 +
+ platform/marvell-larch-sim/platform-larch.dep |    9 +
+ platform/marvell-larch-sim/platform-larch.mk  |    9 +
+ platform/marvell-larch-sim/platform.conf      |    0
+ platform/marvell-larch-sim/rules.dep          |    5 +
+ platform/marvell-larch-sim/rules.mk           |   26 +
+ platform/marvell-larch-sim/sai.dep            |    7 +
+ platform/marvell-larch-sim/sai.mk             |   11 +
+ .../sonic-platform-larch/debian/changelog     |    4 +
+ .../sonic-platform-larch/debian/compat        |    1 +
+ .../sonic-platform-larch/debian/control       |   12 +
+ .../sonic-platform-larch/debian/rules         |   38 +
+ .../debian/sonic-platform-larchvm.install     |    3 +
+ .../debian/sonic-platform-larchvm.postinst    |   20 +
+ .../files/etc/modules-load.d/mpls.conf        |    2 +
+ .../files/etc/sysctl.d/90-mpls.conf           |    1 +
+ .../files/scripts/larchvm-init.sh             |   43 +
+ .../files/service/larchvm-init.service        |   11 +
+ .../sonic-platform-larch/larchvm/setup.py     |   13 +
+ .../larchvm/sonic_platform/__init__.py        |    2 +
+ .../larchvm/sonic_platform/chassis.py         |  134 ++
+ .../larchvm/sonic_platform/platform.py        |   25 +
+ .../larchvm/sysctl/zz-dqs5000-nmi.conf        |    7 +
+ platform/marvell-larch-sim/utils/run_qemu.sh  |   90 +
+ 83 files changed, 9831 insertions(+)
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/default_sku
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/installer.conf
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/ln3824g/ASK-Board-ac5x-ln-24x1G-6x25G.md5
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/ln3824g/ASK-Board-ac5x-ln-24x1G-6x25G.xml
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/ln3824g/ASK-L1-AC5X-LN-24x1G-6x25G.md5
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/ln3824g/ASK-L1-AC5X-LN-24x1G-6x25G.xml
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/ln3824g/ASK-PP-AC5X-LN.md5
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/ln3824g/ASK-PP-AC5X-LN.xml
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/ln3824g/SAI-AC5X-LN-24x1G-6x25G.md5
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/ln3824g/SAI-AC5X-LN-24x1G-6x25G.xml
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/ln3824g/buffers.json.j2
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/ln3824g/buffers_defaults_t0.j2
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/ln3824g/buffers_defaults_t1.j2
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/ln3824g/hwsku.json
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/ln3824g/pg_profile_lookup.ini
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/ln3824g/port_config.ini
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/ln3824g/profile.ini
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/ln3824g/qos.json.j2
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/ln3824g/sai.profile
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/ln3848g/ASK-Board-ac5x-ln-48x1G-6x25G.md5
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/ln3848g/ASK-Board-ac5x-ln-48x1G-6x25G.xml
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/ln3848g/ASK-L1-AC5X-LN-48x1G-6x25G.md5
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/ln3848g/ASK-L1-AC5X-LN-48x1G-6x25G.xml
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/ln3848g/ASK-PP-AC5X-LN.md5
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/ln3848g/ASK-PP-AC5X-LN.xml
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/ln3848g/SAI-AC5X-LN-48x1G-6x25G.md5
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/ln3848g/SAI-AC5X-LN-48x1G-6x25G.xml
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/ln3848g/buffers.json.j2
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/ln3848g/buffers_defaults_t0.j2
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/ln3848g/buffers_defaults_t1.j2
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/ln3848g/hwsku.json
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/ln3848g/pg_profile_lookup.ini
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/ln3848g/port_config.ini
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/ln3848g/profile.ini
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/ln3848g/qos.json.j2
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/ln3848g/sai.profile
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/platform.json
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/platform_asic
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/plugins/eeprom.py
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/pmon_daemon_control.json
+ create mode 100644 device/larch/x86_64-larch-vs_larchvm/system_health_monitoring_config.json
+ create mode 100644 platform/marvell-larch-sim/docker-syncd-mrvl-prestera-rpc.dep
+ create mode 100644 platform/marvell-larch-sim/docker-syncd-mrvl-prestera-rpc.mk
+ create mode 100644 platform/marvell-larch-sim/docker-syncd-mrvl-prestera-rpc/99-syncd.conf
+ create mode 100644 platform/marvell-larch-sim/docker-syncd-mrvl-prestera-rpc/Dockerfile.j2
+ create mode 100644 platform/marvell-larch-sim/docker-syncd-mrvl-prestera-rpc/ptf_nn_agent.conf
+ create mode 100644 platform/marvell-larch-sim/docker-syncd-mrvl-prestera.dep
+ create mode 100644 platform/marvell-larch-sim/docker-syncd-mrvl-prestera.mk
+ create mode 100755 platform/marvell-larch-sim/docker-syncd-mrvl-prestera/Dockerfile.j2
+ create mode 100644 platform/marvell-larch-sim/docker-syncd-mrvl-prestera/critical_processes
+ create mode 100755 platform/marvell-larch-sim/docker-syncd-mrvl-prestera/slan.sh
+ create mode 100644 platform/marvell-larch-sim/docker-syncd-mrvl-prestera/supervisord.conf
+ create mode 100755 platform/marvell-larch-sim/docker-syncd-mrvl-prestera/syncd.sh
+ create mode 100755 platform/marvell-larch-sim/docker-syncd-mrvl-prestera/syncd_start.sh
+ create mode 100644 platform/marvell-larch-sim/kvm-image.mk
+ create mode 100644 platform/marvell-larch-sim/libsaithrift-dev.dep
+ create mode 100644 platform/marvell-larch-sim/libsaithrift-dev.mk
+ create mode 100644 platform/marvell-larch-sim/one-image.dep
+ create mode 100644 platform/marvell-larch-sim/one-image.mk
+ create mode 100644 platform/marvell-larch-sim/onie.mk
+ create mode 100644 platform/marvell-larch-sim/platform-larch.dep
+ create mode 100644 platform/marvell-larch-sim/platform-larch.mk
+ create mode 100644 platform/marvell-larch-sim/platform.conf
+ create mode 100644 platform/marvell-larch-sim/rules.dep
+ create mode 100644 platform/marvell-larch-sim/rules.mk
+ create mode 100644 platform/marvell-larch-sim/sai.dep
+ create mode 100644 platform/marvell-larch-sim/sai.mk
+ create mode 100644 platform/marvell-larch-sim/sonic-platform-larch/debian/changelog
+ create mode 100644 platform/marvell-larch-sim/sonic-platform-larch/debian/compat
+ create mode 100644 platform/marvell-larch-sim/sonic-platform-larch/debian/control
+ create mode 100755 platform/marvell-larch-sim/sonic-platform-larch/debian/rules
+ create mode 100644 platform/marvell-larch-sim/sonic-platform-larch/debian/sonic-platform-larchvm.install
+ create mode 100644 platform/marvell-larch-sim/sonic-platform-larch/debian/sonic-platform-larchvm.postinst
+ create mode 100644 platform/marvell-larch-sim/sonic-platform-larch/files/etc/modules-load.d/mpls.conf
+ create mode 100644 platform/marvell-larch-sim/sonic-platform-larch/files/etc/sysctl.d/90-mpls.conf
+ create mode 100644 platform/marvell-larch-sim/sonic-platform-larch/files/scripts/larchvm-init.sh
+ create mode 100644 platform/marvell-larch-sim/sonic-platform-larch/files/service/larchvm-init.service
+ create mode 100644 platform/marvell-larch-sim/sonic-platform-larch/larchvm/setup.py
+ create mode 100644 platform/marvell-larch-sim/sonic-platform-larch/larchvm/sonic_platform/__init__.py
+ create mode 100644 platform/marvell-larch-sim/sonic-platform-larch/larchvm/sonic_platform/chassis.py
+ create mode 100644 platform/marvell-larch-sim/sonic-platform-larch/larchvm/sonic_platform/platform.py
+ create mode 100644 platform/marvell-larch-sim/sonic-platform-larch/larchvm/sysctl/zz-dqs5000-nmi.conf
+ create mode 100755 platform/marvell-larch-sim/utils/run_qemu.sh
+
 diff --git a/device/larch/x86_64-larch-vs_larchvm/default_sku b/device/larch/x86_64-larch-vs_larchvm/default_sku
 new file mode 100644
-index 000000000..4f356d314
+index 000000000..2c2a96a03
 --- /dev/null
 +++ b/device/larch/x86_64-larch-vs_larchvm/default_sku
 @@ -0,0 +1 @@
-+ln3848g t1
++ln3848g l1
 diff --git a/device/larch/x86_64-larch-vs_larchvm/installer.conf b/device/larch/x86_64-larch-vs_larchvm/installer.conf
 new file mode 100644
 index 000000000..b65a86750
@@ -2235,15 +2402,15 @@ index 000000000..1444145e8
 \ No newline at end of file
 diff --git a/device/larch/x86_64-larch-vs_larchvm/ln3824g/ASK-PP-AC5X-LN.md5 b/device/larch/x86_64-larch-vs_larchvm/ln3824g/ASK-PP-AC5X-LN.md5
 new file mode 100644
-index 000000000..a8cacfdd9
+index 000000000..1d7449849
 --- /dev/null
 +++ b/device/larch/x86_64-larch-vs_larchvm/ln3824g/ASK-PP-AC5X-LN.md5
 @@ -0,0 +1 @@
-+7e0317c4f0c86cc16929b1a143d90c32
++4ed6b2ba5c9c99bc970485efd8654ac6
 \ No newline at end of file
 diff --git a/device/larch/x86_64-larch-vs_larchvm/ln3824g/ASK-PP-AC5X-LN.xml b/device/larch/x86_64-larch-vs_larchvm/ln3824g/ASK-PP-AC5X-LN.xml
 new file mode 100644
-index 000000000..8ed10be62
+index 000000000..cd8f7127f
 --- /dev/null
 +++ b/device/larch/x86_64-larch-vs_larchvm/ln3824g/ASK-PP-AC5X-LN.xml
 @@ -0,0 +1,891 @@
@@ -3111,7 +3278,7 @@ index 000000000..8ed10be62
 +      </askppplt:Phase2>
 +      <askppplt:LogicalInit>
 +        <askppplt:routingMode askppplt:type="routing-mode-type">TCAM_ROUTER_BASED</askppplt:routingMode>
-+        <askppplt:maxNumOfPbrEntries askppplt:type="uint32">0</askppplt:maxNumOfPbrEntries>
++        <askppplt:maxNumOfPbrEntries askppplt:type="uint32">256</askppplt:maxNumOfPbrEntries>
 +        <askppplt:ingressDropEnable askppplt:type="boolean-type">true</askppplt:ingressDropEnable>
 +      </askppplt:LogicalInit>
 +      <askppplt:LibInit>
@@ -3558,18 +3725,19 @@ index 000000000..0b1cb2c54
 +{%- include 'buffers_config.j2' %}
 diff --git a/device/larch/x86_64-larch-vs_larchvm/ln3824g/buffers_defaults_t0.j2 b/device/larch/x86_64-larch-vs_larchvm/ln3824g/buffers_defaults_t0.j2
 new file mode 100644
-index 000000000..25b2f5608
+index 000000000..33f5ae9da
 --- /dev/null
 +++ b/device/larch/x86_64-larch-vs_larchvm/ln3824g/buffers_defaults_t0.j2
-@@ -0,0 +1,49 @@
+@@ -0,0 +1,50 @@
 +
 +{%- set default_cable = '40m' %}
 +
 +{%- macro generate_buffer_pool_and_profiles() %}
 +    "BUFFER_POOL": {
-+        "ingress_pool1": {
++        "ingress_lossless_pool": {
 +            "mode": "dynamic",
 +            "size": "1447040",
++            "xoff": "361728",
 +            "type": "ingress"
 +        },
 +        "ingress_pool2": {
@@ -3600,7 +3768,7 @@ index 000000000..25b2f5608
 +            "dynamic_th": "1"
 +        },
 +        "ingress_lossless_profile": {
-+            "pool": "ingress_pool1",
++            "pool": "ingress_lossless_pool",
 +            "size": "0",
 +            "dynamic_th": "-3"
 +        },
@@ -3613,18 +3781,19 @@ index 000000000..25b2f5608
 +{%- endmacro %}
 diff --git a/device/larch/x86_64-larch-vs_larchvm/ln3824g/buffers_defaults_t1.j2 b/device/larch/x86_64-larch-vs_larchvm/ln3824g/buffers_defaults_t1.j2
 new file mode 100644
-index 000000000..25b2f5608
+index 000000000..33f5ae9da
 --- /dev/null
 +++ b/device/larch/x86_64-larch-vs_larchvm/ln3824g/buffers_defaults_t1.j2
-@@ -0,0 +1,49 @@
+@@ -0,0 +1,50 @@
 +
 +{%- set default_cable = '40m' %}
 +
 +{%- macro generate_buffer_pool_and_profiles() %}
 +    "BUFFER_POOL": {
-+        "ingress_pool1": {
++        "ingress_lossless_pool": {
 +            "mode": "dynamic",
 +            "size": "1447040",
++            "xoff": "361728",
 +            "type": "ingress"
 +        },
 +        "ingress_pool2": {
@@ -3655,7 +3824,7 @@ index 000000000..25b2f5608
 +            "dynamic_th": "1"
 +        },
 +        "ingress_lossless_profile": {
-+            "pool": "ingress_pool1",
++            "pool": "ingress_lossless_pool",
 +            "size": "0",
 +            "dynamic_th": "-3"
 +        },
@@ -3826,6 +3995,39 @@ index 000000000..0b0b3631b
 +        }
 +    }
 +}
+diff --git a/device/larch/x86_64-larch-vs_larchvm/ln3824g/pg_profile_lookup.ini b/device/larch/x86_64-larch-vs_larchvm/ln3824g/pg_profile_lookup.ini
+new file mode 100644
+index 000000000..e33579f46
+--- /dev/null
++++ b/device/larch/x86_64-larch-vs_larchvm/ln3824g/pg_profile_lookup.ini
+@@ -0,0 +1,27 @@
++# PG lossless profiles for buffermgrd (traditional model), Marvell Prestera xpSai.
++# Generated for https://redmine.larch-networks.com/issues/36864 - see the MR for the derivation.
++#
++# xoff = ceil128( 2*MTU + 1.5 * ( (2*L*5ns + 1us) * speed/8 + peer_reaction(speed) ) )
++#        MTU 9216 B, cell 128 B, peer reaction = IEEE 802.3 Table 31B-1 pause quanta x 64 B
++# size = 0      xpSai programs it as the CPSS PFC guaranteedThreshold (pure dynamic XOFF)
++# xon  = 2*MTU  stored only: xpSai has no XON threshold; xon_offset is NOT_SUPPORTED by xpSai
++# dynamic_th -3: PFC XOFF when the PG holds more than 1/8 of the free ingress_lossless_pool
++# Headroom is reserved once as the pool shared headroom (BUFFER_POOL ingress_lossless_pool.xoff = 361728 B:
++#   min(sum over 30 ports of xoff(speed, 40m) = 615936, 25% of pool 1447040 = 361728)); every xoff below fits in it.
++#
++# speed  cable  size  xon    xoff    dynamic_th
++  1000   5m     0     18432  18944   -3
++  2500   5m     0     18432  24704   -3
++  5000   5m     0     18432  25216   -3
++  10000  5m     0     18432  26240   -3
++  25000  5m     0     18432  34688   -3
++  1000   40m    0     18432  18944   -3
++  2500   40m    0     18432  24960   -3
++  5000   40m    0     18432  25600   -3
++  10000  40m    0     18432  26880   -3
++  25000  40m    0     18432  36352   -3
++  1000   300m   0     18432  19456   -3
++  2500   300m   0     18432  26112   -3
++  5000   300m   0     18432  28032   -3
++  10000  300m   0     18432  31744   -3
++  25000  300m   0     18432  48512   -3
 diff --git a/device/larch/x86_64-larch-vs_larchvm/ln3824g/port_config.ini b/device/larch/x86_64-larch-vs_larchvm/ln3824g/port_config.ini
 new file mode 100644
 index 000000000..4a538dde1
@@ -3872,10 +4074,11 @@ index 000000000..c2f77685a
 +switchMacAddress=00:01:02:03:04:05
 diff --git a/device/larch/x86_64-larch-vs_larchvm/ln3824g/qos.json.j2 b/device/larch/x86_64-larch-vs_larchvm/ln3824g/qos.json.j2
 new file mode 100644
-index 000000000..3e548325e
+index 000000000..64dbdafe9
 --- /dev/null
 +++ b/device/larch/x86_64-larch-vs_larchvm/ln3824g/qos.json.j2
-@@ -0,0 +1 @@
+@@ -0,0 +1,2 @@
++{%- set default_dot1p_to_tc_map_enabled = true %}
 +{%- include 'qos_config.j2' %}
 diff --git a/device/larch/x86_64-larch-vs_larchvm/ln3824g/sai.profile b/device/larch/x86_64-larch-vs_larchvm/ln3824g/sai.profile
 new file mode 100644
@@ -6704,15 +6907,15 @@ index 000000000..44b0b1d4a
 \ No newline at end of file
 diff --git a/device/larch/x86_64-larch-vs_larchvm/ln3848g/ASK-PP-AC5X-LN.md5 b/device/larch/x86_64-larch-vs_larchvm/ln3848g/ASK-PP-AC5X-LN.md5
 new file mode 100644
-index 000000000..a8cacfdd9
+index 000000000..1d7449849
 --- /dev/null
 +++ b/device/larch/x86_64-larch-vs_larchvm/ln3848g/ASK-PP-AC5X-LN.md5
 @@ -0,0 +1 @@
-+7e0317c4f0c86cc16929b1a143d90c32
++4ed6b2ba5c9c99bc970485efd8654ac6
 \ No newline at end of file
 diff --git a/device/larch/x86_64-larch-vs_larchvm/ln3848g/ASK-PP-AC5X-LN.xml b/device/larch/x86_64-larch-vs_larchvm/ln3848g/ASK-PP-AC5X-LN.xml
 new file mode 100644
-index 000000000..8ed10be62
+index 000000000..cd8f7127f
 --- /dev/null
 +++ b/device/larch/x86_64-larch-vs_larchvm/ln3848g/ASK-PP-AC5X-LN.xml
 @@ -0,0 +1,891 @@
@@ -7580,7 +7783,7 @@ index 000000000..8ed10be62
 +      </askppplt:Phase2>
 +      <askppplt:LogicalInit>
 +        <askppplt:routingMode askppplt:type="routing-mode-type">TCAM_ROUTER_BASED</askppplt:routingMode>
-+        <askppplt:maxNumOfPbrEntries askppplt:type="uint32">0</askppplt:maxNumOfPbrEntries>
++        <askppplt:maxNumOfPbrEntries askppplt:type="uint32">256</askppplt:maxNumOfPbrEntries>
 +        <askppplt:ingressDropEnable askppplt:type="boolean-type">true</askppplt:ingressDropEnable>
 +      </askppplt:LogicalInit>
 +      <askppplt:LibInit>
@@ -8147,18 +8350,19 @@ index 000000000..0b1cb2c54
 +{%- include 'buffers_config.j2' %}
 diff --git a/device/larch/x86_64-larch-vs_larchvm/ln3848g/buffers_defaults_t0.j2 b/device/larch/x86_64-larch-vs_larchvm/ln3848g/buffers_defaults_t0.j2
 new file mode 100644
-index 000000000..25b2f5608
+index 000000000..33f5ae9da
 --- /dev/null
 +++ b/device/larch/x86_64-larch-vs_larchvm/ln3848g/buffers_defaults_t0.j2
-@@ -0,0 +1,49 @@
+@@ -0,0 +1,50 @@
 +
 +{%- set default_cable = '40m' %}
 +
 +{%- macro generate_buffer_pool_and_profiles() %}
 +    "BUFFER_POOL": {
-+        "ingress_pool1": {
++        "ingress_lossless_pool": {
 +            "mode": "dynamic",
 +            "size": "1447040",
++            "xoff": "361728",
 +            "type": "ingress"
 +        },
 +        "ingress_pool2": {
@@ -8189,7 +8393,7 @@ index 000000000..25b2f5608
 +            "dynamic_th": "1"
 +        },
 +        "ingress_lossless_profile": {
-+            "pool": "ingress_pool1",
++            "pool": "ingress_lossless_pool",
 +            "size": "0",
 +            "dynamic_th": "-3"
 +        },
@@ -8202,18 +8406,19 @@ index 000000000..25b2f5608
 +{%- endmacro %}
 diff --git a/device/larch/x86_64-larch-vs_larchvm/ln3848g/buffers_defaults_t1.j2 b/device/larch/x86_64-larch-vs_larchvm/ln3848g/buffers_defaults_t1.j2
 new file mode 100644
-index 000000000..25b2f5608
+index 000000000..33f5ae9da
 --- /dev/null
 +++ b/device/larch/x86_64-larch-vs_larchvm/ln3848g/buffers_defaults_t1.j2
-@@ -0,0 +1,49 @@
+@@ -0,0 +1,50 @@
 +
 +{%- set default_cable = '40m' %}
 +
 +{%- macro generate_buffer_pool_and_profiles() %}
 +    "BUFFER_POOL": {
-+        "ingress_pool1": {
++        "ingress_lossless_pool": {
 +            "mode": "dynamic",
 +            "size": "1447040",
++            "xoff": "361728",
 +            "type": "ingress"
 +        },
 +        "ingress_pool2": {
@@ -8244,7 +8449,7 @@ index 000000000..25b2f5608
 +            "dynamic_th": "1"
 +        },
 +        "ingress_lossless_profile": {
-+            "pool": "ingress_pool1",
++            "pool": "ingress_lossless_pool",
 +            "size": "0",
 +            "dynamic_th": "-3"
 +        },
@@ -8535,6 +8740,39 @@ index 000000000..0a3513e48
 +        }
 +    }
 +}
+diff --git a/device/larch/x86_64-larch-vs_larchvm/ln3848g/pg_profile_lookup.ini b/device/larch/x86_64-larch-vs_larchvm/ln3848g/pg_profile_lookup.ini
+new file mode 100644
+index 000000000..d28de2fe5
+--- /dev/null
++++ b/device/larch/x86_64-larch-vs_larchvm/ln3848g/pg_profile_lookup.ini
+@@ -0,0 +1,27 @@
++# PG lossless profiles for buffermgrd (traditional model), Marvell Prestera xpSai.
++# Generated for https://redmine.larch-networks.com/issues/36864 - see the MR for the derivation.
++#
++# xoff = ceil128( 2*MTU + 1.5 * ( (2*L*5ns + 1us) * speed/8 + peer_reaction(speed) ) )
++#        MTU 9216 B, cell 128 B, peer reaction = IEEE 802.3 Table 31B-1 pause quanta x 64 B
++# size = 0      xpSai programs it as the CPSS PFC guaranteedThreshold (pure dynamic XOFF)
++# xon  = 2*MTU  stored only: xpSai has no XON threshold; xon_offset is NOT_SUPPORTED by xpSai
++# dynamic_th -3: PFC XOFF when the PG holds more than 1/8 of the free ingress_lossless_pool
++# Headroom is reserved once as the pool shared headroom (BUFFER_POOL ingress_lossless_pool.xoff = 361728 B:
++#   min(sum over 54 ports of xoff(speed, 40m) = 1070592, 25% of pool 1447040 = 361728)); every xoff below fits in it.
++#
++# speed  cable  size  xon    xoff    dynamic_th
++  1000   5m     0     18432  18944   -3
++  2500   5m     0     18432  24704   -3
++  5000   5m     0     18432  25216   -3
++  10000  5m     0     18432  26240   -3
++  25000  5m     0     18432  34688   -3
++  1000   40m    0     18432  18944   -3
++  2500   40m    0     18432  24960   -3
++  5000   40m    0     18432  25600   -3
++  10000  40m    0     18432  26880   -3
++  25000  40m    0     18432  36352   -3
++  1000   300m   0     18432  19456   -3
++  2500   300m   0     18432  26112   -3
++  5000   300m   0     18432  28032   -3
++  10000  300m   0     18432  31744   -3
++  25000  300m   0     18432  48512   -3
 diff --git a/device/larch/x86_64-larch-vs_larchvm/ln3848g/port_config.ini b/device/larch/x86_64-larch-vs_larchvm/ln3848g/port_config.ini
 new file mode 100644
 index 000000000..3250a854c
@@ -8605,10 +8843,11 @@ index 000000000..c2f77685a
 +switchMacAddress=00:01:02:03:04:05
 diff --git a/device/larch/x86_64-larch-vs_larchvm/ln3848g/qos.json.j2 b/device/larch/x86_64-larch-vs_larchvm/ln3848g/qos.json.j2
 new file mode 100644
-index 000000000..3e548325e
+index 000000000..64dbdafe9
 --- /dev/null
 +++ b/device/larch/x86_64-larch-vs_larchvm/ln3848g/qos.json.j2
-@@ -0,0 +1 @@
+@@ -0,0 +1,2 @@
++{%- set default_dot1p_to_tc_map_enabled = true %}
 +{%- include 'qos_config.j2' %}
 diff --git a/device/larch/x86_64-larch-vs_larchvm/ln3848g/sai.profile b/device/larch/x86_64-larch-vs_larchvm/ln3848g/sai.profile
 new file mode 100644
@@ -9431,10 +9670,10 @@ index 000000000..b75a4a23e
 +program:slan
 diff --git a/platform/marvell-larch-sim/docker-syncd-mrvl-prestera/slan.sh b/platform/marvell-larch-sim/docker-syncd-mrvl-prestera/slan.sh
 new file mode 100755
-index 000000000..d53d21c04
+index 000000000..24cad7002
 --- /dev/null
 +++ b/platform/marvell-larch-sim/docker-syncd-mrvl-prestera/slan.sh
-@@ -0,0 +1,15 @@
+@@ -0,0 +1,26 @@
 +#!/usr/bin/env bash
 +
 +num_port=8
@@ -9449,6 +9688,17 @@ index 000000000..d53d21c04
 +}
 +
 +tap_set
++
++# The previous instance can still listen on 127.0.0.1:34567 (hex 8707) after a
++# container restart. slanConnector_Linux exits if it cannot bind the port.
++# Check only the LISTEN state (0A): TIME_WAIT sockets of the closed slanEthPortLinux
++# connections do not block the bind. A wait for them delays slanConnector past the
++# start of slanEthPortLinux, and the SAI does not start slanEthPortLinux again.
++for i in $(seq 60); do
++  awk '$2 ~ /:8707$/ && $4 == "0A" {f=1} END {exit !f}' /proc/net/tcp || break
++  sleep 1
++done
++
 +exec /usr/bin/slanConnector_Linux
 diff --git a/platform/marvell-larch-sim/docker-syncd-mrvl-prestera/supervisord.conf b/platform/marvell-larch-sim/docker-syncd-mrvl-prestera/supervisord.conf
 new file mode 100644
@@ -9732,6 +9982,36 @@ index 000000000..df1293385
 +
 +# Runtime dependency on mrvl-prestera sai is set only for syncd
 +$(SYNCD)_RDEPENDS += $(MRVL_SAI)
+diff --git a/platform/marvell-larch-sim/sai.dep b/platform/marvell-larch-sim/sai.dep
+new file mode 100644
+index 000000000..54305d5cb
+--- /dev/null
++++ b/platform/marvell-larch-sim/sai.dep
+@@ -0,0 +1,7 @@
++DEP_FILES   := $(SONIC_COMMON_FILES_LIST) $(PLATFORM_PATH)/sai.mk $(PLATFORM_PATH)/sai.dep
++DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
++
++$(MRVL_SAI)_CACHE_MODE  := GIT_CONTENT_SHA
++$(MRVL_SAI)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
++$(MRVL_SAI)_DEP_FILES   := $(DEP_FILES)
++
+diff --git a/platform/marvell-larch-sim/sai.mk b/platform/marvell-larch-sim/sai.mk
+new file mode 100644
+index 000000000..6bb8d9e45
+--- /dev/null
++++ b/platform/marvell-larch-sim/sai.mk
+@@ -0,0 +1,11 @@
++# Marvell SAI
++
++BRANCH = 202511
++MRVL_SAI_VERSION = 1.17.4-2
++
++MRVL_SAI_URL_PREFIX = https://github.com/larch-sonic/sonic-larch-binaries/raw/main/$(CONFIGURED_ARCH)/sai-plugin/$(BRANCH)/
++MRVL_SAI = mrvlvslibsai_$(MRVL_SAI_VERSION)_$(PLATFORM_ARCH).deb
++$(MRVL_SAI)_URL = $(MRVL_SAI_URL_PREFIX)/$(MRVL_SAI)
++
++SONIC_ONLINE_DEBS += $(MRVL_SAI)
++$(MRVL_SAI)_SKIP_VERSION=y
 diff --git a/platform/marvell-larch-sim/sonic-platform-larch/debian/changelog b/platform/marvell-larch-sim/sonic-platform-larch/debian/changelog
 new file mode 100644
 index 000000000..701fcae26
@@ -9855,105 +10135,6 @@ index 000000000..dce41059a
 @@ -0,0 +1,2 @@
 +mpls_router
 +mpls_iptunnel
-diff --git a/platform/marvell-larch-sim/sonic-platform-larch/files/etc/sonic/telemetry/cert.cer b/platform/marvell-larch-sim/sonic-platform-larch/files/etc/sonic/telemetry/cert.cer
-new file mode 100644
-index 000000000..521bb6849
---- /dev/null
-+++ b/platform/marvell-larch-sim/sonic-platform-larch/files/etc/sonic/telemetry/cert.cer
-@@ -0,0 +1,35 @@
-+-----BEGIN CERTIFICATE-----
-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
-+-----END CERTIFICATE-----
-diff --git a/platform/marvell-larch-sim/sonic-platform-larch/files/etc/sonic/telemetry/key.key b/platform/marvell-larch-sim/sonic-platform-larch/files/etc/sonic/telemetry/key.key
-new file mode 100644
-index 000000000..381ef29f2
---- /dev/null
-+++ b/platform/marvell-larch-sim/sonic-platform-larch/files/etc/sonic/telemetry/key.key
-@@ -0,0 +1,52 @@
-+-----BEGIN PRIVATE KEY-----
-+MIIJQAIBADANBgkqhkiG9w0BAQEFAASCCSowggkmAgEAAoICAQDB5uZCFQ6/0GP/
-+5Nttvas+CBZTPbnFoNsE+2SUZPrMsIk/k4ZxTnXYRgBjx5YjYX19F/kTlK+WehuC
-+MFXGiOntHzxvCRYsLrF5CNDaBQ7cl9CJhZ3quKSq7o2egjOGBPV7Sa4JVO//iXa/
-+aWU848rPinpbOZTN5GMlDg+Keqji2qzKb3iGaeQ5Ec0aRLRtWtw9Pfont8rvE8Wc
-+sAaz4pse756fIlnJ3X2cJR2iBzSUKV/xFe5MEwV1r2AXd7EGKkbK7f71B7LRm5J6
-+rP+wpyLtIGDxlGYY4hV8anyYZbGIcgpt9Eani3LdsCM6EBENtK0fvIsjlSj1qT8t
-+a1cyi4obKfgWBJNs2vauUwASkfmcqqSVRCjuFPssdDXWhPaMUTS6dn4X7ubVHcK9
-+t4KhJSrSwTPHx5hqSZNVQAbRWqBxo6J4F8peAP1wCWL8ocDucklyYAFUqpSAaoxj
-+Ud3RzrFnHTqjnqsrDM8nqcReM40pDw1ShpRJyQmytT+gLDK27G7O35Eq1+o5SUZ6
-+KQwFLTWF/HbAFXniSqYPjjow2s3w8DXctQhc7RX9KDktih1Zx8+PKdYWL9o1iGSk
-+RgDt82xV4jpcV9zAsLUmaRhwN4GmTPhABYPje74Zf5YhFuIyB2Y0jvC86tBoyTwT
-+CIESeq8m7BymR04JB4HUSk3IWG+1NwIDAQABAoICAE5xCwiDvU5CzxmX618XYl27
-+ZtCxAWTeYIxA6R0RRtakujlShIp0+76M/x5egTH6AAqptpVBytDcwCEoTaL+A2hu
-+gQPIUMR59UjqFJeGgU8jSXVA7TQmE1OlIvyTXqWifu6rzXCwAFFHupbP2+lIm+Te
-++AXMoxKyCJvWdtoGKilv3oQcmU0DLJUbyvYMAlPU9JD/8CG+PCYAwSpUmbmO/EMF
-+HA3zlxBPfr+60iSYtqATpuEAhsEW1tgXpQ+JV7+PPcldg4172k7qmVTwhJXh34K/
-+XQiOCMmbOKb260W5qhrxS5/UuPqRstvVJEMaedOqGnlizIUOFB5hpBHLQWDMy4bi
-+PvGOFobCC6tLIyRMLVFEjtE6Hj9grBU5YzxZ8qzpidlWrXhkq/7EGEoiNEB8NW4i
-+0DmcjxuK93r0kUetz1NQrITeSPJxdmL74QgNfAURz651B1G7MUtSuPiC4y//OpUI
-+xKjrmifFH4yYu5ikf8Hjptd9a7jZ9ECaB84LhvehKuwn+2huFsDBaGOXdMC75aH/
-+b8qpnp4gD2xfXnim1orNoTSWSLAj5jrKvR0FSR8t4YDunBZ407hJALsmkjb8c7FJ
-+JBU0QUgqNgvqbxlOm9GnhwtgS+lMTE0FL86n8Xx8fczjKS+MPvhY9m4350t0KCrA
-+h7Ah9m8oAKbr06RZ8LwhAoIBAQDpAOtdOGEdh1nA1CTreo2eLNqQ2ATuMl1V1An7
-+670RYTp5HX2vGo95DvMzpBY3i55jbPZcSXg4mpaOh1tHc4acmCxbg9VHBIJ5mTls
-+/2yIWc0wHNmDwEy7MEvYzEho5lbDEQP4wJYk1LqxXKEJM7Rhgv2PwJAwLtAraXMR
-+zMN/wD+fA2eVszsE0LVZ2VqENhN/4BAHMoZl3gZ+vKqghwfr12I5d/vKFBgYsRlE
-+Q3U4IMPOGqv7MQl5RDnRULN6e2OQSyl0NU0xCFCjGE3BIPqGjC97mXcIkFTBfp/S
-+SMvS+Hw2GfZRA6gSze+2L6lhDTXFceZPukMCRpH91SvyM7RhAoIBAQDVCgk4WznZ
-+xUYH+6Atutao70U87R9oiT7rPYeF/GPTg6g66m8Tn6X0WkeGN37Aqkp7CjnfhNfo
-+b7De3ksjsRN8Q3U5PPaE1BAEErQJYFwWuOOq+jk1BdF0xmelht2gTUoXM9F/o9H4
-+wwS38OufnZQka62Y5eKM8Y0p6qVTFmPk7h7oV6XD1TNYC6RC1mm/V7s+HNcF0A3Y
-+DLpBqxcHOE8rT5eHCYqbj8VQCIrmg1QmFIK3azQCJjzx6auxRTPlK+1GyH12d1i8
-+2Pm1MIl0STH1bfj5qOczzoGE0emBRmh6nS85nbyggW+8FfqDSFXgN8gstk0umumw
-+jUCL4B/c0lCXAoIBAHk6gzrjRJQKggYz2mmyP9CWYbmOyzHrfmhThEZQZvSN89Bk
-+KapbVV6VCrBJpU2NFQGCBcQKbcR1mfPaNQG998Gt4xZSRztF+2Ss9hXh52Qh5QIt
-+YHaOLN4PyMapstrxTR780WYxPW04SVJScW7KOgWqE6chd2O6V5DesoIGWYk0S2W+
-+bbyTnhdpR5HR5qh3Qjn8KBq2jPqfRB3Yp6YR22s3iuF/rb98KPVf31eHCYwEcBvi
-+AK0W3Gj9uF9Rb7BAVpMSqCTQPrNOMjZJRNtA/1fVxDa4qBgKkC6EZT8RpQrFQksb
-+wu5vypjOEPRnY+cc6mcqVbwRmx+p+/dnXBAOGsECgf8s7/EB8jxBs1sSVAF1o/Oj
-+rtTsBRia9FhRRqlPme10sFDMHKdRfFuFL4Xmyc3y1fjf+0g53cutO+ITINC4tqFl
-+lNUlPbbCTfkS4t8XGzxRjq53YlCu3otQFonGYKxfI+589nE6e1PPJVPZePg6swKM
-+rCnyFouzL0CXludIn3By2cerOtG8fTxXVh1P++pSci8M6whwMXK6H/Up5Oz2mOoa
-+OK+9zEVwiuMT/rlN5mXZonnwNqzBx08TuDZ/LhnEPX/PbnsIgiQ1sY76qUJVRRtE
-+qe3au8YJJ4YqfhzDKBbhxkYv4RXoxWTMR9aP2rJCmYGf7NRbAFJK64CyAJS3/6UC
-+ggEBAOAzEUuPiiQPCCd90PFlFVhVAWAdCBzPznOdSLlb6Z9+A75Prm/iluKL64fL
-+ecq0cdysp9JOczIT8kt0gV0GeftrF25cZ7Q6TF8YRkTYg2NaJFjS3/t0BshQUn2T
-+HeiOgZB2LqGie/WHjLscYuRCcSWUUY+5i+FAsFQozowkjpR16PqYMdaRHZkQ3c5U
-+P4ATmtrZMwTMPwLihRjxUSreCLCzmukvunwGm5BpurHZQKo62Q8W4+FVveKqti02
-+EwLha0rZNpXcMfNG7UOl7RyZXVcAIYCW9SQhEg1OE7Gwsh4ycJg97jnOQO/628SB
-+spMLHhOarjRQj3wrnkrPoGV3gOo=
-+-----END PRIVATE KEY-----
 diff --git a/platform/marvell-larch-sim/sonic-platform-larch/files/etc/sysctl.d/90-mpls.conf b/platform/marvell-larch-sim/sonic-platform-larch/files/etc/sysctl.d/90-mpls.conf
 new file mode 100644
 index 000000000..a81a2ca69
@@ -10335,33 +10516,6 @@ index 000000000..0f9b22b55
 +sudo qemu-system-x86_64 "${QEMU_ARGS[@]}"
 +
 +sudo kill $(cat /tmp/${USER}_dhcp.pid)
-diff --git a/platform/marvell-larch-sim/sai.mk b/platform/marvell-larch-sim/sai.mk
-new file mode 100644
-index 000000000..00000000
---- /dev/null
-+++ b/platform/marvell-larch-sim/sai.mk
-@@ -0,0 +1,11 @@
-+# Marvell SAI
-+
-+BRANCH = 202511
-+MRVL_SAI_VERSION = 1.17.4-2
-+
-+MRVL_SAI_URL_PREFIX = https://github.com/larch-sonic/sonic-larch-binaries/raw/main/$(CONFIGURED_ARCH)/sai-plugin/$(BRANCH)/
-+MRVL_SAI = mrvlvslibsai_$(MRVL_SAI_VERSION)_$(PLATFORM_ARCH).deb
-+$(MRVL_SAI)_URL = $(MRVL_SAI_URL_PREFIX)/$(MRVL_SAI)
-+
-+SONIC_ONLINE_DEBS += $(MRVL_SAI)
-+$(MRVL_SAI)_SKIP_VERSION=y
-diff --git a/platform/marvell-larch-sim/sai.dep b/platform/marvell-larch-sim/sai.dep
-new file mode 100644
-index 000000000..00000000
---- /dev/null
-+++ b/platform/marvell-larch-sim/sai.dep
-@@ -0,0 +1,7 @@
-+DEP_FILES   := $(SONIC_COMMON_FILES_LIST) $(PLATFORM_PATH)/sai.mk $(PLATFORM_PATH)/sai.dep
-+DEP_FILES   += $(SONIC_COMMON_BASE_FILES_LIST)
-+
-+$(MRVL_SAI)_CACHE_MODE  := GIT_CONTENT_SHA
-+$(MRVL_SAI)_DEP_FLAGS   := $(SONIC_COMMON_FLAGS_LIST)
-+$(MRVL_SAI)_DEP_FILES   := $(DEP_FILES)
-+
+-- 
+2.34.1
+

@@ -1,4 +1,4 @@
-From dd6a3117ab7c7dc43244cce40a8b02399a5bd725 Mon Sep 17 00:00:00 2001
+From 9f6933550478095f77c794938969b6be76c19b08 Mon Sep 17 00:00:00 2001
 From: Kostiantyn Buravchenko <kburavchenko@larch-networks.com>
 Date: Mon, 19 Jan 2026 14:56:04 +0200
 Subject: [PATCH] Enable ospf and isis traps by default

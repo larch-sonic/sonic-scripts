@@ -1,29 +1,31 @@
-From c0498fb81d0bff7cb7276b8bd2fa8be73e5ad43f Mon Sep 17 00:00:00 2001
-From: Alex Sakun <asakun@larch-networks.com>
-Date: Mon, 4 May 2026 12:32:08 +0300
-Subject: [PATCH] Switch sai.mk to Larch prebuilt SAI v1.17.4-2
+From 2cf6e10025e310146af93467a06e1571ba5a4d2a Mon Sep 17 00:00:00 2001
+From: Kostiantyn Buravchenko <kburavchenko@larch-networks.com>
+Date: Wed, 11 Nov 2026 10:00:53 +0200
+Subject: [PATCH] Switch sai.mk to Larch prebuilt SAI (arm64 1.17.4-3, amd64 1.17.4-2)
 
 ---
- platform/marvell-prestera/sai.mk | 13 +++----------
- 1 file changed, 3 insertions(+), 10 deletions(-)
+ platform/marvell-prestera/sai.mk | 12 +++++-------
+ 1 file changed, 5 insertions(+), 7 deletions(-)
 
 diff --git a/platform/marvell-prestera/sai.mk b/platform/marvell-prestera/sai.mk
-index 75a121126..3d79d5bbe 100644
+index 18f41ff13..c49e781cb 100644
 --- a/platform/marvell-prestera/sai.mk
 +++ b/platform/marvell-prestera/sai.mk
-@@ -1,19 +1,12 @@
+@@ -1,19 +1,17 @@
  # Marvell SAI
  
 -BRANCH = master
--ifeq ($(CONFIGURED_ARCH),arm64)
--MRVL_SAI_VERSION = 1.17.1-1
--else ifeq ($(CONFIGURED_ARCH),armhf)
--MRVL_SAI_VERSION = 1.17.1-1
--else
--MRVL_SAI_VERSION = 1.17.1-1
--endif
 +BRANCH = 202511
++# arm64: 1.17.4-3 (ACL VLAN range); amd64: 1.17.4-2
+ ifeq ($(CONFIGURED_ARCH),arm64)
+-MRVL_SAI_VERSION = 1.17.1-13
+-else ifeq ($(CONFIGURED_ARCH),armhf)
+-MRVL_SAI_VERSION = 1.17.1-13
++MRVL_SAI_VERSION = 1.17.4-3
+ else
+-MRVL_SAI_VERSION = 1.17.1-13
 +MRVL_SAI_VERSION = 1.17.4-2
+ endif
  
 -MRVL_SAI_URL_PREFIX = https://github.com/Marvell-switching/sonic-marvell-binaries/raw/master/$(CONFIGURED_ARCH)/sai-plugin/$(BRANCH)/
 +MRVL_SAI_URL_PREFIX = https://github.com/larch-sonic/sonic-larch-binaries/raw/main/$(CONFIGURED_ARCH)/sai-plugin/$(BRANCH)/
@@ -36,3 +38,4 @@ index 75a121126..3d79d5bbe 100644
 -
 -- 
 2.34.1
+
