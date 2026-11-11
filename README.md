@@ -106,7 +106,7 @@ bash larch_sonic_patch_script.sh --branch 202511 --platform marvell-prestera --a
 make configure NOBUSTER=1 NOBULLSEYE=1 PLATFORM=marvell-prestera PLATFORM_ARCH=arm64
 
 make SONIC_BUILD_JOBS=8 NOBUSTER=1 NOBULLSEYE=1 SONIC_DPKG_CACHE_METHOD=rwcache \
-  target/sonic-marvell-arm64.bin
+  target/sonic-marvell-prestera-arm64.bin
 ```
 
 #### AMD64
@@ -118,7 +118,7 @@ bash larch_sonic_patch_script.sh --branch 202511 --platform marvell-prestera --a
 make configure NOBUSTER=1 NOBULLSEYE=1 PLATFORM=marvell-prestera PLATFORM_ARCH=amd64
 
 make SONIC_BUILD_JOBS=8 NOBUSTER=1 NOBULLSEYE=1 SONIC_DPKG_CACHE_METHOD=rwcache \
-  target/sonic-marvell.bin
+  target/sonic-marvell-prestera.bin
 ```
 
 #### AMD64 Simulation (QEMU)
