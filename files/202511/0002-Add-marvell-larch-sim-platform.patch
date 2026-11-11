@@ -1,4 +1,4 @@
-From 038cdaba1569eea8cac9fda4f85f3454d8f85cdc Mon Sep 17 00:00:00 2001
+From 8751c25f3616a56d55a6c3ace49ccbfaae3a95c4 Mon Sep 17 00:00:00 2001
 From: Kostiantyn Buravchenko <kburavchenko@larch-networks.com>
 Date: Fri, 1 May 2026 20:01:19 +0300
 Subject: [PATCH] Add marvell-larch-sim platform
@@ -70,7 +70,7 @@ Subject: [PATCH] Add marvell-larch-sim platform
  platform/marvell-larch-sim/rules.dep          |    5 +
  platform/marvell-larch-sim/rules.mk           |   26 +
  platform/marvell-larch-sim/sai.dep            |    7 +
- platform/marvell-larch-sim/sai.mk             |   11 +
+ platform/marvell-larch-sim/sai.mk             |   12 +
  .../sonic-platform-larch/debian/changelog     |    4 +
  .../sonic-platform-larch/debian/compat        |    1 +
  .../sonic-platform-larch/debian/control       |   12 +
@@ -87,7 +87,7 @@ Subject: [PATCH] Add marvell-larch-sim platform
  .../larchvm/sonic_platform/platform.py        |   25 +
  .../larchvm/sysctl/zz-dqs5000-nmi.conf        |    7 +
  platform/marvell-larch-sim/utils/run_qemu.sh  |   90 +
- 83 files changed, 9831 insertions(+)
+ 83 files changed, 9832 insertions(+)
  create mode 100644 device/larch/x86_64-larch-vs_larchvm/default_sku
  create mode 100644 device/larch/x86_64-larch-vs_larchvm/installer.conf
  create mode 100644 device/larch/x86_64-larch-vs_larchvm/ln3824g/ASK-Board-ac5x-ln-24x1G-6x25G.md5
@@ -9997,10 +9997,10 @@ index 000000000..54305d5cb
 +
 diff --git a/platform/marvell-larch-sim/sai.mk b/platform/marvell-larch-sim/sai.mk
 new file mode 100644
-index 000000000..6bb8d9e45
+index 000000000..e0e0ba659
 --- /dev/null
 +++ b/platform/marvell-larch-sim/sai.mk
-@@ -0,0 +1,11 @@
+@@ -0,0 +1,12 @@
 +# Marvell SAI
 +
 +BRANCH = 202511
@@ -10012,6 +10012,7 @@ index 000000000..6bb8d9e45
 +
 +SONIC_ONLINE_DEBS += $(MRVL_SAI)
 +$(MRVL_SAI)_SKIP_VERSION=y
++$(eval $(call add_conflict_package,$(MRVL_SAI),$(LIBSAIVS_DEV)))
 diff --git a/platform/marvell-larch-sim/sonic-platform-larch/debian/changelog b/platform/marvell-larch-sim/sonic-platform-larch/debian/changelog
 new file mode 100644
 index 000000000..701fcae26
