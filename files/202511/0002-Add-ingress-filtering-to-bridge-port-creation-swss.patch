@@ -1,0 +1,28 @@
+From 31734162d62e53b18a30ec9e3969f8f7e0986ba3 Mon Sep 17 00:00:00 2001
+From: Alex Sakun <asakun@larch-networks.com>
+Date: Wed, 27 May 2026 01:47:58 +0300
+Subject: [PATCH] Added SAI_BRIDGE_PORT_ATTR_INGRESS_FILTERING = true to bridge
+ port creation
+
+---
+ orchagent/portsorch.cpp | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/orchagent/portsorch.cpp b/orchagent/portsorch.cpp
+index 412aa426..46a483e3 100644
+--- a/orchagent/portsorch.cpp
++++ b/orchagent/portsorch.cpp
+@@ -7057,6 +7057,11 @@ bool PortsOrch::addBridgePort(Port &port)
+     attr.value.s32 = port.m_learn_mode;
+     attrs.push_back(attr);
+ 
++    /* Enable ingress VLAN filtering on bridge port */
++    attr.id = SAI_BRIDGE_PORT_ATTR_INGRESS_FILTERING;
++    attr.value.booldata = true;
++    attrs.push_back(attr);
++
+     sai_status_t status = sai_bridge_api->create_bridge_port(&port.m_bridge_port_id, gSwitchId, (uint32_t)attrs.size(), attrs.data());
+     if (status != SAI_STATUS_SUCCESS)
+     {
+-- 
+2.34.1

@@ -20,7 +20,7 @@ CUR_DIR=$(basename `pwd`)
 LOG_FILE=patches_result.log
 FULL_PATH=`pwd`
 err_cnt=0
-SAI_COMMIT="v1.17.1"
+SAI_COMMIT="v1.17.4"
 
 # VERIFY_PATCHES=Y may be selected by MRVL sonic_build_script.sh
 if [[ "$DEVEL" == "" || "$VERIFY_PATCHES" == "Y" ]]; then
@@ -162,7 +162,7 @@ apply_sonicbuildimage_patches()
 	pushd patches
 	wget_cp $WGET_PATH/$patch_file
 	popd
-	git am patches/$patch_file
+	git am --3way patches/$patch_file
 	ret=$?
 	if [ $ret -ne 0 ]; then
         ((err_cnt++))
@@ -187,7 +187,7 @@ apply_submodule_patches()
 	wget_cp $WGET_PATH/${patch}
 	popd
 	pushd ${dir}
-	git am $CWD/patches/${patch}
+	git am --3way $CWD/patches/${patch}
 	ret=$?
 	if [ $ret -ne 0 ]; then
         ((err_cnt++))
@@ -269,6 +269,15 @@ main()
 	if [ $? -ne 0 ]; then
 		# log ERROR already printed
 		exit 1
+	fi
+
+	# Remove host-base-image version directory: pinned versions include
+	# binNMU (+bN) rebuilds not available in Debian snapshot mirrors.
+	# Without this dir, build_debian_base_system.sh uses plain debootstrap.
+	if [ -d files/build/versions/host-base-image ]; then
+		log "Removing host-base-image version pins (binNMU pins not in snapshot)"
+		git rm -rf files/build/versions/host-base-image
+		git commit -m "Remove host-base-image version pins to use plain debootstrap"
 	fi
 
 	echo "make init" >> build_cmd.txt

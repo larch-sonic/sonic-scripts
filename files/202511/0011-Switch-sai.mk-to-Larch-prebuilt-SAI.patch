@@ -1,0 +1,41 @@
+From 2cf6e10025e310146af93467a06e1571ba5a4d2a Mon Sep 17 00:00:00 2001
+From: Kostiantyn Buravchenko <kburavchenko@larch-networks.com>
+Date: Wed, 11 Nov 2026 10:00:53 +0200
+Subject: [PATCH] Switch sai.mk to Larch prebuilt SAI (arm64 1.17.4-3, amd64 1.17.4-2)
+
+---
+ platform/marvell-prestera/sai.mk | 12 +++++-------
+ 1 file changed, 5 insertions(+), 7 deletions(-)
+
+diff --git a/platform/marvell-prestera/sai.mk b/platform/marvell-prestera/sai.mk
+index 18f41ff13..c49e781cb 100644
+--- a/platform/marvell-prestera/sai.mk
++++ b/platform/marvell-prestera/sai.mk
+@@ -1,19 +1,17 @@
+ # Marvell SAI
+ 
+-BRANCH = master
++BRANCH = 202511
++# arm64: 1.17.4-3 (ACL VLAN range); amd64: 1.17.4-2
+ ifeq ($(CONFIGURED_ARCH),arm64)
+-MRVL_SAI_VERSION = 1.17.1-13
+-else ifeq ($(CONFIGURED_ARCH),armhf)
+-MRVL_SAI_VERSION = 1.17.1-13
++MRVL_SAI_VERSION = 1.17.4-3
+ else
+-MRVL_SAI_VERSION = 1.17.1-13
++MRVL_SAI_VERSION = 1.17.4-2
+ endif
+ 
+-MRVL_SAI_URL_PREFIX = https://github.com/Marvell-switching/sonic-marvell-binaries/raw/master/$(CONFIGURED_ARCH)/sai-plugin/$(BRANCH)/
++MRVL_SAI_URL_PREFIX = https://github.com/larch-sonic/sonic-larch-binaries/raw/main/$(CONFIGURED_ARCH)/sai-plugin/$(BRANCH)/
+ MRVL_SAI = mrvllibsai_$(MRVL_SAI_VERSION)_$(PLATFORM_ARCH).deb
+ $(MRVL_SAI)_URL = $(MRVL_SAI_URL_PREFIX)/$(MRVL_SAI)
+ 
+ SONIC_ONLINE_DEBS += $(MRVL_SAI)
+ $(MRVL_SAI)_SKIP_VERSION=y
+ $(eval $(call add_conflict_package,$(MRVL_SAI),$(LIBSAIVS_DEV)))
+-
+-- 
+2.34.1
+
